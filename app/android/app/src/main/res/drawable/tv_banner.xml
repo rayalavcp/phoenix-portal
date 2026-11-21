@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Android TV banner (android:banner): the phoenix mark on deep ink with an
+     ember glow, in the 16:9 field TV homes draw. Drawn from assets/branding/mark.svg. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="320dp" android:height="180dp"
+    android:viewportWidth="320" android:viewportHeight="180">
+    <path android:pathData="M0 0h320v180H0z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="160" android:centerY="80" android:gradientRadius="190">
+                <item android:color="#FF3A1E16" android:offset="0"/>
+                <item android:color="#FF14171C" android:offset="0.6"/>
+                <item android:color="#FF0B0D10" android:offset="1"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <group android:translateX="105" android:translateY="35" android:scaleX="1.1" android:scaleY="1.1">
+        <path android:pathData="M47 60 C32 58 13 46 5 12 C13 21 20 24 26 24 C22 19 20 13 21 6 C27 16 33 21 39 22 C37 17 37 12 38 6 C44 18 47 29 49 40 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="linear" android:startX="27" android:startY="60" android:endX="27" android:endY="6">
+                    <item android:color="#FFFF4D2E" android:offset="0"/>
+                    <item android:color="#FFFF8A3D" android:offset="0.6"/>
+                    <item android:color="#FFFFC861" android:offset="1"/>
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path android:pathData="M53 60 C68 58 87 46 95 12 C87 21 80 24 74 24 C78 19 80 13 79 6 C73 16 67 21 61 22 C63 17 63 12 62 6 C56 18 53 29 51 40 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="linear" android:startX="73" android:startY="60" android:endX="73" android:endY="6">
+                    <item android:color="#FFFF4D2E" android:offset="0"/>
+                    <item android:color="#FFFF8A3D" android:offset="0.6"/>
+                    <item android:color="#FFFFC861" android:offset="1"/>
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path android:pathData="M50 97 C39 91 34 80 38 69 C40 75 43 77 46 77 C41 67 41 54 50 41 C59 54 59 67 54 77 C57 77 60 75 62 69 C66 80 61 91 50 97 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="linear" android:startX="43.6" android:startY="97" android:endX="56.4" android:endY="41">
+                    <item android:color="#FFFF3D24" android:offset="0"/>
+                    <item android:color="#FFFF6A3D" android:offset="0.5"/>
+                    <item android:color="#FFFFB547" android:offset="1"/>
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path android:pathData="M42.5 36 A7.5 7.5 0 1 0 57.5 36 A7.5 7.5 0 1 0 42.5 36 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="linear" android:startX="47" android:startY="43.5" android:endX="53" android:endY="28.5">
+                    <item android:color="#FFFF3D24" android:offset="0"/>
+                    <item android:color="#FFFF6A3D" android:offset="0.5"/>
+                    <item android:color="#FFFFB547" android:offset="1"/>
+                </gradient>
+            </aapt:attr>
+        </path>
+    </group>
+</vector>

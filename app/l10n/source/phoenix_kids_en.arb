@@ -1,0 +1,549 @@
+{
+  "@@locale": "en",
+  "settingPhoenixProfileTitle": "Profile",
+  "@settingPhoenixProfileTitle": {
+    "context": "Settings > Kids Portal",
+    "description": "Setting label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal > Profile"
+      ],
+      "remoteAdmin": [
+        "Kids Portal > Profile"
+      ]
+    }
+  },
+  "settingPhoenixProfileDescription": "Family shows the dashboard. Kids keeps the screen on the Kids Portal. Night shows the bedtime screen. Home Assistant can switch it.",
+  "@settingPhoenixProfileDescription": {
+    "context": "Settings > Kids Portal",
+    "description": "Help below this setting.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal > Profile"
+      ],
+      "remoteAdmin": [
+        "Kids Portal > Profile"
+      ]
+    }
+  },
+  "settingKidsEnabledTitle": "Kids Portal in the menu",
+  "@settingKidsEnabledTitle": {
+    "context": "Settings > Kids Portal",
+    "description": "Setting label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal > Kids Portal in the menu"
+      ],
+      "remoteAdmin": [
+        "Kids Portal > Kids Portal in the menu"
+      ]
+    }
+  },
+  "settingKidsEnabledDescription": "A playful home with games, drawing and the apps you allow, opened from the menu or by the Kids profile.",
+  "@settingKidsEnabledDescription": {
+    "context": "Settings > Kids Portal",
+    "description": "Help below this setting.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal > Kids Portal in the menu"
+      ],
+      "remoteAdmin": [
+        "Kids Portal > Kids Portal in the menu"
+      ]
+    }
+  },
+  "settingKidsNameTitle": "Child's name",
+  "@settingKidsNameTitle": {
+    "context": "Settings > Kids Portal",
+    "description": "Setting label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal > Child's name"
+      ],
+      "remoteAdmin": [
+        "Kids Portal > Child's name"
+      ]
+    }
+  },
+  "settingKidsNameDescription": "Used in the Kids Portal greeting. Leave empty for a general one.",
+  "@settingKidsNameDescription": {
+    "context": "Settings > Kids Portal",
+    "description": "Help below this setting.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal > Child's name"
+      ],
+      "remoteAdmin": [
+        "Kids Portal > Child's name"
+      ]
+    }
+  },
+  "settingKidsDailyMinutesTitle": "Daily screen time",
+  "@settingKidsDailyMinutesTitle": {
+    "context": "Settings > Kids Portal",
+    "description": "Setting label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal > Daily screen time"
+      ],
+      "remoteAdmin": [
+        "Kids Portal > Daily screen time"
+      ]
+    }
+  },
+  "settingKidsDailyMinutesDescription": "How long the Kids Portal can be played each day. When it runs out, an all-done screen shows until a parent adds time or tomorrow.",
+  "@settingKidsDailyMinutesDescription": {
+    "context": "Settings > Kids Portal",
+    "description": "Help below this setting.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal > Daily screen time"
+      ],
+      "remoteAdmin": [
+        "Kids Portal > Daily screen time"
+      ]
+    }
+  },
+  "settingKidsBedtimeTitle": "Bedtime",
+  "@settingKidsBedtimeTitle": {
+    "context": "Settings > Kids Portal",
+    "description": "Setting label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal > Bedtime"
+      ],
+      "remoteAdmin": [
+        "Kids Portal > Bedtime"
+      ]
+    }
+  },
+  "settingKidsBedtimeDescription": "From this time until wake-up the Kids Portal shows the bedtime screen instead of games.",
+  "@settingKidsBedtimeDescription": {
+    "context": "Settings > Kids Portal",
+    "description": "Help below this setting.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal > Bedtime"
+      ],
+      "remoteAdmin": [
+        "Kids Portal > Bedtime"
+      ]
+    }
+  },
+  "settingKidsWakeTimeTitle": "Wake-up time",
+  "@settingKidsWakeTimeTitle": {
+    "context": "Settings > Kids Portal",
+    "description": "Setting label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal > Wake-up time"
+      ],
+      "remoteAdmin": [
+        "Kids Portal > Wake-up time"
+      ]
+    }
+  },
+  "settingKidsWakeTimeDescription": "When bedtime ends.",
+  "@settingKidsWakeTimeDescription": {
+    "context": "Settings > Kids Portal",
+    "description": "Help below this setting.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal > Wake-up time"
+      ],
+      "remoteAdmin": [
+        "Kids Portal > Wake-up time"
+      ]
+    }
+  },
+  "settingKidsPinTitle": "Parent PIN",
+  "@settingKidsPinTitle": {
+    "context": "Settings > Kids Portal",
+    "description": "Setting label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal > Parent PIN"
+      ],
+      "remoteAdmin": [
+        "Kids Portal > Parent PIN"
+      ]
+    }
+  },
+  "settingKidsPinDescription": "Asked to leave the Kids Portal or add screen time. Leave empty to use a three-second press on the lock instead.",
+  "@settingKidsPinDescription": {
+    "context": "Settings > Kids Portal",
+    "description": "Help below this setting.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal > Parent PIN"
+      ],
+      "remoteAdmin": [
+        "Kids Portal > Parent PIN"
+      ]
+    }
+  },
+  "kidsProfileFamily": "Family",
+  "@kidsProfileFamily": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "kidsProfileKids": "Kids",
+  "@kidsProfileKids": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "kidsProfileNight": "Night",
+  "@kidsProfileNight": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "kidsMinutesUnlimited": "No limit",
+  "@kidsMinutesUnlimited": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "kidsMinutes15": "15 minutes",
+  "@kidsMinutes15": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "kidsMinutes30": "30 minutes",
+  "@kidsMinutes30": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "kidsMinutes45": "45 minutes",
+  "@kidsMinutes45": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "kidsMinutes60": "1 hour",
+  "@kidsMinutes60": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "kidsMinutes90": "1.5 hours",
+  "@kidsMinutes90": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "kidsMinutes120": "2 hours",
+  "@kidsMinutes120": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "kidsMinutes180": "3 hours",
+  "@kidsMinutes180": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "kidsBedtimeOff": "Off",
+  "@kidsBedtimeOff": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "kidsTime1900": "7:00 PM",
+  "@kidsTime1900": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "kidsTime1930": "7:30 PM",
+  "@kidsTime1930": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "kidsTime2000": "8:00 PM",
+  "@kidsTime2000": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "kidsTime2030": "8:30 PM",
+  "@kidsTime2030": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "kidsTime2100": "9:00 PM",
+  "@kidsTime2100": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "kidsTime2130": "9:30 PM",
+  "@kidsTime2130": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "kidsTime2200": "10:00 PM",
+  "@kidsTime2200": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "kidsTime0600": "6:00 AM",
+  "@kidsTime0600": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "kidsTime0630": "6:30 AM",
+  "@kidsTime0630": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "kidsTime0700": "7:00 AM",
+  "@kidsTime0700": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "kidsTime0730": "7:30 AM",
+  "@kidsTime0730": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "kidsTime0800": "8:00 AM",
+  "@kidsTime0800": {
+    "context": "Settings > Kids Portal",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Kids Portal"
+      ],
+      "remoteAdmin": [
+        "Kids Portal"
+      ]
+    }
+  },
+  "settingsMenuKidsPortal": "Kids Portal",
+  "@settingsMenuKidsPortal": {
+    "context": "Settings:Menu",
+    "description": "Settings menu entry.",
+    "x-locations": {
+      "device": [
+        "Settings > menu"
+      ],
+      "remoteAdmin": [
+        "Sidebar menu"
+      ]
+    }
+  },
+  "settingsMenuKidsPortalSummary": "Games, screen time, bedtime",
+  "@settingsMenuKidsPortalSummary": {
+    "context": "Settings:Menu",
+    "description": "Settings menu entry summary.",
+    "x-locations": {
+      "device": [
+        "Settings > menu"
+      ],
+      "remoteAdmin": [
+        "Sidebar menu"
+      ]
+    }
+  },
+  "drawerKids": "Kids Portal",
+  "@drawerKids": {
+    "context": "Kiosk menu",
+    "description": "Menu entry that opens the Kids Portal.",
+    "x-locations": {
+      "device": [
+        "Kiosk menu"
+      ],
+      "remoteAdmin": [
+        "Quick actions"
+      ]
+    }
+  },
+  "drawerStore": "App Store",
+  "@drawerStore": {
+    "context": "Kiosk menu",
+    "description": "Menu entry that opens the Phoenix app store.",
+    "x-locations": {
+      "device": [
+        "Kiosk menu"
+      ],
+      "remoteAdmin": [
+        "Drawer menu items"
+      ]
+    }
+  }
+}

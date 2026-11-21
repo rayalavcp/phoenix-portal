@@ -1,0 +1,111 @@
+name: Release
+
+# Publishing a GitHub release builds signed universal and ABI-specific APKs.
+# The app version comes from the tag (v1.2.3 becomes 1.2.3), so a release can never disagree with
+# what the app reports about itself.
+#
+# Retry an existing release with the latest workflow fixes without moving its
+# tag: gh workflow run release.yml --ref main -f release_tag=<tag>
+# App sources always come from that tag. Release scripts come from the workflow
+# revision. Without release_tag, dispatch on the tag itself as before.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag to rebuild
+        required: false
+        type: string
+
+env:
+  RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+
+concurrency:
+  group: release-${{ inputs.release_tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
+
+      - name: Check out release scripts from the workflow revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: .release-workflow
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.6
+          cache: true
+
+      - name: Restore the signing identity
+        working-directory: app
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/upload-keystore.jks
+          cat > android/key.properties <<EOF
+          storePassword=$STORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=upload-keystore.jks
+          EOF
+
+      - name: Build the signed APKs
+        working-directory: app
+        env:
+          # Proves to Ground Control that the kiosk runs Kiosk Satellite.
+          GROUND_CONTROL_CLIENT_KEY_ID: ${{ secrets.GROUND_CONTROL_CLIENT_KEY_ID }}
+          GROUND_CONTROL_CLIENT_KEY: ${{ secrets.GROUND_CONTROL_CLIENT_KEY }}
+        run: |
+          # Phoenix Portal: Ground Control (Voice Match) is optional. Without the
+          # client key the build still works; it just can't sign in to a Ground
+          # Control service.
+          if [ -z "$GROUND_CONTROL_CLIENT_KEY_ID" ] || [ -z "$GROUND_CONTROL_CLIENT_KEY" ]; then
+            echo "::warning::Ground Control client key secrets are not set; building without Voice Match sign-in"
+          fi
+          VERSION="${RELEASE_TAG#v}"
+          # The build number comes from pubspec.yaml, NOT the workflow run
+          # counter: dev builds side-loaded during testing carry the pubspec
+          # number, and a release with a lower versionCode is a downgrade
+          # Android refuses to install over them.
+          BUILD_NUMBER="$(sed -n 's/^version:.*+//p' pubspec.yaml)"
+          flutter pub get
+          flutter build apk --release --split-per-abi \
+            --target-platform android-arm,android-arm64 \
+            --build-name="$VERSION" \
+            --build-number="$BUILD_NUMBER"
+          python3 ../.release-workflow/.github/scripts/check_apks.py \
+            build/app/outputs/flutter-apk "$VERSION" "$BUILD_NUMBER"
+          mv build/app/outputs/flutter-apk/app-release.apk \
+             "kiosk-satellite-${RELEASE_TAG}.apk"
+          for ABI in armeabi-v7a arm64-v8a; do
+            mv "build/app/outputs/flutter-apk/app-${ABI}-release.apk" \
+               "kiosk-satellite-${RELEASE_TAG}.${ABI}.apk"
+          done
+
+      - name: Attach the APKs to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 .release-workflow/.github/scripts/publish_apks.py "$RELEASE_TAG" app

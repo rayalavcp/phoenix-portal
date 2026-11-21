@@ -1,44 +1,34 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+# Flutter/Dart
+app/.dart_tool/
+app/.flutter-plugins*
+app/.packages
+app/build/
+app/.idea/
+app/android/.gradle/
+app/android/local.properties
+app/ios/Pods/
+app/ios/.symlinks/
+app/*.iml
+
+# Misc
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-local.properties
+__pycache__/
+*.pyc
 
-# MkDocs build output (the docs site is built and deployed by CI, not committed).
-/site
-
-# Release signing — NEVER commit these. Back them up securely; the same key must
-# sign every Immortal release for in-place self-update to work.
-keystore.properties
+# Release signing identity: never committed. Local builds read
+# android/key.properties; CI gets the same values from secrets.
+app/android/key.properties
+app/android/app/upload-keystore.jks
 *.jks
-*.keystore
-
-# Built APKs / staged release artifacts and scratch screenshots.
-provisioning/apks/*.apk
-_chk*.png
-
-# Per-device fleet inventory written by `provision.sh --fleet`. Contains each
-# device's agent auth TOKEN — never commit (the repo is public).
-provisioning/fleet/
-
-# Internal strategy/planning notes — never publish.
-_planning/
-
-# Reverse-engineering research — never publish (repo is public). Decompilation
-# working dir and APKs pulled off the device. Keep internal findings in
-# apk_work/ or _planning/ — NOT in docs/, which is now the published wiki source.
-apk_work/
-system_services.apk
-*.apk
+# The Ground Control client key: never committed either.
+app/android/ground_control_client.properties
 
 .claude/
+.vscode/
+.codex/
+.remember/
+.playwright-mcp/
+.internal/
+benchmarks/
+
+AGENTS.md

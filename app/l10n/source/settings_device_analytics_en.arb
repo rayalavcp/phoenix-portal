@@ -1,0 +1,133 @@
+{
+  "@@locale": "en",
+  "settingAnalyticsBasicTitle": "Basic analytics",
+  "@settingAnalyticsBasicTitle": {
+    "context": "Settings:Device:Phoenix Portal Analytics",
+    "description": "Setting label.",
+    "x-locations": {
+      "device": [
+        "Settings > Device > Phoenix Portal Analytics"
+      ],
+      "remoteAdmin": [
+        "Device > Phoenix Portal Analytics"
+      ]
+    }
+  },
+  "settingAnalyticsBasicDescription": "Information about your device, such as model, Android version, app version, screen size and language.",
+  "@settingAnalyticsBasicDescription": {
+    "context": "Settings:Device:Phoenix Portal Analytics",
+    "description": "Help below the setting.",
+    "x-locations": {
+      "device": [
+        "Settings > Device > Phoenix Portal Analytics"
+      ],
+      "remoteAdmin": [
+        "Device > Phoenix Portal Analytics"
+      ]
+    }
+  },
+  "settingAnalyticsUsageTitle": "Usage",
+  "@settingAnalyticsUsageTitle": {
+    "context": "Settings:Device:Phoenix Portal Analytics",
+    "description": "Setting label.",
+    "x-locations": {
+      "device": [
+        "Settings > Device > Phoenix Portal Analytics"
+      ],
+      "remoteAdmin": [
+        "Device > Phoenix Portal Analytics"
+      ]
+    }
+  },
+  "settingAnalyticsUsageDescription": "Details of what you use with Phoenix Portal.",
+  "@settingAnalyticsUsageDescription": {
+    "context": "Settings:Device:Phoenix Portal Analytics",
+    "description": "Help below the setting.",
+    "x-locations": {
+      "device": [
+        "Settings > Device > Phoenix Portal Analytics"
+      ],
+      "remoteAdmin": [
+        "Device > Phoenix Portal Analytics"
+      ]
+    }
+  },
+  "settingAnalyticsDiagnosticsTitle": "Diagnostics",
+  "@settingAnalyticsDiagnosticsTitle": {
+    "context": "Settings:Device:Phoenix Portal Analytics",
+    "description": "Setting label.",
+    "x-locations": {
+      "device": [
+        "Settings > Device > Phoenix Portal Analytics"
+      ],
+      "remoteAdmin": [
+        "Device > Phoenix Portal Analytics"
+      ]
+    }
+  },
+  "settingAnalyticsDiagnosticsDescription": "Share crash reports when unexpected errors occur.",
+  "@settingAnalyticsDiagnosticsDescription": {
+    "context": "Settings:Device:Phoenix Portal Analytics",
+    "description": "Help below the setting.",
+    "x-locations": {
+      "device": [
+        "Settings > Device > Phoenix Portal Analytics"
+      ],
+      "remoteAdmin": [
+        "Device > Phoenix Portal Analytics"
+      ]
+    }
+  },
+  "deviceAnalyticsPage": "Phoenix Portal Analytics",
+  "@deviceAnalyticsPage": {
+    "context": "Settings:Device:Phoenix Portal Analytics",
+    "description": "Label or explanation on this Device settings page.",
+    "x-locations": {
+      "device": [
+        "Settings > Device > Phoenix Portal Analytics"
+      ],
+      "remoteAdmin": [
+        "Device > Phoenix Portal Analytics"
+      ]
+    }
+  },
+  "deviceAnalyticsIntro": "Share anonymized information from your installation to help make Phoenix Portal better and guide which devices and features get attention.",
+  "@deviceAnalyticsIntro": {
+    "context": "Settings:Device:Phoenix Portal Analytics",
+    "description": "Label or explanation on this Device settings page.",
+    "x-locations": {
+      "device": [
+        "Settings > Device > Phoenix Portal Analytics"
+      ],
+      "remoteAdmin": [
+        "Device > Phoenix Portal Analytics"
+      ]
+    }
+  },
+  "deviceAnalyticsLearn": "Learn how we process your data",
+  "@deviceAnalyticsLearn": {
+    "context": "Settings:Device:Phoenix Portal Analytics",
+    "description": "Label or explanation on this Device settings page.",
+    "x-locations": {
+      "device": [
+        "Settings > Device > Phoenix Portal Analytics"
+      ],
+      "remoteAdmin": [
+        "Device > Phoenix Portal Analytics"
+      ]
+    }
+  },
+  "deviceAnalyticsLearnHelp": "What Phoenix Portal Analytics sends and what it never sends.",
+  "@deviceAnalyticsLearnHelp": {
+    "context": "Settings:Device:Phoenix Portal Analytics",
+    "description": "Label or explanation on this Device settings page.",
+    "x-locations": {
+      "device": [
+        "Settings > Device > Phoenix Portal Analytics"
+      ],
+      "remoteAdmin": [
+        "Device > Phoenix Portal Analytics"
+      ]
+    }
+  }
+}

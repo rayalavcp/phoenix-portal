@@ -1,3 +1,0 @@
-# Documentation site toolchain (MkDocs Material).
-# Build locally with:  pip install -r requirements-docs.txt && mkdocs serve
-mkdocs-material==9.5.39

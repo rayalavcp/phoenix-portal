@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Phoenix Portal themed-icon layer: the phoenix mark in one colour. Drawn from assets/branding/mark.svg. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="432dp" android:height="432dp"
+    android:viewportWidth="100" android:viewportHeight="100">
+    <group android:scaleX="0.7" android:scaleY="0.7" android:pivotX="50" android:pivotY="51.5" android:translateY="-1.5">
+        <path android:fillColor="#FFFFFFFF" android:pathData="M47 60 C32 58 13 46 5 12 C13 21 20 24 26 24 C22 19 20 13 21 6 C27 16 33 21 39 22 C37 17 37 12 38 6 C44 18 47 29 49 40 Z"/>
+        <path android:fillColor="#FFFFFFFF" android:pathData="M53 60 C68 58 87 46 95 12 C87 21 80 24 74 24 C78 19 80 13 79 6 C73 16 67 21 61 22 C63 17 63 12 62 6 C56 18 53 29 51 40 Z"/>
+        <path android:fillColor="#FFFFFFFF" android:pathData="M50 97 C39 91 34 80 38 69 C40 75 43 77 46 77 C41 67 41 54 50 41 C59 54 59 67 54 77 C57 77 60 75 62 69 C66 80 61 91 50 97 Z"/>
+        <path android:fillColor="#FFFFFFFF" android:pathData="M42.5 36 A7.5 7.5 0 1 0 57.5 36 A7.5 7.5 0 1 0 42.5 36 Z"/>
+    </group>
+</vector>

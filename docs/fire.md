@@ -1,0 +1,130 @@
+# Amazon Fire Tablets
+
+This setup has been verified on a Fire HD 10 (`KFTUWI`, Fire OS 8, Android 11) and, for the lock screen functionality, on a Fire HD 8 (`KFONWI`, Fire OS 7, Android 9). Note that Fire OS 5 tablets (Android 5.1) fall below the app's Android 7 minimum requirement; if you attempt an `adb install` on one, it will refuse the action with an `INSTALL_FAILED_OLDER_SDK` error.
+
+## Install
+
+Install the APK using `adb install` just like any other sideloaded app. Once installed, the app's built-in updater handles future updates.
+
+You can find ADB settings under **Settings > Device Options > Developer Options** (this menu appears after tapping your device's serial number seven times). Fire OS 8 also includes a **Wireless debugging** feature. However, it assigns a new port on every reboot and turns itself off after a single use, so anything requiring a reboot is much easier to handle using a physical USB cable.
+
+## Setup in One Sitting
+
+You can perform the entire setup a Fire tablet requires from a computer on the same network. The following grants represent the Android 11 subset of the standard [Permissions](permissions.md). The final block is specific to Fire OS, and the reasons for it are explained further down this page.
+
+```
+adb connect <fire ip>:<port>       # Use the port shown in Wireless debugging, or connect via USB cable
+adb install -r kiosk-satellite.apk
+```
+
+```
+adb shell pm grant com.phoenix.portal android.permission.RECORD_AUDIO
+adb shell pm grant com.phoenix.portal android.permission.CAMERA
+adb shell pm grant com.phoenix.portal android.permission.ACCESS_COARSE_LOCATION
+adb shell pm grant com.phoenix.portal android.permission.ACCESS_FINE_LOCATION
+adb shell pm grant com.phoenix.portal android.permission.READ_EXTERNAL_STORAGE
+adb shell pm grant com.phoenix.portal android.permission.WRITE_EXTERNAL_STORAGE
+adb shell appops set com.phoenix.portal SYSTEM_ALERT_WINDOW allow
+adb shell appops set com.phoenix.portal WRITE_SETTINGS allow
+adb shell appops set com.phoenix.portal MANAGE_EXTERNAL_STORAGE allow
+adb shell appops set com.phoenix.portal GET_USAGE_STATS allow
+adb shell dumpsys deviceidle whitelist +com.phoenix.portal
+adb shell dpm set-active-admin com.phoenix.portal/me.jxl.kiosk_satellite.KioskAdminReceiver
+```
+
+```
+# Fire OS 8 only. This addresses the lock screen: without it, a screen turned off by the app wakes onto the lock screen and goes dark again seconds later (see details below)
+adb shell locksettings set-disabled true
+adb reboot
+```
+
+Optional: To enable the System UI guard behind Kiosk Mode's protections (as detailed in [Permissions](permissions.md)), run this:
+
+```
+adb shell settings put secure enabled_accessibility_services com.phoenix.portal/me.jxl.kiosk_satellite.KioskAccessibilityService
+adb shell settings put secure accessibility_enabled 1
+```
+
+Finally, finish the setup wizard directly on the device or from a browser using `http://<fire ip>:2324`.
+
+## Updates
+
+The in-app update process functions on a Fire tablet as follows:
+
+| Step | Fire Behavior |
+| --- | --- |
+| Download | Downloads normally. |
+| Install unknown apps permission | Prompts once on Android's system screen during the initial update. |
+| Android install confirmation | Requires a tap unless the optional update helper is running. |
+| Installation | Completes through Android's installer or the update helper. |
+| Relaunch | The app automatically relaunches once installation completes if the **Display over other apps** permission is granted. |
+
+For updates without a confirmation tap, start the bundled helper:
+
+```sh
+adb shell "content read --uri content://com.phoenix.portal.update-helper/start | sh"
+```
+
+The helper runs on the Fire tablet and survives app restarts and self-updates. It stops at reboot, so restore ADB access and rerun the command afterward. When it is unavailable, the app brings Android's confirmation screen forward and re-arms kiosk protections when the attempt ends. See [Optional Update Helper](updates.md#optional-update-helper) for status, setup instructions and installation behavior.
+
+Device ownership remains unavailable because Amazon's Parental Controls already hold the profile owner role. The helper does not require device ownership or accessibility access. Silent installation through the helper has been verified on a Fire HD 10 running Fire OS 8.
+
+## The Lock Screen
+
+Turning the screen off (whether triggered by the Home Assistant **Screen** entity or the screensaver's **Turn screen off after** setting) utilizes Android's device admin lock. This call automatically arms the lock screen on any device that has one. A Fire tablet has one regardless of whether a passcode is set; if no passcode exists, it simply acts as a swipe away screen. 
+
+Standard Android allows an app to clear an unsecured lock screen when it wakes the panel, and Phoenix Portal attempts to do so. On Fire OS 7, this works perfectly: the wake command lands cleanly on the kiosk with the lock screen gone, and the rest of this section does not apply to you. 
+
+However, Fire OS 8 strictly refuses this request from any app other than Amazon's own software, generating this internal error:
+
+```
+AmazonWindowManager: com.phoenix.portal cannot dismissKeyguard without com.amazon.permission.ENABLE_KEYGUARD_FLAGS permission.
+```
+
+The `ENABLE_KEYGUARD_FLAGS` permission is a signature level permission that no installed app can hold, and the system issues the refusal without a callback. Displaying content *over* the lock screen is blocked in the exact same manner, meaning the re wake function built into Kiosk Mode's **Disable power button** protection cannot bypass it either.
+
+Here is what that looks like if left unattended: the screen turns on displaying the lock screen, the kiosk remains paused underneath, the screensaver stands down because another window has taken the foreground, and the lock screen's native timeout forces the panel back to sleep about fifteen seconds later. You will see this sequence in the app log: `the panel lit on the lock screen; dismissing it`, followed by `the lock screen refused to go`, and finally `screen off (system)` on every wake attempt. If you swipe the lock screen away manually, the device lands on the kiosk and the panel stays on.
+
+Fire OS completely removes the option to turn the lock screen off within its UI Settings. Its **Lock Screen Passcode** page only allows you to set or remove a passcode, and removing one just leaves you with the swipe screen. However, the system switch Android uses for this is still reachable via ADB:
+
+```
+adb shell locksettings set-disabled true
+adb reboot
+```
+
+Running the switch command alone changes nothing immediately. The lock screen reads that status when it is first created, so while running the command reports success and `locksettings get-disabled` returns `true`, the very next screen off will still raise the lock screen. You must reboot the device to recreate the lock screen. 
+
+Alternatively, you can restart the System UI service, which keeps ADB alive on a wall mounted device, provided the screen is currently on and unlocked (if you restart it while the lock screen is visible, it comes back showing and the switch appears to fail). This has been verified on both Fire OS 7 and 8:
+
+```
+adb shell locksettings set-disabled true
+adb shell am force-stop com.android.systemui
+```
+
+Give the System UI a few seconds to initialize before triggering the next screen off. After using either route, the kiosk will maintain control of the screen through the entire cycle, and a screen off command will still power the panel down properly. If you ever need it back, running `locksettings set-disabled false` followed by the same restart will restore the lock screen.
+
+Note: A Fire tablet that never turns its panel completely off (for example, one that runs a screensaver all night instead) never encounters the lock screen and requires none of these steps.
+
+## The Microphone Gets Revoked
+
+On Fire OS, a sideloaded app does not keep its microphone permission for good. The grant is stripped on every reboot and it can also be stripped on a running tablet, most often right after a Wi-Fi drop and reconnect. When that happens Android kills the app on the spot (`Killing ... permissions revoked` in logcat), the guard service brings it back and the app asks for the microphone again the very next time it attempts to open it. This means the standard Android permission prompt reappears (triggered by a wake word, a page calling `getUserMedia` or a gesture that listens) and it waits there until someone taps "Allow". Restarting the app itself never triggers this. Seen on Fire OS 8 and on Fire OS 7 (Fire HD 10 9th generation).
+
+This happens because Fire OS runs a service called `AudioRecordPermissionEnforcer` (located in `/system/framework/fosservices.jar`). It walks through every installed app and forcibly revokes `android.permission.RECORD_AUDIO` from any app it does not trust. Its internal allowlist only passes an app if it is a system app or if it was installed through an Amazon source (the Appstore, `com.amazon.venezia`) *and* Amazon's own remote config (delivered over Arcus) explicitly names it. Because a sideloaded APK meets neither criteria, its microphone grant is stripped every time the enforcer runs: at boot and evidently again when Amazon's remote config is refreshed, which a network reconnect can trigger. `RECORD_AUDIO` is the only permission singled out this way. Camera and location grants are left completely untouched. Amazon has [acknowledged the runtime revoke](https://community.amazondeveloper.com/t/how-can-i-work-around-the-app-being-forced-to-stop-after-the-record-audio-permission-is-removed-on-the-fire-tablet/5569) on its developer forum without shipping a fix.
+
+Because the app is restarted after the kill, its first update check runs about 20 seconds later and the **Update available** notice appears at the same time as the prompt whenever a newer release exists. The two are not related.
+
+There is currently no way to stop this behavior. Spoofing the installer package to `com.amazon.venezia` does not work because the Arcus allowlist handles the second half of the test and there is no method to insert an app onto that list. If a device could be provisioned as a device owner, the grant would be set through a persistent policy and outlast the enforcer, but no Fire tablet can be provisioned that way (see the final row in the table below). Tapping "Allow" on the next microphone request is the whole of it. A stable Wi-Fi connection makes the runtime revoke rarer and the **App uptime** sensor in Home Assistant shows when the app was restarted by it.
+
+## What to Know Before Provisioning
+
+| Quirk | Effect | What to do |
+| --- | --- | --- |
+| Fire OS 8 blocks apps from clearing the lock screen | A screen turned off by the app wakes onto the lock screen and goes to sleep again seconds later (see above). Fire OS 7 is not affected by this. | Run `adb shell locksettings set-disabled true` and either reboot or restart the System UI once. |
+| Fire OS revokes the microphone from sideloaded apps | The microphone permission is stripped at every boot and can also be stripped on a running tablet, usually after a Wi-Fi reconnect. Android kills the app when that happens, the app restarts and asks again on the next mic open (see above). Camera and location permissions are completely untouched. | Tap "Allow" on the prompt when it reappears. There is no way to pre empt this. |
+| Wireless debugging disables itself after every reboot, generating a new port | A setup process that ends in a reboot will instantly sever your ADB connection. | Use a physical cable, or turn Wireless debugging back on manually afterward and read the new port from the device's settings page. |
+| Amazon's WebView lacks WebRTC support | Go2RTC camera streams absolutely cannot play over WebRTC. | Do nothing: the app detects this, falls back to MSE on its own, and records the switch in the App Logs. Toggling **Prefer MSE over WebRTC** (under Settings > Camera Streams > Playback) skips the initial failed attempt entirely. See [Cameras](cameras.md). |
+| Bluetooth scanning requires location services | Fire OS 8 is based on Android 11, where a scanner lacking the Location permission and Location Based Services runs but hears nothing. | Grant the location permission via the ADB block above and ensure **Location Based Services** is on in the device's Settings. The "Nearby devices" row on the Bluetooth Proxy page clearly indicates if this is blocking scans. See [ESPHome](esphome.md). |
+| Sticky services restart slowly | A crashed kiosk on standard Android devices is back up in about a second; Fire OS takes considerably more time to restart the guard service. | Do nothing: the crash self heal mechanism has a dedicated heartbeat alarm to handle this. Keep the "Display over other apps" permission granted, as the relaunch requires it. |
+| Amazon's WebView can crash the process in its audio path | A native crash in `libaaudio` during the WebView's audio playback will take the entire app down. | There is nothing you can do to prevent it; the app's crash self heal will automatically relaunch the kiosk. |
+| The [Home Launcher](home-launcher.md) feature is unsupported | Fire OS firmly prohibits replacing its default launcher, preventing Phoenix Portal from registering as the home screen. The Home Launcher page explicitly states this on a Fire tablet. The OS lock runs deep: Fire OS advertises the home role as available but silently denies every request, its default home settings screen forcefully closes itself the moment it opens, and even granting the role via ADB (`cmd role add-role-holder`) changes nothing (the physical home button still forces you to the Fire launcher). | Use **Start on boot** and rely on Kiosk Mode's protections instead. |
+| Fire OS already acts as its own device policy owner | Device ownership (which grants silent updates and true lock task mode on Android 11) cannot be applied to any Fire tablet. Amazon's Parental Controls are hard provisioned as the profile owner on user 0 during the very first boot. Because Android strictly allows only one owner per user, `dpm set-device-owner` will always answer "the user already has a profile owner". Since it is a core system package, it cannot be removed. Furthermore, ownership requires a device with absolutely no registered accounts, and a logged in Fire tablet carries several Amazon ones. | Updates need one confirmation tap unless the [optional update helper](updates.md#optional-update-helper) is running. Start it through ADB and repeat after each reboot. |

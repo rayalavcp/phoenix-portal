@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phoenix Control</title>
+  <meta name="description" content="Set up and manage Phoenix Portal devices from the browser over USB.">
+  <meta name="theme-color" content="#0f1115">
+  <link rel="icon" href="mark.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="dist/app.js"></script>
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <img src="mark.svg" alt="" width="34" height="34">
+      <div><strong>Phoenix <span>Control</span></strong><small>Set up and manage Phoenix Portal</small></div>
+    </div>
+    <div class="status" id="status"><span class="dot"></span><span id="statusText">Not connected</span></div>
+  </header>
+
+  <main>
+    <!-- Not connected -->
+    <section id="connectView" class="hero card">
+      <h1>Connect your Portal</h1>
+      <p class="lead">Phoenix Control talks to the device over USB, right from this page. Nothing to install.</p>
+      <ol class="steps">
+        <li><b>Turn on ADB.</b> On the Portal: Settings → Debugging → ADB enabled (Portal TV: Settings → System → Developer options).</li>
+        <li><b>Plug it in</b> with a USB-C cable that carries data.</li>
+        <li><b>Click Connect</b>, pick the Portal, then tap <i>Allow</i> on its screen.</li>
+      </ol>
+      <div class="row">
+        <button id="connectBtn" class="primary big">Connect device</button>
+        <span id="connectNote" class="note"></span>
+      </div>
+      <p id="noUsb" class="warn" hidden>This browser can't use USB. Open this page in Chrome or Edge on a computer.</p>
+    </section>
+
+    <!-- Connected -->
+    <section id="deviceView" hidden>
+      <div class="grid">
+        <article class="card device">
+          <h2>Device</h2>
+          <dl id="facts"></dl>
+          <div class="row">
+            <button id="refreshBtn">Refresh</button>
+            <button id="disconnectBtn" class="ghost">Disconnect</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Profile</h2>
+          <p class="muted">The same switch Home Assistant flips. Needs Phoenix Portal installed.</p>
+          <div class="segmented" id="profiles">
+            <button data-profile="family">Family</button>
+            <button data-profile="kids">Kids</button>
+            <button data-profile="night">Night</button>
+          </div>
+          <h2 class="spaced">Tools</h2>
+          <div class="row wrap">
+            <button id="shotBtn">Screenshot</button>
+            <a id="adminLink" class="button" target="_blank" rel="noopener" hidden>Open remote admin (Wi-Fi)</a>
+            <button id="restoreBtn" class="ghost">Restore stock…</button>
+            <button id="rebootBtn" class="ghost">Reboot</button>
+          </div>
+          <img id="shot" alt="Device screenshot" hidden>
+        </article>
+
+        <article class="card wide">
+          <h2>Set up Phoenix Portal</h2>
+          <div class="apk">
+            <div>
+              <div class="label">App</div>
+              <div id="apkName" class="muted">No APK chosen</div>
+            </div>
+            <div class="row wrap">
+              <button id="latestBtn">Use latest release</button>
+              <label class="button">Choose APK file<input id="apkFile" type="file" accept=".apk" hidden></label>
+            </div>
+          </div>
+          <div class="options">
+            <label><input id="optHome" type="checkbox" checked> Make Phoenix Portal the home screen</label>
+            <label><input id="optOta" type="checkbox" checked> Block Meta OS updates, so an update can't undo the setup</label>
+          </div>
+          <div class="row">
+            <button id="planBtn" class="primary">Review plan</button>
+            <span class="note">Every command is shown before anything runs.</span>
+          </div>
+        </article>
+      </div>
+
+      <article class="card wide" id="planCard" hidden>
+        <div class="plan-head">
+          <h2 id="planTitle">Plan</h2>
+          <div class="row">
+            <button id="applyBtn" class="primary">Apply</button>
+            <button id="cancelPlanBtn" class="ghost">Cancel</button>
+          </div>
+        </div>
+        <label id="uninstallOpt" hidden><input id="optUninstall" type="checkbox"> Also uninstall Phoenix Portal</label>
+        <ol id="plan" class="plan"></ol>
+      </article>
+    </section>
+
+    <p class="foot">Phoenix Control runs entirely in your browser. ADB keys stay in this browser. Built on <a href="https://github.com/yume-chan/ya-webadb" target="_blank" rel="noopener">Tango ADB</a>.</p>
+  </main>
+</body>
+</html>

@@ -1,0 +1,252 @@
+package me.jxl.kiosk_satellite
+
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
+import android.provider.Settings
+
+/**
+ * Brings the kiosk back after a whole-process death it did not ask for.
+ *
+ * A WebView native crash (issue #94: Fire OS aborts inside AAudio's timestamp
+ * path, called from Amazon's WebView audio code) takes the process down with a
+ * signal, below anything Java or Dart can catch. Recovery therefore has to be
+ * arranged with the OS in advance, and two arrangements are made whenever the
+ * kiosk Activity is on screen:
+ *
+ *  - [KioskSatelliteService], the START_STICKY foreground service that
+ *    keeps the app alive on every install. Android restarts a sticky
+ *    service after its process dies, and that restart is the hook that
+ *    relaunches the Activity.
+ *
+ *  - a heartbeat alarm, because sticky restarts are a promise some OEMs keep
+ *    loosely and Fire OS is one of them. Alarms are held by the system, so
+ *    they survive the process and recreate it to deliver. Each beat checks
+ *    "should the kiosk be on screen, and is it?" and reschedules itself only
+ *    while the answer to the first half is yes.
+ *
+ * Both funnel into [maybeRelaunch], which is also what the wake-word
+ * service's own sticky restart calls. Its gates keep the cure from being
+ * worse than the disease: never yank the app the user deliberately switched
+ * to, never fight a kiosk that is already up, never relaunch-loop an app
+ * broken enough to crash at startup.
+ *
+ * The relaunch itself is a background activity start, which Android 10+ only
+ * honors with the "Display over other apps" grant. The setup wizard requests
+ * it and both settings UIs nag under "Auto-reload on error" while it is
+ * missing.
+ */
+object CrashSelfHeal {
+    private const val TAG = "CrashSelfHeal"
+
+    /// How often the heartbeat re-checks a kiosk that should be on screen.
+    /// Inexact by design (no exact-alarm grant needed); in doze Android may
+    /// stretch it to ten minutes or so, which still beats a wall of ads
+    /// until a human walks past.
+    private const val HEARTBEAT_MS = 3 * 60_000L
+
+    /** How long after the process starts [watchStart] looks for the
+     *  kiosk screen. A launch that started the process, and the relaunch
+     *  after a crash, both attach well inside it. */
+    private const val START_CHECK_MS = 5_000L
+
+    private const val PREFS = "FlutterSharedPreferences"
+    private const val WAS_FOREGROUND = "flutter.ks.crash.was_foreground"
+    private const val FOREGROUND_BOOT = "flutter.ks.crash.foreground_boot"
+
+    /** Android's count of boots, which tells this boot from the last. */
+    private fun bootCount(context: Context): Long = try {
+        Settings.Global.getInt(
+            context.contentResolver, Settings.Global.BOOT_COUNT, 0).toLong()
+    } catch (_: Exception) {
+        0L
+    }
+
+    /** The kiosk is on screen, or has just left it ([MainActivity]). */
+    fun noteForeground(context: Context, value: Boolean) {
+        val edit = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putBoolean(WAS_FOREGROUND, value)
+        if (value) edit.putLong(FOREGROUND_BOOT, bootCount(context))
+        edit.apply()
+    }
+
+    /**
+     * Called as the process starts: a little later, bring the kiosk screen
+     * back if the process came up without it (issue #1433).
+     *
+     * The sticky restart after a crash is one way the process starts with
+     * no Activity, and [KioskSatelliteService] answers that one. Android
+     * has others that reach no hook here: a system service that binds one
+     * of ours again after a force stop (the notification listener), which
+     * also clears the sticky restart and the heartbeat, a vendor's own
+     * keep-alive, or a crash relaunch that the two minute throttle turned
+     * away. The process then runs with Home Assistant connected and
+     * nothing on screen, and nothing the Activity owns (the camera, RTSP)
+     * works, until a person opens the app.
+     *
+     * Only for a kiosk that was on screen in this boot when its last
+     * process ended. After a reboot the flag is stale and Start on boot
+     * decides. The heartbeat is armed too, so a relaunch the throttle
+     * turns away here is tried again.
+     */
+    fun watchStart(context: Context) {
+        val app = context.applicationContext
+        Handler(Looper.getMainLooper()).postDelayed({
+            val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            val bringBack = startedWithoutScreen(
+                activityUp = ActivityState.attached || ActivityState.resumed,
+                exiting = KioskSatelliteService.exiting,
+                autoReload = autoReloadEnabled(app),
+                wasForeground = prefs.getBoolean(WAS_FOREGROUND, false),
+                foregroundBoot = prefs.getLong(FOREGROUND_BOOT, -1L),
+                boot = bootCount(app),
+            )
+            if (!bringBack) return@postDelayed
+            android.util.Log.w(TAG,
+                "the process started without the kiosk screen; bringing it back")
+            scheduleHeartbeat(app)
+            maybeRelaunch(app)
+        }, START_CHECK_MS)
+    }
+
+    /** Whether [watchStart] should bring the kiosk screen back. */
+    internal fun startedWithoutScreen(
+        activityUp: Boolean,
+        exiting: Boolean,
+        autoReload: Boolean,
+        wasForeground: Boolean,
+        foregroundBoot: Long,
+        boot: Long,
+    ): Boolean =
+        !activityUp && !exiting && autoReload && wasForeground &&
+            foregroundBoot == boot
+
+    /**
+     * Make sure the service is up and arm the heartbeat, or stand the
+     * heartbeat down where auto-reload is off. Called from the Activity's
+     * onResume: the flag it persists there (ks.crash.was_foreground) is
+     * what separates "died on screen" from "user left", so arming is only
+     * meaningful from the same place. The service runs either way; its
+     * relaunch gates below are what the toggle switches off.
+     */
+    fun arm(context: Context) {
+        KioskSatelliteService.ensureRunning(context)
+        if (!autoReloadEnabled(context)) {
+            disarm(context)
+            return
+        }
+        scheduleHeartbeat(context)
+    }
+
+    /**
+     * A deliberate exit: nothing should bring the kiosk back. The service
+     * itself is stopped by the exit path, which needs its onDestroy to end
+     * the process.
+     */
+    fun disarm(context: Context) {
+        cancelHeartbeat(context)
+    }
+
+    /**
+     * Relaunch the kiosk if, and only if, it died while it was the thing on
+     * screen. Shared by every recovery hook. The gates:
+     *  - the auto-reload toggle is on (it already covers renderer crashes;
+     *    a whole-process crash is the same promise kept one level deeper),
+     *  - the app was on screen when it died (never yank whatever app the
+     *    user deliberately switched to),
+     *  - no Activity is up yet (boot receiver or a sibling hook may have
+     *    won the race),
+     *  - the last self-heal was over two minutes ago, so an app broken
+     *    enough to crash at startup cannot relaunch-loop forever.
+     */
+    fun maybeRelaunch(context: Context) {
+        // Paused is not gone: with the was_foreground flag surviving a
+        // screen-off (MainActivity.onPause), the heartbeat now beats over
+        // a dark panel whose Activity is alive and merely paused, and
+        // must not start it again.
+        if (ActivityState.resumed || ActivityState.attached) return
+        val prefs = context.getSharedPreferences(
+            "FlutterSharedPreferences", Context.MODE_PRIVATE)
+        if (!prefs.getBoolean("flutter.ks.browser.auto_reload_on_error", true)) return
+        if (!prefs.getBoolean("flutter.ks.crash.was_foreground", false)) return
+        val now = System.currentTimeMillis()
+        val last = prefs.getLong("flutter.ks.crash.last_self_heal", 0L)
+        if (now - last < 120_000) return
+        prefs.edit().putLong("flutter.ks.crash.last_self_heal", now).apply()
+        val launch = HomeRole.launchIntent(context) ?: return
+        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            // Without the overlay grant Android discards this silently, so
+            // say so ourselves; the attempt is still made because a few ROMs
+            // are more permissive than stock.
+            if (!Settings.canDrawOverlays(context)) {
+                android.util.Log.w(TAG,
+                    "relaunching without the overlay grant; Android may drop it")
+            }
+            context.startActivity(launch)
+            android.util.Log.i(TAG, "relaunched the kiosk after a crash")
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "crash self-heal failed: $e")
+        }
+    }
+
+    fun scheduleHeartbeat(context: Context) {
+        try {
+            val alarms = context.getSystemService(Context.ALARM_SERVICE)
+                as AlarmManager
+            alarms.setAndAllowWhileIdle(
+                AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                SystemClock.elapsedRealtime() + HEARTBEAT_MS,
+                heartbeatIntent(context),
+            )
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "heartbeat schedule failed: $e")
+        }
+    }
+
+    private fun cancelHeartbeat(context: Context) {
+        try {
+            val alarms = context.getSystemService(Context.ALARM_SERVICE)
+                as AlarmManager
+            alarms.cancel(heartbeatIntent(context))
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun heartbeatIntent(context: Context): PendingIntent =
+        PendingIntent.getBroadcast(
+            context, 0,
+            Intent(context, CrashHeartbeatReceiver::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+    fun autoReloadEnabled(context: Context): Boolean =
+        context.getSharedPreferences(
+            "FlutterSharedPreferences", Context.MODE_PRIVATE)
+            .getBoolean("flutter.ks.browser.auto_reload_on_error", true)
+}
+
+/**
+ * The heartbeat's landing point. Delivery recreates the process when the
+ * crash killed it, which is the entire trick: this code runs even when
+ * nothing of ours survived.
+ *
+ * The chain re-arms itself only while the kiosk is supposed to be on screen
+ * (was_foreground still true). A deliberate departure, a clean exit or the
+ * toggle going off all end it; the next Activity resume starts a fresh one.
+ */
+class CrashHeartbeatReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        if (!CrashSelfHeal.autoReloadEnabled(context)) return
+        val prefs = context.getSharedPreferences(
+            "FlutterSharedPreferences", Context.MODE_PRIVATE)
+        if (!prefs.getBoolean("flutter.ks.crash.was_foreground", false)) return
+        CrashSelfHeal.scheduleHeartbeat(context)
+        CrashSelfHeal.maybeRelaunch(context)
+    }
+}

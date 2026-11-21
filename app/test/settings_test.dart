@@ -1,0 +1,576 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:kiosk_satellite/core/command_registry.dart';
+import 'package:kiosk_satellite/core/event_bus.dart';
+import 'package:kiosk_satellite/core/logging.dart';
+import 'package:kiosk_satellite/managers/settings/settings_manager.dart';
+import 'package:kiosk_satellite/managers/settings/definitions.dart' as defs;
+import 'package:kiosk_satellite/managers/wake_word/pryon/pryon_catalog.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  late SettingsManager settings;
+  late Logger log;
+
+  Future<void> build(Map<String, Object> initial) async {
+    SharedPreferences.setMockInitialValues(initial);
+    final bus = EventBus();
+    log = Logger();
+    settings = SettingsManager(bus, CommandRegistry(log), log);
+    await settings.init();
+  }
+
+  test('unstored settings return their declared default', () async {
+    await build({});
+    // Web Content has no settings page anymore: everything defaults on.
+    expect(settings.get(defs.webMicrophone), isTrue);
+    expect(settings.get(defs.webCamera), isTrue);
+    // Geolocation is the exception: it has a row and starts off (#1383).
+    expect(settings.get(defs.webGeolocation), isFalse);
+    expect(settings.visible(defs.webGeolocation), isTrue);
+    expect(settings.get(defs.screensaverTimeoutSeconds), 300);
+  });
+
+  test(
+    'describe() reports defaults for unstored settings (not null)',
+    () async {
+      await build({});
+      final described = settings.describe();
+      final mic = described.firstWhere((s) => s['key'] == 'web.microphone');
+      // Regression: nullable type inference in describe() used to make this
+      // null, so the UI rendered every untouched toggle as off.
+      expect(mic['value'], isTrue);
+      final camera = described.firstWhere((s) => s['key'] == 'web.camera');
+      expect(camera['value'], isTrue);
+    },
+  );
+
+  test('set persists and is read back', () async {
+    await build({});
+    await settings.set(defs.webCamera, true);
+    expect(settings.get(defs.webCamera), isTrue);
+    // Geolocation is the exception: it has a row and starts off (#1383).
+    expect(settings.get(defs.webGeolocation), isFalse);
+    expect(settings.visible(defs.webGeolocation), isTrue);
+    // Simulate a fresh app run against the same store.
+    final bus = EventBus();
+    final log = Logger();
+    final reopened = SettingsManager(bus, CommandRegistry(log), log);
+    await reopened.init();
+    expect(reopened.get(defs.webCamera), isTrue);
+  });
+
+  test('the set log line names the caller when one is given', () async {
+    await build({});
+    await settings.set(defs.webCamera, false);
+    await settings.setFromJson(
+      defs.webCamera.key,
+      true,
+      source: 'remote admin',
+    );
+    final lines = log.recent.map((e) => e.message).toList();
+    // The device's own writes stay as they were.
+    expect(lines, contains('set web.camera = false'));
+    expect(lines, contains('set web.camera = true [remote admin]'));
+  });
+
+  group('ha.url normalization', () {
+    test('a trailing slash is dropped on write', () async {
+      await build({});
+      // The validator accepts a bare trailing slash, so the write path has
+      // to canonicalize it — stored verbatim it dialled
+      // 'http://ha:8123//api/websocket' on the pipeline socket.
+      expect(
+        await settings.setFromJson('ha.url', 'http://192.168.178.26:8123/'),
+        isTrue,
+      );
+      expect(settings.get(defs.haUrl), 'http://192.168.178.26:8123');
+    });
+
+    test('typed set() normalizes too (setup wizard path)', () async {
+      await build({});
+      await settings.set(defs.haUrl, ' https://homeassistant.local:8123/ ');
+      expect(settings.get(defs.haUrl), 'https://homeassistant.local:8123');
+    });
+
+    test('a stored trailing slash migrates to the origin on init', () async {
+      await build({'ks.ha.url': 'http://192.168.178.26:8123/'});
+      expect(settings.get(defs.haUrl), 'http://192.168.178.26:8123');
+    });
+
+    test('an already-clean value is left untouched', () async {
+      await build({'ks.ha.url': 'https://ha.example'});
+      expect(settings.get(defs.haUrl), 'https://ha.example');
+    });
+  });
+
+  group('Custom user agent', () {
+    const agent =
+        'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 '
+        '(KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+
+    test('empty by default, which keeps the WebView user agent', () async {
+      await build({});
+      expect(settings.get(defs.browserUserAgent), '');
+    });
+
+    test('sits right after Ignore SSL errors on Web Browsing', () {
+      final keys = [for (final def in defs.allSettings) def.key];
+      expect(
+        keys.indexOf(defs.browserUserAgent.key),
+        keys.indexOf(defs.ignoreSslErrors.key) + 1,
+      );
+      expect(defs.browserUserAgent.category, defs.ignoreSslErrors.category);
+      expect(defs.browserUserAgent.section, defs.ignoreSslErrors.section);
+      expect(defs.browserUserAgent.hidden, isFalse);
+    });
+
+    test('a pasted value is stored as one clean line', () async {
+      await build({});
+      expect(
+        await settings.setFromJson(
+          'browser.user_agent',
+          '  Mozilla/5.0 (Linux; Android 10; K)\r\n\tAppleWebKit/537.36 '
+              '(KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36\n',
+        ),
+        isTrue,
+      );
+      expect(settings.get(defs.browserUserAgent), agent);
+    });
+
+    test('line breaks typed in the editor become spaces', () async {
+      await build({});
+      await settings.set(
+        defs.browserUserAgent,
+        'Mozilla/5.0 (Linux; Android 10; K)\nAppleWebKit/537.36 \n\n'
+        '(KHTML, like Gecko)\r\nChrome/130.0.0.0 Safari/537.36',
+      );
+      expect(settings.get(defs.browserUserAgent), agent);
+      expect(defs.browserUserAgent.multiline, isTrue);
+    });
+
+    test('clearing the field goes back to the default', () async {
+      await build({'ks.browser.user_agent': agent});
+      expect(settings.get(defs.browserUserAgent), agent);
+      expect(await settings.setFromJson('browser.user_agent', '  '), isTrue);
+      expect(settings.get(defs.browserUserAgent), '');
+    });
+  });
+
+  group('Fill the screen, switch to choice', () {
+    test('a stored switch carries over to the matching choice', () async {
+      await build({
+        'ks.screensaver.media_fill': true,
+        'ks.screensaver.gallery_fill': false,
+        'ks.screensaver.local_fill': true,
+        'ks.screensaver.immich_fill': false,
+      });
+      expect(settings.get(defs.screensaverMediaFill), 'smart');
+      expect(settings.get(defs.screensaverGalleryFill), 'off');
+      expect(settings.get(defs.screensaverLocalFill), 'smart');
+      expect(settings.get(defs.screensaverImmichFill), 'off');
+    });
+
+    test('an install that never touched it lands on Smart', () async {
+      await build({});
+      expect(settings.get(defs.screensaverMediaFill), 'smart');
+      expect(settings.get(defs.screensaverImmichFill), 'smart');
+    });
+
+    test('a choice already stored is left alone', () async {
+      await build({'ks.screensaver.immich_fill': 'always'});
+      expect(settings.get(defs.screensaverImmichFill), 'always');
+    });
+
+    test('the choice rejects a value outside its options', () async {
+      await build({});
+      expect(
+        await settings.setFromJson('screensaver.immich_fill', 'cover'),
+        isFalse,
+      );
+      expect(settings.get(defs.screensaverImmichFill), 'smart');
+      expect(
+        await settings.setFromJson('screensaver.immich_fill', 'always'),
+        isTrue,
+      );
+      expect(settings.get(defs.screensaverImmichFill), 'always');
+    });
+  });
+
+  test('secrets are masked in describe but report set/unset', () async {
+    await build({'ks.remote.password': 'hunter2'});
+    final described = settings.describe();
+    final pw = described.firstWhere((s) => s['key'] == 'remote.password');
+    expect(pw['value'], '__set__');
+    expect(pw['default'], isNull);
+  });
+
+  test('the DLNA port starts empty, for the renderer to fill in', () async {
+    await build({});
+    expect(settings.get(defs.dlnaPort), '');
+  });
+
+  test('the DLNA port rejects values a server cannot bind', () async {
+    await build({});
+    // Empty is the unstarted state, not an error.
+    expect(defs.dlnaPort.validator!(''), isNull);
+    expect(defs.dlnaPort.validator!('  '), isNull);
+    expect(defs.dlnaPort.validator!('2325'), isNull);
+    expect(defs.dlnaPort.validator!('80'), isNotNull);
+    expect(defs.dlnaPort.validator!('70000'), isNotNull);
+    expect(defs.dlnaPort.validator!('nonsense'), isNotNull);
+  });
+
+  test(
+    'the microphone defaults: the raw capture, cancelled, at unity',
+    () async {
+      await build({});
+      expect(settings.get(defs.micCaptureMode), 'mic');
+      expect(settings.get(defs.micSoftwareEchoCancellation), isTrue);
+      expect(settings.get(defs.micNoiseSuppression), isFalse);
+      expect(settings.get(defs.micGainDb), 0);
+      expect(settings.get(defs.micCaptureFormat), 'auto');
+    },
+  );
+
+  for (final stored in [null, true, false]) {
+    test('echo cancellation migrates on once (stored: $stored)', () async {
+      await build({'ks.audio.software_echo_cancellation': ?stored});
+      expect(settings.get(defs.micSoftwareEchoCancellation), isTrue);
+
+      // A user can turn it off again after upgrading or on a fresh install.
+      await settings.set(defs.micSoftwareEchoCancellation, false);
+      final bus = EventBus();
+      final reopened = SettingsManager(bus, CommandRegistry(log), log);
+      await reopened.init();
+      expect(reopened.get(defs.micSoftwareEchoCancellation), isFalse);
+      await reopened.dispose();
+      await bus.dispose();
+    });
+  }
+
+  test('geolocation access stored before it had a row is dropped once '
+      '(#1383)', () async {
+    await build({'ks.web.geolocation': true});
+    expect(settings.get(defs.webGeolocation), isFalse);
+
+    // Turned on from its row, it stays on.
+    await settings.set(defs.webGeolocation, true);
+    final bus = EventBus();
+    final reopened = SettingsManager(bus, CommandRegistry(log), log);
+    await reopened.init();
+    expect(reopened.get(defs.webGeolocation), isTrue);
+    await reopened.dispose();
+    await bus.dispose();
+  });
+
+  test("Amazon's wake word engine moves to vsWakeWord Alexa once while it "
+      'is off', () async {
+    PryonCatalog.enabled = false;
+    addTearDown(() => PryonCatalog.enabled = true);
+    await build({
+      'ks.voice.wake_word_engine': 'pryon',
+      'ks.voice.wake_words': '["computer","echo"]',
+    });
+    expect(settings.get(defs.voiceWakeWordEngine), 'vswakeword');
+    expect(settings.get(defs.voiceWakeWords), '["alexa"]');
+
+    // Written once: Amazon's engine set again later (an old backup, a
+    // fleet profile) is left alone, and the voice manager listens with
+    // vsWakeWord for it.
+    await settings.set(defs.voiceWakeWordEngine, 'pryon');
+    await settings.set(defs.voiceWakeWords, '["ok_nabu"]');
+    final bus = EventBus();
+    final reopened = SettingsManager(bus, CommandRegistry(log), log);
+    await reopened.init();
+    expect(reopened.get(defs.voiceWakeWordEngine), 'pryon');
+    expect(reopened.get(defs.voiceWakeWords), '["ok_nabu"]');
+    await reopened.dispose();
+    await bus.dispose();
+  });
+
+  test("Amazon's wake word engine stays while it is on", () async {
+    await build({
+      'ks.voice.wake_word_engine': 'pryon',
+      'ks.voice.wake_words': '["computer","echo"]',
+    });
+    expect(settings.get(defs.voiceWakeWordEngine), 'pryon');
+    expect(settings.get(defs.voiceWakeWords), '["computer","echo"]');
+  });
+
+  test("Amazon's wake word language is an installed locale", () async {
+    PryonCatalog.debugWords = const [
+      PryonWord(
+        id: 'echo',
+        model: 'echo-nl-NL',
+        keyword: 'ECHO',
+        locales: ['nl-NL'],
+      ),
+      PryonWord(
+        id: 'alexa',
+        model: 'alexa-en-US',
+        keyword: 'ALEXA',
+        locales: ['en-US'],
+      ),
+    ];
+    addTearDown(() => PryonCatalog.debugWords = const []);
+    await build({});
+    // The first locale until one is picked, and no app language option.
+    expect(settings.optionsFor(defs.voiceAmazonLocale), ['nl-NL', 'en-US']);
+    expect(settings.get(defs.voiceAmazonLocale), 'nl-NL');
+    await settings.set(defs.voiceAmazonLocale, 'en-US');
+    expect(settings.get(defs.voiceAmazonLocale), 'en-US');
+    // A pick whose files were removed.
+    await settings.set(defs.voiceAmazonLocale, 'de-DE');
+    expect(settings.get(defs.voiceAmazonLocale), 'nl-NL');
+  });
+
+  test('another wake word engine is not migrated', () async {
+    PryonCatalog.enabled = false;
+    addTearDown(() => PryonCatalog.enabled = true);
+    await build({
+      'ks.voice.wake_word_engine': 'microwakeword',
+      'ks.voice.wake_words': '["hey_jarvis"]',
+    });
+    expect(settings.get(defs.voiceWakeWordEngine), 'microwakeword');
+    expect(settings.get(defs.voiceWakeWords), '["hey_jarvis"]');
+  });
+
+  test('the audio faders default to full, matching old behavior', () async {
+    await build({});
+    // An untouched install must sound exactly as it did before the mixer
+    // existed: everything at the master (device) volume.
+    expect(settings.get(defs.mediaVolume), 100);
+    expect(settings.get(defs.assistantVolume), 100);
+    // Both render on the Screen & Audio page's Audio Volume card, in both
+    // UIs.
+    expect(defs.mediaVolume.category, 'Screen & Audio');
+    expect(defs.assistantVolume.category, 'Screen & Audio');
+    expect(defs.mediaVolume.section, 'Audio Volume');
+    expect(defs.assistantVolume.section, 'Audio Volume');
+  });
+
+  test('the dashboard optimizations are on by default', () async {
+    await build({});
+    // Proven across devices (0.28): every optimization defaults on. A
+    // stored false from someone who turned one off is untouched.
+    expect(settings.get(defs.disableSuspend), isTrue);
+    expect(settings.get(defs.freezeOnScreensaver), isTrue);
+    expect(settings.get(defs.wsFilter), isTrue);
+  });
+
+  test(
+    'kiosk quick actions are opt-in, with every action on by default',
+    () async {
+      await build({});
+      // The gate itself must start closed: enabling kiosk mode alone must not
+      // open any PIN-free path into the menu.
+      expect(settings.get(defs.kioskAllowDrawer), isFalse);
+      // The per-action toggles default on, so opting in is one switch.
+      expect(settings.get(defs.kioskAllowDashboard), isTrue);
+      expect(settings.get(defs.kioskAllowCamera), isTrue);
+      expect(settings.get(defs.kioskAllowScreensaver), isTrue);
+      expect(settings.get(defs.kioskAllowTheme), isTrue);
+      expect(settings.get(defs.kioskAllowSendspinPlayer), isTrue);
+      // The drawer entry the Sendspin Player action admits is itself
+      // opt-in (issue #257), so the allowed action alone shows nothing.
+      expect(settings.get(defs.sendspinPlayerShortcut), isFalse);
+    },
+  );
+
+  test(
+    'the pull-to-refresh protection defaults off, behind kiosk mode',
+    () async {
+      await build({});
+      // Off by default: enabling kiosk mode alone must not change how the
+      // gesture behaved before this setting existed.
+      expect(settings.get(defs.kioskDisablePullRefresh), isFalse);
+      expect(settings.visible(defs.kioskDisablePullRefresh), isFalse);
+      await settings.set(defs.kioskEnabled, true);
+      expect(settings.visible(defs.kioskDisablePullRefresh), isTrue);
+    },
+  );
+
+  test(
+    'the quick-action toggles surface only behind their two gates',
+    () async {
+      await build({});
+      // Transitive dependsOn: action -> allow_drawer -> kiosk.enabled.
+      expect(settings.visible(defs.kioskAllowDrawer), isFalse);
+      expect(settings.visible(defs.kioskAllowDashboard), isFalse);
+      await settings.set(defs.kioskEnabled, true);
+      expect(settings.visible(defs.kioskAllowDrawer), isTrue);
+      expect(settings.visible(defs.kioskAllowDashboard), isFalse);
+      await settings.set(defs.kioskAllowDrawer, true);
+      expect(settings.visible(defs.kioskAllowDashboard), isTrue);
+      expect(settings.visible(defs.kioskAllowCamera), isTrue);
+      expect(settings.visible(defs.kioskAllowScreensaver), isTrue);
+      expect(settings.visible(defs.kioskAllowTheme), isTrue);
+      expect(settings.visible(defs.kioskAllowSendspinPlayer), isTrue);
+      // Closing the outer gate hides the whole group again.
+      await settings.set(defs.kioskEnabled, false);
+      expect(settings.visible(defs.kioskAllowDashboard), isFalse);
+    },
+  );
+
+  group('import identity (issue #136)', () {
+    late CommandRegistry commands;
+
+    Future<void> buildWithCommands(Map<String, Object> initial) async {
+      SharedPreferences.setMockInitialValues(initial);
+      final bus = EventBus();
+      final log = Logger();
+      commands = CommandRegistry(log);
+      settings = SettingsManager(bus, commands, log);
+      await settings.init();
+    }
+
+    Map<String, Object> backup() => {
+      'config': {
+        'kind': 'kiosk-satellite-config',
+        'version': 1,
+        'settings': {'sendspin.client_id': 'backup-id'},
+      },
+    };
+
+    test('restore as a new device keeps its own Sendspin player id', () async {
+      await buildWithCommands({
+        'ks.browser.start_url': 'http://ha.local:8123',
+        'ks.sendspin.client_id': 'own-id',
+      });
+      final result = await commands.execute('importConfig', {
+        ...backup(),
+        'adoptIdentity': false,
+      });
+      expect(result.ok, isTrue);
+      // Two players under one id displace each other at the Sendspin
+      // server, so the backup's id must not come along.
+      expect(settings.get(defs.sendspinClientId), 'own-id');
+    });
+
+    test('a device that had cloned the backup id verbatim sheds it', () async {
+      await buildWithCommands({
+        'ks.browser.start_url': 'http://ha.local:8123',
+        'ks.sendspin.client_id': 'backup-id',
+      });
+      final result = await commands.execute('importConfig', {
+        ...backup(),
+        'adoptIdentity': false,
+      });
+      expect(result.ok, isTrue);
+      // "Keeping its own" would keep the collision; empty makes the
+      // Sendspin manager mint a fresh id at the next player start.
+      expect(settings.get(defs.sendspinClientId), isEmpty);
+    });
+
+    test('a replacement-device restore adopts the backup player id', () async {
+      await buildWithCommands({
+        'ks.browser.start_url': 'http://ha.local:8123',
+        'ks.sendspin.client_id': 'own-id',
+      });
+      final result = await commands.execute('importConfig', backup());
+      expect(result.ok, isTrue);
+      // The default (adoptIdentity true) is a replacement device: Music
+      // Assistant should see the same player it always had.
+      expect(settings.get(defs.sendspinClientId), 'backup-id');
+    });
+
+    Map<String, Object> leaderBackup() => {
+      'config': {
+        'kind': 'kiosk-satellite-config',
+        'version': 1,
+        'settings': {
+          'fleet.id': 'old-leader',
+          'fleet.leader': true,
+          'fleet.followers': '[{"id":"bed"}]',
+        },
+      },
+    };
+
+    test('a replacement restore takes over the leader and its id', () async {
+      await buildWithCommands({
+        'ks.browser.start_url': 'http://ha.local:8123',
+        'ks.fleet.id': 'new-device',
+      });
+      final result = await commands.execute('importConfig', leaderBackup());
+      expect(result.ok, isTrue);
+      // The followers' tokens name the old leader's id (issue #1208).
+      expect(settings.get(defs.fleetId), 'old-leader');
+      expect(settings.get(defs.fleetLeader), isTrue);
+      expect(settings.get(defs.fleetFollowers), '[{"id":"bed"}]');
+    });
+
+    test('a clone of the leader keeps its own fleet id', () async {
+      await buildWithCommands({
+        'ks.browser.start_url': 'http://ha.local:8123',
+        'ks.fleet.id': 'new-device',
+      });
+      final result = await commands.execute('importConfig', {
+        ...leaderBackup(),
+        'adoptIdentity': false,
+      });
+      expect(result.ok, isTrue);
+      expect(settings.get(defs.fleetId), 'new-device');
+      expect(settings.get(defs.fleetLeader), isFalse);
+      expect(settings.get(defs.fleetFollowers), isEmpty);
+    });
+
+    test('a clone that shared the leader id gives it up', () async {
+      await buildWithCommands({
+        'ks.browser.start_url': 'http://ha.local:8123',
+        'ks.fleet.id': 'old-leader',
+      });
+      final result = await commands.execute('importConfig', {
+        ...leaderBackup(),
+        'adoptIdentity': false,
+      });
+      expect(result.ok, isTrue);
+      // Empty: the fleet manager writes the Android ID back.
+      expect(settings.get(defs.fleetId), isEmpty);
+    });
+  });
+
+  // The raw settings dump path (/api/settings/import) used to apply the
+  // source device's identity verbatim, reintroducing the #136 collision.
+  group('shedImportedIdentity (issue #221)', () {
+    test('drops the identity keys and leaves the rest of the dump', () async {
+      await build({
+        'ks.device.name': 'Kitchen',
+        'ks.sendspin.client_id': 'own-player-id',
+      });
+      final map = <String, Object?>{
+        'device.name': 'Living Room',
+        'device.hostname': 'living-room',
+        'sendspin.client_id': 'source-player-id',
+        'screensaver.timeout_seconds': 60,
+      };
+      await settings.shedImportedIdentity(map);
+      // The identity keys must not survive to the import that follows.
+      expect(map.keys, ['screensaver.timeout_seconds']);
+      // This device's own identity is untouched: the incoming values
+      // differ, so there is no inherited collision to shed.
+      expect(settings.get(defs.deviceName), 'Kitchen');
+      expect(settings.get(defs.sendspinClientId), 'own-player-id');
+    });
+
+    test('a device that had cloned the incoming identity sheds it', () async {
+      await build({
+        'ks.device.name': 'Living Room',
+        'ks.device.hostname': 'living-room',
+        'ks.sendspin.client_id': 'source-player-id',
+      });
+      await settings.shedImportedIdentity(<String, Object?>{
+        'device.name': 'Living Room',
+        'device.hostname': 'living-room',
+        'sendspin.client_id': 'source-player-id',
+      });
+      // "Keeping its own" would keep the collision; empty makes the ids
+      // regenerate at the next Sendspin connect, and the hostname fall
+      // back to this device's own name.
+      expect(settings.get(defs.deviceName), isEmpty);
+      expect(settings.get(defs.deviceHostname), isEmpty);
+      expect(settings.get(defs.sendspinClientId), isEmpty);
+    });
+  });
+}

@@ -1,0 +1,687 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:kiosk_satellite/core/command_registry.dart';
+import 'package:kiosk_satellite/core/event_bus.dart';
+import 'package:kiosk_satellite/core/logging.dart';
+import 'package:kiosk_satellite/managers/settings/settings_manager.dart';
+import 'package:kiosk_satellite/managers/settings/definitions.dart' as defs;
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// Second-level settings pages: the `subpage` axis both UIs render from.
+/// A page that grew too long hands a group to a page of its own, reached by
+/// one entry row; the settings themselves are untouched.
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  late SettingsManager settings;
+
+  Future<void> build() async {
+    SharedPreferences.setMockInitialValues({});
+    final bus = EventBus();
+    final log = Logger();
+    settings = SettingsManager(bus, CommandRegistry(log), log);
+    await settings.init();
+  }
+
+  test(
+    'the Voice Match settings are on the Ground Control Voice Match page, right after Realtime',
+    () {
+      final vm = [
+        for (final d in defs.allSettings)
+          if (d.key.startsWith('voice_match.')) d,
+      ];
+      expect(vm.map((d) => d.key), [
+        'voice_match.enabled',
+        'voice_match.policy',
+        'voice_match.people',
+        'voice_match.rejected',
+        'voice_match.speaker_sensor',
+        'voice_match.show_speaker',
+        'voice_match.allow_enroll',
+        'voice_match.end_on_other_voice',
+        'voice_match.isolation',
+      ]);
+      for (final d in vm) {
+        expect(d.category, 'Voice Satellite', reason: d.key);
+        expect(d.subpage, 'Ground Control Voice Match', reason: d.key);
+      }
+      // Grouped by the Voice Match features, as in Ground Control.
+      expect(
+        {for (final d in vm.skip(1)) d.key: d.section},
+        {
+          'voice_match.policy': 'Recognition',
+          'voice_match.people': 'Recognition',
+          'voice_match.rejected': 'Recognition',
+          'voice_match.speaker_sensor': 'Recognition',
+          'voice_match.show_speaker': 'Recognition',
+          'voice_match.allow_enroll': 'Recognition',
+          'voice_match.end_on_other_voice': 'Trimming',
+          'voice_match.isolation': 'Isolation',
+        },
+      );
+      // Isolation runs on what Trimming sends back, so it follows Trimming.
+      expect(
+        defs.voiceMatchIsolation.dependsOn,
+        'voice_match.end_on_other_voice',
+      );
+      expect(defs.voiceMatchIsolation.defaultValue, isTrue);
+      // The switch follows Voice Satellite and Ground Control, the rest
+      // follow the switch (or the policy, for the chosen people and what
+      // happens to a voice that is not chosen).
+      expect(defs.voiceMatchEnabled.dependsOn, 'voice.enabled');
+      expect(defs.voiceMatchEnabled.alsoDependsOn, 'ground_control.enabled');
+      expect(defs.voiceMatchRejected.dependsOn, 'voice_match.policy');
+      expect(defs.voiceMatchRejected.dependsOnValue, 'people');
+      expect(defs.voiceMatchPeople.dependsOn, 'voice_match.policy');
+      expect(defs.voiceMatchPeople.dependsOnValue, 'people');
+      expect(defs.voiceMatchPolicy.options, ['anyone', 'people']);
+      expect(defs.voiceMatchPolicy.defaultValue, 'anyone');
+      final byPolicy = {defs.voiceMatchRejected, defs.voiceMatchPeople};
+      for (final d in vm.where(
+        (d) =>
+            d != defs.voiceMatchEnabled &&
+            d != defs.voiceMatchIsolation &&
+            !byPolicy.contains(d),
+      )) {
+        expect(d.dependsOn, 'voice_match.enabled', reason: d.key);
+      }
+      // Entry rows follow allSettings: Voice Match comes after Realtime.
+      final pages = <String>[];
+      for (final d in defs.allSettings) {
+        if (d.category == 'Voice Satellite' &&
+            d.subpage != null &&
+            !pages.contains(d.subpage)) {
+          pages.add(d.subpage!);
+        }
+      }
+      expect(
+        pages.indexOf('Ground Control Voice Match'),
+        pages.indexOf('Realtime') + 1,
+      );
+      expect(defs.subpageHints['Ground Control Voice Match'], isNotEmpty);
+    },
+  );
+
+  test('the chosen people are stored by id and name, each once', () {
+    expect(defs.decodeVoiceMatchPeople('[]'), isEmpty);
+    expect(defs.decodeVoiceMatchPeople('not json'), isEmpty);
+    expect(defs.decodeVoiceMatchPeople('{"id": "a"}'), isEmpty);
+    final picks = defs.decodeVoiceMatchPeople(
+      '[{"id": "a", "name": "Ana"}, {"id": "a", "name": "Ana"}, {"id": "b"}, {"name": "x"}, 3]',
+    );
+    expect(picks, [(id: 'a', name: 'Ana'), (id: 'b', name: '')]);
+    expect(
+      defs.normalizeVoiceMatchPeople('[{"id": "a", "name": "Ana"}, 3]'),
+      '[{"id":"a","name":"Ana"}]',
+    );
+  });
+
+  test('Ground Control has its own page, with the connection on it', () {
+    final gc = [
+      for (final d in defs.allSettings)
+        if (d.key.startsWith('ground_control.')) d,
+    ];
+    expect(gc.map((d) => d.key), [
+      'ground_control.enabled',
+      'ground_control.address',
+      'ground_control.voice_match',
+    ]);
+    for (final d in gc) {
+      expect(d.category, 'Ground Control', reason: d.key);
+      expect(d.subpage, isNull, reason: d.key);
+    }
+    expect(defs.groundControlAddress.dependsOn, 'ground_control.enabled');
+    // Features, after Connection: Voice Match opens its page under Voice
+    // Satellite, at its switch.
+    expect(defs.groundControlAddress.section, 'Connection');
+    expect(defs.groundControlVoiceMatch.section, 'Features');
+    expect(defs.groundControlVoiceMatch.linksTo, defs.voiceMatchEnabled.key);
+    expect(defs.voiceMatchEnabled.subpage, 'Ground Control Voice Match');
+    // Nothing on the Voice Match page still connects to the service.
+    expect(
+      defs.allSettings.where((d) => d.key == 'voice_match.address'),
+      isEmpty,
+    );
+  });
+
+  test('the timer settings are on the Timers page, the sound included', () {
+    final timers = [
+      for (final d in defs.allSettings)
+        if (!d.hidden && d.category == 'Timers') d.key,
+    ];
+    expect(timers, contains(defs.voiceTimerPills.key));
+    expect(timers, contains(defs.voiceTimersShareWith.key));
+    expect(timers, contains(defs.voiceChimeTimer.key));
+    expect(timers, contains(defs.voiceChimeTimerVolume.key));
+    expect(
+      defs.allSettings.where(
+        (d) => d.category == 'Voice Satellite' && d.subpage == 'Timers',
+      ),
+      isEmpty,
+    );
+    // The page has no pages of its own.
+    expect(
+      defs.allSettings.where(
+        (d) => d.category == 'Timers' && d.subpage != null,
+      ),
+      isEmpty,
+    );
+    // The pills switch shows for both voice runtimes, under Enable timers
+    // alone (issue #1508).
+    expect(defs.voiceTimerPills.dependsOn, defs.timersEnabled.key);
+    // Timers is a fleet category of its own. Share with and the sound
+    // stay on each kiosk.
+    expect(defs.fleetCategoryOf(defs.voiceTimerPills), 'Timers');
+    expect(defs.fleetSyncCategories.map((c) => c.$1), contains('Timers'));
+    expect(defs.voiceTimersShareWith.perDevice, isTrue);
+    expect(defs.voiceChimeTimer.perDevice, isTrue);
+  });
+
+  test('the Timers groups run Shared timers, When a timer ends, Text to '
+      'Speech, Pills', () {
+    final sections = <String>[];
+    // The untitled card on top: Enable timers, the near completion slider,
+    // then the link to Drawer menu items.
+    expect(
+      [
+        for (final d in defs.allSettings)
+          if (d.category == 'Timers' && d.section == null && !d.hidden) d.key,
+      ],
+      [
+        defs.timersEnabled.key,
+        defs.timersShowOnStart.key,
+        defs.timersShowBeforeEnd.key,
+        defs.timersPauseScreensaver.key,
+        defs.timersMenu.key,
+      ],
+    );
+    expect(defs.timersShowOnStart.defaultValue, isTrue);
+    expect(defs.timersPauseScreensaver.defaultValue, isFalse);
+    expect(defs.timersShowBeforeEnd.min, 30);
+    expect(defs.timersShowBeforeEnd.max, 300);
+    expect(defs.timersShowBeforeEnd.step, 30);
+    expect(defs.timersMenu.linksTo, defs.uiDrawerItems.key);
+    for (final d in defs.allSettings) {
+      if (d.hidden || d.category != 'Timers' || d.section == null) continue;
+      if (sections.isEmpty || sections.last != d.section) {
+        sections.add(d.section!);
+      }
+    }
+    expect(sections, [
+      'Shared timers',
+      'When a timer ends',
+      'Text to Speech',
+      'Pills',
+    ]);
+    // The engine shows with Speak when a timer ends, its language and
+    // voice once an engine is picked. Empty is First available, as on Alarms.
+    expect(defs.timersTtsEngine.dependsOn, defs.voiceTimerSpeak.key);
+    expect(defs.timersTtsEngine.defaultValue, '');
+    expect(defs.timersTtsLanguage.dependsOn, defs.timersTtsEngine.key);
+    expect(defs.timersTtsVoice.dependsOn, defs.timersTtsEngine.key);
+    expect(defs.voiceTimerAlertPill.section, 'Pills');
+  });
+
+  test('the pill rows show only with Show timers as pills on', () async {
+    SharedPreferences.setMockInitialValues({'ks.voice.enabled': true});
+    final bus = EventBus();
+    final log = Logger();
+    final s = SettingsManager(bus, CommandRegistry(log), log);
+    await s.init();
+    final rows = [
+      defs.voiceTimerNameInPill,
+      defs.voiceTimerPillScale,
+      defs.voiceTimerAlertPill,
+      defs.voiceTimerNameOnAlert,
+    ];
+    for (final d in rows) {
+      expect(s.visible(d), isFalse, reason: d.key);
+    }
+    await s.set(defs.voiceTimerPills, true);
+    for (final d in rows) {
+      expect(s.visible(d), isTrue, reason: d.key);
+    }
+  });
+
+  test(
+    'an install with pills stored moves to the full screen view once',
+    () async {
+      SharedPreferences.setMockInitialValues({'ks.voice.timer_pills': true});
+      final bus = EventBus();
+      final log = Logger();
+      var s = SettingsManager(bus, CommandRegistry(log), log);
+      await s.init();
+      expect(s.get(defs.voiceTimerPills), isFalse);
+      // Turned back on by hand, it stays on.
+      await s.set(defs.voiceTimerPills, true);
+      s = SettingsManager(bus, CommandRegistry(log), log);
+      await s.init();
+      expect(s.get(defs.voiceTimerPills), isTrue);
+    },
+  );
+
+  test('the Home Assistant User Interface page holds both groups', () {
+    final moved = [
+      for (final d in defs.allSettings)
+        if (d.subpage == 'User Interface') d,
+    ];
+    // Both former top-level groups, and nothing else.
+    expect(moved.map((d) => d.section).toSet(), {'User Interface', 'Haptics'});
+    expect(moved.every((d) => d.category == 'Home Assistant'), isTrue);
+    // The sections survive the move: they are the cards *inside* the page.
+    expect(
+      moved.map((d) => d.key),
+      containsAll([
+        defs.haKioskMode.key,
+        defs.haDashboardCarousel.key,
+        defs.haHaptics.key,
+        defs.haTapSound.key,
+      ]),
+    );
+  });
+
+  test('the Home Assistant page keeps only its connection and dashboard', () {
+    // What is left at the top level after the move: the connection rows the
+    // rest of the page waits behind. Everything else opens a page of its own.
+    final top = [
+      for (final d in defs.allSettings)
+        if (d.category == 'Home Assistant' && !d.hidden && d.subpage == null)
+          d.key,
+    ];
+    expect(top, [defs.haUrl.key, defs.haToken.key, defs.haAutoLogin.key]);
+  });
+
+  test('the entry rows come out in page order', () {
+    // Both UIs put each entry row where that group's first setting sat, so
+    // allSettings order *is* the order of the rows on the page.
+    final order = <String>[];
+    for (final d in defs.allSettings) {
+      if (d.category != 'Home Assistant' || d.subpage == null) continue;
+      if (!order.contains(d.subpage)) order.add(d.subpage!);
+    }
+    expect(order, [
+      'User Interface',
+      'Theme',
+      'Dashboard View Rotation',
+      'Return to home dashboard view',
+      'Hold mode',
+      'Optimizations',
+    ]);
+  });
+
+  test('every subpage a setting declares has an entry-row hint', () {
+    for (final def in defs.allSettings) {
+      if (def.subpage == null) continue;
+      expect(
+        defs.subpageHints[def.subpage],
+        isNotNull,
+        reason: '${def.subpage} (from ${def.key}) has no hint',
+      );
+    }
+  });
+
+  test('a subpage never splits a section across two pages', () {
+    // A section straddling the boundary between the category page and one
+    // of its subpages would render as two cards with one heading, and
+    // syncGatedRows in the remote UI could not place a row. Two subpages
+    // may each have a group of the same name, such as User Interface on
+    // Now Playing and on Music Library: both UIs draw a subpage on its
+    // own and syncGatedRows compares the subpage.
+    final pageOf = <String, Set<String?>>{};
+    for (final def in defs.allSettings) {
+      if (def.section == null) continue;
+      (pageOf['${def.category}/${def.section}'] ??= {}).add(def.subpage);
+    }
+    for (final entry in pageOf.entries) {
+      if (entry.value.length < 2) continue;
+      expect(entry.value, isNot(contains(null)), reason: entry.key);
+    }
+  });
+
+  test('a gated row is on its gate\'s page, or on one below it', () {
+    // Where a gate and its dependants share a page, both UIs bring the rows
+    // in and out in place. Where they do not, the remote's syncGatedRows
+    // refuses (its sameCard compares the subpage) and the caller re-renders
+    // instead, which is correct but heavier — so the only cross-page shape
+    // allowed is the deliberate one: a switch on the category page opening a
+    // page of its own, as the screensaver mode does for its six modes.
+    // A hidden gate is exempt either way: it draws no row, so nothing ever
+    // flips it from a page.
+    final byKey = {for (final d in defs.allSettings) d.key: d};
+    for (final def in defs.allSettings) {
+      final gate = def.dependsOn == null ? null : byKey[def.dependsOn];
+      if (gate == null || gate.hidden || gate.subpage == null) continue;
+      expect(def.subpage, gate.subpage, reason: '${def.key} vs ${gate.key}');
+    }
+  });
+
+  test('the screensaver mode pages exist only while that mode is picked', () {
+    // Every setting on the mode pages gates on the mode select, so the row
+    // that opens the page comes and goes with the mode — the group's own
+    // behaviour before it moved. The other modes keep their group inline.
+    // Home Assistant Media's playlist rows gate on the hidden folder flag,
+    // which itself gates on the mode; the walk below follows that chain.
+    for (final page in [
+      'Clock screensaver',
+      'Home Assistant Media screensaver',
+      'Local Media screensaver',
+      'Photo Gallery screensaver',
+      'Immich Media screensaver',
+      'Camera Streams screensaver',
+    ]) {
+      final rows = [
+        for (final d in defs.allSettings)
+          if (d.subpage == page) d,
+      ];
+      expect(rows, isNotEmpty, reason: page);
+      // Directly or through one of its own rows, each one hangs off the mode.
+      final byKey = {for (final d in defs.allSettings) d.key: d};
+      for (final row in rows) {
+        var d = row;
+        while (d.dependsOn != null && d.subpage == page) {
+          d = byKey[d.dependsOn!]!;
+        }
+        expect(d.key, defs.screensaverMode.key, reason: row.key);
+      }
+    }
+  });
+
+  test('the Voice Satellite Wake Word page holds the detection settings', () {
+    // On the dashboard runtime the rest of that page is live rows from the
+    // integration; native Voice Satellite adds its own engine, the language
+    // of Amazon's engine, sensitivity, noise gate and stop word (the wake
+    // words are Home Assistant's selects).
+    final moved = [
+      for (final d in defs.allSettings)
+        if (d.subpage == 'Wake Word') d.key,
+    ];
+    expect(moved, [
+      defs.wakeWordPreferFp32.key,
+      defs.wakeWordResumeTimeoutSeconds.key,
+      defs.voiceWakeWordEngine.key,
+      defs.voiceAmazonLocale.key,
+      defs.voiceWakeWordSensitivity.key,
+      defs.voiceWakeWordFineTune.key,
+      defs.voiceNoiseGate.key,
+      defs.voiceStopWord.key,
+      defs.voiceStopWordFineTune.key,
+      defs.voiceWakeArbitration.key,
+      defs.voiceWakeArbitrationWindowMs.key,
+      defs.voiceWakeArbitrationOffsetDb.key,
+    ]);
+    // Diagnostics is a page of its own, opened from the tester's group.
+    expect(defs.wakeWordDiagnostics.subpage, 'Wake word diagnostics');
+    expect(defs.subpageHints, contains('Wake word diagnostics'));
+    // Keep listening in the background stays in General on the page above.
+    expect(defs.wakeWordBackground.subpage, isNull);
+  });
+
+  test('the Screen & Audio capture tuning is a page of its own', () {
+    final moved = [
+      for (final d in defs.allSettings)
+        if (d.subpage == 'Microphone settings') d.key,
+    ];
+    expect(moved, [
+      defs.micCaptureMode.key,
+      defs.micSoftwareEchoCancellation.key,
+      defs.micEchoCancellationMethod.key,
+      defs.micNoiseSuppression.key,
+      defs.micGainDb.key,
+      defs.micCaptureFormat.key,
+      // Hidden and hand-built (its options run to the mic's channel count),
+      // but it belongs to that page too.
+      defs.micChannel.key,
+    ]);
+    // The mixer and the device pickers stay on the page above.
+    expect(defs.mediaVolume.subpage, isNull);
+    expect(defs.audioMicDevice.subpage, isNull);
+  });
+
+  test('the equalizer is a page of its own under Microphone settings', () {
+    final keys = [for (final d in defs.allSettings) d.key];
+    final page = [
+      for (final d in defs.allSettings)
+        if (d.subpage == 'Equalizer') d.key,
+    ];
+    expect(page, [
+      defs.equalizerEnabled.key,
+      for (final band in defs.equalizerBands) band.key,
+      defs.equalizerPreamp.key,
+    ]);
+    expect(defs.subpageHints, contains('Equalizer'));
+    // The remote puts a page's entry row where its first setting sits.
+    expect(
+      keys.indexOf(defs.equalizerEnabled.key),
+      greaterThan(keys.indexOf(defs.micChannel.key)),
+    );
+    for (final d in defs.allSettings.where((d) => d.subpage == 'Equalizer')) {
+      // A speaker correction belongs to its device.
+      expect(d.perDevice, isTrue, reason: d.key);
+      expect(d.category, 'Screen & Audio');
+      if (d != defs.equalizerEnabled) {
+        expect(d.dependsOn, defs.equalizerEnabled.key, reason: d.key);
+      }
+    }
+    // Off and flat until someone sets it, with the preamp ready.
+    expect(defs.equalizerEnabled.defaultValue, isFalse);
+    expect(defs.equalizerPreamp.defaultValue, isTrue);
+    for (final band in defs.equalizerBands) {
+      expect(band.defaultValue, 0);
+    }
+  });
+
+  test('the ESPHome Notifications page holds appearance and sound', () {
+    final moved = [
+      for (final d in defs.allSettings)
+        if (d.subpage == 'Notifications') d.key,
+    ];
+    expect(moved, [
+      defs.notificationsTransparency.key,
+      defs.notificationsBlur.key,
+      defs.notificationsChimeFile.key,
+      defs.notificationsVolume.key,
+    ]);
+    expect(defs.notificationsTransparency.section, 'Appearance');
+    expect(defs.notificationsBlur.section, 'Appearance');
+    expect(defs.notificationsChimeFile.section, 'Sound');
+    expect(defs.notificationsVolume.section, 'Sound');
+    // Its entry row sits above the Bluetooth Proxy one: entry order
+    // follows allSettings.
+    final keys = defs.allSettings.map((d) => d.key).toList();
+    expect(
+      keys.indexOf(defs.notificationsChimeFile.key),
+      lessThan(keys.indexOf(defs.btproxyEnabled.key)),
+    );
+    expect(defs.subpageHints, contains('Notifications'));
+  });
+
+  test('the Person Detection page holds its switches, under Proximity', () {
+    final page = [
+      for (final d in defs.allSettings)
+        if (d.subpage == 'Person Detection') d.key,
+    ];
+    expect(page, [
+      defs.screensaverDismissOnPerson.key,
+      defs.screensaverDismissOnPersonScreenOffOnly.key,
+      defs.screensaverPostponeOnPerson.key,
+    ]);
+    expect(defs.screensaverDismissOnPerson.section, 'Person Detection');
+    expect(defs.screensaverDismissOnPerson.dependsOn, isNull);
+    expect(
+      defs.screensaverPostponeOnPerson.dependsOn,
+      defs.screensaverDismissOnPerson.key,
+    );
+    final keys = defs.allSettings.map((d) => d.key).toList();
+    expect(
+      keys.indexOf(defs.screensaverDismissOnPerson.key),
+      greaterThan(keys.indexOf(defs.screensaverPostponeOnProximity.key)),
+    );
+    expect(defs.subpageHints, contains('Person Detection'));
+  });
+
+  test('the Person Sensor page holds its switch, under Motion Sensor, '
+      'free of the Camera switch (issue #734)', () {
+    expect(
+      [
+        for (final d in defs.allSettings)
+          if (d.subpage == 'Person Sensor') d.key,
+      ],
+      [defs.personSensorEnabled.key],
+    );
+    expect(defs.personSensorEnabled.category, 'Camera');
+    expect(defs.personSensorEnabled.section, 'Person Sensor');
+    expect(defs.personSensorEnabled.dependsOn, isNull);
+    final keys = defs.allSettings.map((d) => d.key).toList();
+    expect(
+      keys.indexOf(defs.personSensorEnabled.key),
+      greaterThan(keys.indexOf(defs.motionStartDelay.key)),
+    );
+    expect(
+      keys.indexOf(defs.personSensorEnabled.key),
+      lessThan(keys.indexOf(defs.cameraRtspEnabled.key)),
+    );
+    expect(defs.subpageHints, contains('Person Sensor'));
+  });
+
+  test('a device-hidden definition is hidden in describe() too', () async {
+    await build();
+    defs.deviceHiddenKeys.add(defs.screensaverDismissOnPerson.key);
+    try {
+      final row = settings.describe().firstWhere(
+        (d) => d['key'] == defs.screensaverDismissOnPerson.key,
+      );
+      expect(row['hidden'], isTrue);
+    } finally {
+      defs.deviceHiddenKeys.clear();
+    }
+    final row = settings.describe().firstWhere(
+      (d) => d['key'] == defs.screensaverDismissOnPerson.key,
+    );
+    expect(row['hidden'], isNull);
+  });
+
+  test('the ESPHome GPS Sensor page holds the switch and its interval', () {
+    final moved = [
+      for (final d in defs.allSettings)
+        if (d.subpage == 'GPS Sensor') d.key,
+    ];
+    expect(moved, [defs.locationEnabled.key, defs.locationInterval.key]);
+    expect(defs.locationInterval.section, 'GPS Sensor');
+    // The switch rides the entities switch on the page above (the
+    // screensaver-mode shape: the whole page comes and goes with it), and
+    // the interval rides the switch on its own page.
+    expect(defs.locationEnabled.dependsOn, defs.esphomeEntities.key);
+    expect(defs.esphomeEntities.subpage, isNull);
+    expect(defs.locationInterval.dependsOn, defs.locationEnabled.key);
+    // Under the Bluetooth Proxy page, above Advanced settings.
+    final keys = defs.allSettings.map((d) => d.key).toList();
+    expect(
+      keys.indexOf(defs.locationEnabled.key),
+      greaterThan(keys.indexOf(defs.btproxyNearbySort.key)),
+    );
+    expect(
+      keys.indexOf(defs.locationEnabled.key),
+      lessThan(keys.indexOf(defs.esphomeRealMac.key)),
+    );
+    expect(defs.subpageHints, contains('GPS Sensor'));
+  });
+
+  test(
+    'the Device Phoenix Portal Analytics page holds the three switches',
+    () {
+      final moved = [
+        for (final d in defs.allSettings)
+          if (d.subpage == 'Phoenix Portal Analytics') d.key,
+      ];
+      expect(moved, [
+        defs.analyticsBasic.key,
+        defs.analyticsUsage.key,
+        defs.analyticsDiagnostics.key,
+      ]);
+      // Off by default in Phoenix Portal (opt-in), and not per device: a fleet decides once.
+      for (final d in [
+        defs.analyticsBasic,
+        defs.analyticsUsage,
+        defs.analyticsDiagnostics,
+      ]) {
+        expect(d.defaultValue, isFalse, reason: d.key);
+        expect(d.perDevice, isFalse, reason: d.key);
+        expect(d.category, 'Device', reason: d.key);
+        // The one section is named after the page, so the page shows no
+        // heading above the card.
+        expect(d.section, 'Phoenix Portal Analytics', reason: d.key);
+      }
+      // The last Device group: after the Shizuku page, before Fleet.
+      final keys = defs.allSettings.map((d) => d.key).toList();
+      expect(
+        keys.indexOf(defs.analyticsBasic.key),
+        greaterThan(keys.indexOf(defs.shizukuInstallUpdates.key)),
+      );
+      final lastDevice = defs.allSettings.lastWhere(
+        (d) => d.category == 'Device',
+      );
+      expect(lastDevice.key, defs.analyticsDiagnostics.key);
+      expect(defs.subpageHints, contains('Phoenix Portal Analytics'));
+    },
+  );
+
+  test('the ESPHome Bluetooth half is one page', () {
+    final moved = [
+      for (final d in defs.allSettings)
+        if (d.subpage == 'Bluetooth Proxy') d.key,
+    ];
+    expect(moved, [
+      defs.btproxyEnabled.key,
+      defs.btproxyScanDuty.key,
+      defs.btproxyScreenOffScan.key,
+      defs.btproxyDeviceMac.key,
+      defs.btproxyConnections.key,
+      defs.btproxyMinConnectRssi.key,
+      defs.btproxyMacLookup.key,
+      defs.btproxyNearbySort.key,
+    ]);
+    // Both groups: the proxy's own settings and the nearby list's, which
+    // keeps its heading inside the page.
+    expect(defs.btproxyNearbySort.section, 'Nearby devices');
+    // The entity server's own settings stay on the page above — the API
+    // port and key are ESPHome's, not the proxy's.
+    expect(defs.btproxyPort.subpage, isNull);
+    expect(defs.esphomeEntities.subpage, isNull);
+  });
+
+  test('the Kiosk allowed actions are one page', () {
+    final moved = [
+      for (final d in defs.allSettings)
+        if (d.subpage == 'Allowed Actions') d.key,
+    ];
+    // The menu's own switch leads, then the action it gates, one per row,
+    // then the apps a locked launcher offers.
+    expect(moved.first, defs.kioskAllowDrawer.key);
+    expect(moved, hasLength(17));
+    expect(moved.last, defs.kioskAllowedApps.key);
+    // The protections stay on the page above: they are what kiosk mode is.
+    expect(defs.kioskExitGesture.subpage, isNull);
+    expect(defs.kioskDisableStatusBar.subpage, isNull);
+  });
+
+  test('every second-level page has a hint, defless ones included', () {
+    // Voice Satellite's two pages carry no settings of their own, so their
+    // names only exist here and in the two UIs that place them.
+    expect(defs.subpageHints.containsKey('Wake Word'), isTrue);
+    expect(defs.subpageHints.containsKey('Appearance'), isTrue);
+  });
+
+  test('describe() names each setting\'s page for the remote UI', () async {
+    await build();
+    final described = settings.describe();
+    final haptics = described.firstWhere((s) => s['key'] == 'ha.haptics');
+    expect(haptics['subpage'], 'User Interface');
+    // Sections are unchanged: the page groups its cards the same way.
+    expect(haptics['section'], 'Haptics');
+    // A setting that stayed on the category page says nothing about pages.
+    final url = described.firstWhere((s) => s['key'] == 'ha.url');
+    expect(url.containsKey('subpage'), isFalse);
+    // The hints ride beside the definitions rather than on each one: a page
+    // with no settings of its own still needs a label for its entry row.
+    expect(described.every((s) => !s.containsKey('subpageHint')), isTrue);
+  });
+}

@@ -1,0 +1,19 @@
+{
+  "name": "phoenix-control",
+  "private": true,
+  "type": "module",
+  "description": "Phoenix Control: set up and manage Phoenix Portal devices from the browser over WebUSB.",
+  "scripts": {
+    "build": "esbuild src/app.js --bundle --format=esm --target=es2022 --minify --sourcemap --outfile=dist/app.js",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@yume-chan/adb": "^2.6.4",
+    "@yume-chan/adb-credential-web": "^2.1.0",
+    "@yume-chan/adb-daemon-webusb": "^2.3.2",
+    "@yume-chan/stream-extra": "^2.6.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

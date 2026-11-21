@@ -1,0 +1,56 @@
+name: Phoenix Control
+
+# Tests and builds the Phoenix Control web app (control/) and publishes it to
+# GitHub Pages, so it is served over HTTPS as WebUSB requires:
+# https://<owner>.github.io/<repo>/
+on:
+  push:
+    branches: [main]
+    paths: ['control/**', '.github/workflows/control-pages.yml']
+  pull_request:
+    paths: ['control/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: control-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: control
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Stage the site
+        run: |
+          mkdir -p ../_site/dist
+          cp index.html styles.css mark.svg manifest.webmanifest ../_site/
+          cp dist/app.js ../_site/dist/
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
+        with:
+          path: _site
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

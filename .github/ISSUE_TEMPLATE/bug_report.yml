@@ -1,86 +1,116 @@
-name: Bug report
-description: Report a problem with Immortal (launcher, screensaver, store, installs, or the provisioning kit)
-title: "[Bug] <short summary>"
+name: Bug Report
+description: Report a bug with the Kiosk Satellite app
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for the report! A few details make bugs much faster to fix — the
-        Portal model and Android version matter a lot, especially on the first-gen
-        Portal+ (Android 9).
-  - type: textarea
-    id: what
+        Thanks for taking the time to report a bug! The logs sections at the bottom are not optional: reports without the logs their category requires are labeled `needs-logs` automatically and closed if the logs are not added.
+
+        **Never paste your configuration export here.** It contains your Home Assistant token, passwords and API keys.
+
+  - type: checkboxes
+    id: prerequisites
     attributes:
-      label: What happened?
-      description: A clear description of the problem.
-    validations: { required: true }
+      label: Prerequisites checklist
+      description: Please confirm these before opening an issue.
+      options:
+        - label: I am running the **latest Kiosk Satellite release** (check Settings or the About tab of the remote admin against the latest GitHub release).
+          required: true
+        - label: I have **searched the existing issues** and this has not been reported already.
+          required: true
+        - label: If the issue is voice related, my Assist pipeline works on its own (e.g. via the Assist dialog in the HA sidebar).
+          required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area affected
+      description: Pick the closest match. This decides which logs we will ask you for below.
+      options:
+        - Voice / wake word (Voice Satellite)
+        - Crash, freeze, white screen, or restart
+        - Dashboard page (loading, rendering, scrolling)
+        - Screensaver (clock, photos, Immich, media)
+        - Audio output (chimes, TTS, Bluetooth, speaker/mic selection)
+        - MQTT / Home Assistant entities
+        - Media and cameras (SendSpin, DLNA, camera views)
+        - Remote administration
+        - Setup wizard / configuration import
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: A clear description of what happens, and how often (every time, after a few hours, once so far).
+      placeholder: "After a few hours the dashboard goes white, but the remote admin still responds..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What you expected to happen instead.
+    validations:
+      required: true
+
   - type: textarea
     id: steps
     attributes:
       label: Steps to reproduce
+      description: If you can trigger it on demand, list the steps. If it just happens over time, describe the conditions (screensaver active, overnight, during music playback, ...).
       placeholder: |
-        1.
-        2.
-        3.
-    validations: { required: true }
+        1. ...
+        2. ...
+    validations:
+      required: false
+
   - type: textarea
-    id: expected
+    id: environment
     attributes:
-      label: What did you expect to happen?
-  - type: dropdown
-    id: model
-    attributes:
-      label: Portal model
-      options:
-        - Portal Go
-        - Portal Mini
-        - Portal (gen-2)
-        - Portal+
-        - Portal+ (Gen-1, Android 9)
-        - Portal TV
-        - Not sure
-    validations: { required: true }
-  - type: input
-    id: android
-    attributes:
-      label: Android version
-      description: Settings -> About (e.g. "Android 9" / "API 28").
-  - type: dropdown
-    id: area
-    attributes:
-      label: Which part?
-      options:
-        - Launcher / home screen
-        - Screensaver / photo frame
-        - App Store (installing a listed app)
-        - Install with Immortal / sideloading an APK
-        - Aurora / Play-Store apps (Shizuku)
-        - Provisioning kit (setup or restore)
-        - Self-update
-        - Other / not sure
-    validations: { required: true }
-  - type: dropdown
-    id: provisioned
-    attributes:
-      label: Set up with the provisioning kit?
-      options: [Yes, "No — installed manually", Not sure]
-  - type: input
-    id: version
-    attributes:
-      label: Immortal version
-      description: Shown on the "App Store" / update tile, or via adb. e.g. 1.9
+      label: Environment
+      description: All of these matter. App version and Android version are in Settings and in the remote admin's About tab.
+      value: |
+        - Kiosk Satellite version:
+        - Device (exact model, e.g. Fire HD 8 2020, Echo Show 5 2nd gen, Galaxy Tab A8):
+        - Android version (and OS flavor if not stock, e.g. Fire OS, LineageOS):
+        - Home Assistant version:
+        - Voice Satellite integration version (only if you use it instead of the built-in Voice Satellite):
+        - Dashboard URL scheme (https, or http with the secure context proxy):
+        - Relevant settings (wake word on/off, WebSocket filter on/off, screensaver mode, Bluetooth devices in use):
+    validations:
+      required: true
+
   - type: textarea
-    id: logs
+    id: app-logs
     attributes:
-      label: Logs / screenshots (optional)
+      label: App logs
       description: |
-        Anything that helps — a photo of the screen, or `adb logcat` output. Please
-        scrub anything personal.
-  - type: checkboxes
-    id: confirm
+        On the device: **Settings > App Logs**. From a browser: enable Remote Administration, open `http://<device-ip>:2324`, **Logs** tab. Paste the lines around the time the problem happened. For a voice issue, include a full attempt from the wake word onward.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: console-logs
     attributes:
-      label: Before submitting
-      options:
-        - label: I searched existing issues and didn't find a duplicate.
-          required: true
+      label: Web console logs (required for dashboard issues)
+      description: |
+        The dashboard page's own JavaScript console. From a browser: remote admin at `http://<device-ip>:2324`, **Console** tab. Reproduce the issue, then paste the lines around it. The built-in Voice Satellite logs to the app log above, not here. If you run the Voice Satellite integration on the dashboard instead, enable **Debug Logging** in its sidepanel in Home Assistant first and paste a full attempt from the wake word onward (lines prefixed `[VS]`).
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: logcat
+    attributes:
+      label: Logcat (required for crashes, freezes, white screens, or restarts)
+      description: |
+        The Android system log, which records renderer crashes and OS-level kills the app's own log cannot see. On the device: **Settings > App Logs**, switch the source to **Logcat**. From a browser: remote admin **Logs** tab, switch the source to **Logcat**. Paste the section around the crash (error and warning filters on is fine).
+      render: text
+    validations:
+      required: false

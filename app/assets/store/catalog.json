@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "note": "Phoenix Portal's curated app store. Every entry is free and open source on F-Droid; the app resolves the current APK from F-Droid when it installs, so this file never goes stale. Lemuroid plays games you own or legally redistributable homebrew; no games are shipped.",
+  "categories": ["Games", "Kids & learning", "Media", "Smart home", "Tools"],
+  "apps": [
+    {"package": "com.swordfish.lemuroid", "name": "Lemuroid", "category": "Games", "icon": "videogame", "summary": "Retro console emulator with big touch controls. Play your own cartridges or free homebrew games."},
+    {"package": "org.supertuxkart.stk", "name": "SuperTuxKart", "category": "Games", "icon": "kart", "summary": "3D kart racing with Tux and friends. Great with a gamepad."},
+    {"package": "org.lichess.mobileV2", "name": "Lichess", "category": "Games", "icon": "chess", "summary": "Play chess, solve puzzles and learn with lessons. No ads."},
+    {"package": "org.secuso.privacyfriendlysudoku", "name": "Sudoku", "category": "Games", "icon": "grid", "summary": "Classic number puzzles from easy to hard."},
+    {"package": "io.anuke.mindustry", "name": "Mindustry", "category": "Games", "icon": "factory", "summary": "Build factories and defend your base. For older kids."},
+    {"package": "net.gcompris.full", "name": "GCompris", "category": "Kids & learning", "icon": "school", "summary": "More than 100 learning games for ages 2 to 10: letters, numbers, science, art."},
+    {"package": "org.tuxpaint", "name": "Tux Paint", "category": "Kids & learning", "icon": "palette", "summary": "The friendly drawing program for children, with stamps and magic tools."},
+    {"package": "org.secuso.privacyfriendlymemory", "name": "Memory", "category": "Kids & learning", "icon": "memory", "summary": "Card-matching memory game with many themes."},
+    {"package": "com.ichi2.anki", "name": "AnkiDroid", "category": "Kids & learning", "icon": "cards", "summary": "Flashcards for spelling, times tables and languages."},
+    {"package": "org.videolan.vlc", "name": "VLC", "category": "Media", "icon": "play", "summary": "Plays almost any video or music file and network stream."},
+    {"package": "org.jellyfin.mobile", "name": "Jellyfin", "category": "Media", "icon": "movie", "summary": "Your own movies and shows from a Jellyfin server."},
+    {"package": "org.schabi.newpipe", "name": "NewPipe", "category": "Media", "icon": "smart_display", "summary": "YouTube without ads or an account, with background play."},
+    {"package": "de.danoeh.antennapod", "name": "AntennaPod", "category": "Media", "icon": "podcast", "summary": "Podcasts, including stories for kids."},
+    {"package": "io.homeassistant.companion.android.minimal", "name": "Home Assistant", "category": "Smart home", "icon": "home", "summary": "The official companion app (minimal, no Google services)."},
+    {"package": "org.fdroid.fdroid", "name": "F-Droid", "category": "Tools", "icon": "store", "summary": "The free and open source app store, for everything else."},
+    {"package": "com.aurora.store", "name": "Aurora Store", "category": "Tools", "icon": "store_alt", "summary": "Install apps from Google Play without a Google account."},
+    {"package": "me.zhanghai.android.files", "name": "Material Files", "category": "Tools", "icon": "folder", "summary": "File manager for photos, downloads and USB drives."}
+  ]
+}
