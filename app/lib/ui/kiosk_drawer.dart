@@ -114,9 +114,11 @@ class KioskDrawer extends StatelessWidget {
       // With the launcher enabled and apps actually whitelisted. The
       // restricted menu needs an app the locked kiosk allows.
       'apps' =>
-        allowed(defs.kioskAllowApps) &&
-            c.settings.get(defs.launcherEnabled) &&
-            (restricted ? c.launcher.kioskApps : c.launcher.apps).isNotEmpty,
+        (c.phoenixHome.active.value && !restricted) ||
+            (allowed(defs.kioskAllowApps) &&
+                c.settings.get(defs.launcherEnabled) &&
+                (restricted ? c.launcher.kioskApps : c.launcher.apps)
+                    .isNotEmpty),
       // Restart Device (issue #528): only where the restart can land, as
       // device owner or over a granted Shizuku connection.
       'restart' => !restricted && c.kiosk.rebootSupported.value,
@@ -462,6 +464,14 @@ class KioskDrawer extends StatelessWidget {
       case 'dashboard':
         return item(Icons.dashboard_outlined, strings.drawerDashboard, () {
           onClose();
+          // Phoenix Home: the dashboard opens over it, or the Smart Home
+          // page explains how to connect one.
+          if (c.phoenixHome.active.value) {
+            c.browser.startUrl.isEmpty
+                ? c.phoenixHome.openSmartHome()
+                : c.phoenixHome.openDashboard();
+            return;
+          }
           c.commands.execute('loadUrl', {'url': c.browser.startUrl});
         });
       case 'settings':
@@ -559,6 +569,12 @@ class KioskDrawer extends StatelessWidget {
       case 'apps':
         return item(Icons.apps_outlined, strings.drawerApps, () {
           onClose();
+          // Phoenix Home's own drawer holds every app; a locked kiosk keeps
+          // the launcher's allowed apps.
+          if (c.phoenixHome.active.value && !restricted) {
+            c.phoenixHome.appsOpen.value = true;
+            return;
+          }
           c.launcher.open(unlocked: !restricted);
         });
       case 'clear_cache':

@@ -357,9 +357,11 @@ class RemoteManager extends Manager {
         if (e.key == defs.remoteEnabled.key ||
             e.key == defs.remotePort.key ||
             e.key == defs.remotePassword.key ||
-            // Setup completing (start URL set) may mean the server should
-            // stop — the wizard ran on the setup-mode allowance alone.
-            e.key == defs.startUrl.key) {
+            // Setup completing (start URL set, or finished without Home
+            // Assistant) may mean the server should stop — the wizard ran
+            // on the setup-mode allowance alone.
+            e.key == defs.startUrl.key ||
+            e.key == defs.homeSetupDone.key) {
           _sync();
         }
       }),
@@ -400,7 +402,9 @@ class RemoteManager extends Manager {
 
   /// Unconfigured device: the remote onboarding wizard must be reachable,
   /// password or not — its own first step is to set one.
-  bool get _setupMode => _settings.get(defs.startUrl).isEmpty;
+  bool get _setupMode =>
+      _settings.get(defs.startUrl).isEmpty &&
+      !_settings.get(defs.homeSetupDone);
 
   Future<void> _sync() {
     final next = (_syncQueue ?? Future<void>.value()).then((_) => _syncNow());

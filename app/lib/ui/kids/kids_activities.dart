@@ -1,7 +1,4 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 
 /// The Kids Portal's built-in activities. Everything here is offline and
 /// drawn by Flutter itself: no assets, no network, no ads.

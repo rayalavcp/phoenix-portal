@@ -9,7 +9,11 @@ import '../../managers/kids/kids_manager.dart';
 import '../../managers/launcher/app_launcher_manager.dart';
 import 'kids_activities.dart';
 import 'kids_games.dart';
+import 'kids_learn.dart';
 import 'kids_logic.dart';
+import 'kids_more_logic.dart';
+import 'kids_play.dart';
+import 'kids_puzzles.dart';
 
 /// Phoenix Portal's Kids Portal: a full screen, child-safe home. Mounted by
 /// the kiosk screen above the dashboard; shows whatever [KidsManager.screen]
@@ -97,11 +101,17 @@ class _Glow extends StatelessWidget {
 
 // ── Home ───────────────────────────────────────────────────────────────
 
-enum _Game { math, words, g2048, connect4, memory, draw }
+enum _Game {
+  math, words, g2048, connect4, memory, draw,
+  times, clock, flags, patterns,
+  sudoku, maze, wordsearch, guess,
+  ttt, snake, simon, pixel, piano,
+}
 
-/// The hub's cards: title, pitch, icon, colours and how the best reads.
+/// The hub's cards: title, pitch, icon, colours, shelf and how the best
+/// reads.
 class _GameInfo {
-  const _GameInfo(this.game, this.title, this.pitch, this.icon, this.colors, this.bestKey, this.bestText);
+  const _GameInfo(this.game, this.title, this.pitch, this.icon, this.colors, this.bestKey, this.bestText, {this.shelf = 'Play'});
   final _Game game;
   final String title;
   final String pitch;
@@ -109,22 +119,59 @@ class _GameInfo {
   final List<Color> colors;
   final String? bestKey;
   final String Function(int best)? bestText;
+
+  /// Learn, Puzzles, Play or Create: the hub's rows.
+  final String shelf;
 }
 
+String _mmss(int s) => '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
+
 final _games = <_GameInfo>[
+  // Learn
   _GameInfo(_Game.math, 'Math Blitz', 'Beat the 60-second clock', Icons.calculate_rounded,
-      const [Color(0xFFE0446A), Color(0xFFF28A1E)], 'math', (b) => 'Best: $b solved'),
+      const [Color(0xFFE0446A), Color(0xFFF28A1E)], 'math', (b) => 'Best: $b solved', shelf: 'Learn'),
+  _GameInfo(_Game.times, 'Times Tables', 'Master ×2 to ×12', Icons.close_rounded,
+      const [Color(0xFFD42A1A), Color(0xFFF5A623)], 'times', (b) => 'Best: $b of 20', shelf: 'Learn'),
+  _GameInfo(_Game.clock, 'Telling the Time', 'Read the clock', Icons.schedule_rounded,
+      const [Color(0xFF1C8ED6), Color(0xFF63C3FF)], 'clock', (b) => 'Best: $b of 10', shelf: 'Learn'),
+  _GameInfo(_Game.flags, 'Flag Quiz', 'Flags and capitals', Icons.flag_rounded,
+      const [Color(0xFF14A06B), Color(0xFF1C8ED6)], 'flags', (b) => 'Best: $b of 10', shelf: 'Learn'),
   _GameInfo(_Game.words, 'Word Scramble', 'Crack the mystery words', Icons.abc_rounded,
-      const [Color(0xFF14A06B), Color(0xFF1C8ED6)], 'words', (b) => 'Best: $b pts'),
+      const [Color(0xFF14A06B), Color(0xFF1C8ED6)], 'words', (b) => 'Best: $b pts', shelf: 'Learn'),
+  _GameInfo(_Game.patterns, 'Patterns', 'What comes next?', Icons.auto_graph_rounded,
+      const [Color(0xFF8C5BFF), Color(0xFFE0446A)], 'patterns', (b) => 'Best: $b of 10', shelf: 'Learn'),
+  // Puzzles
+  _GameInfo(_Game.sudoku, 'Sudoku', '4×4, 6×6 or 9×9', Icons.grid_on_rounded,
+      const [Color(0xFF283066), Color(0xFF5B6CFF)], 'sudoku4', (b) => '4×4 best: ${_mmss(b)}', shelf: 'Puzzles'),
+  _GameInfo(_Game.maze, 'Maze', 'Find the way out', Icons.route_rounded,
+      const [Color(0xFF128A5A), Color(0xFF52D69F)], 'maze', (b) => 'Fastest: ${_mmss(b)}', shelf: 'Puzzles'),
+  _GameInfo(_Game.wordsearch, 'Word Search', 'Hidden words', Icons.manage_search_rounded,
+      const [Color(0xFFE08A00), Color(0xFFE0446A)], 'wordsearch', (b) => 'Fastest: ${_mmss(b)}', shelf: 'Puzzles'),
+  _GameInfo(_Game.guess, 'Word Guess', 'Save the balloons', Icons.spellcheck_rounded,
+      const [Color(0xFF7B5CFF), Color(0xFF1C8ED6)], 'guess', (b) => 'Best streak: $b', shelf: 'Puzzles'),
+  _GameInfo(_Game.memory, 'Memory Pro', 'Find all 8 pairs fast', Icons.psychology_rounded,
+      const [Color(0xFF5B6CFF), Color(0xFF9A6BFF)], 'memory', (b) => 'Best: ${b}s', shelf: 'Puzzles'),
   _GameInfo(_Game.g2048, '2048', 'Slide, merge, reach 2048', Icons.grid_4x4_rounded,
-      const [Color(0xFF8C5BFF), Color(0xFF5B6CFF)], '2048', (b) => 'Best: $b'),
+      const [Color(0xFF8C5BFF), Color(0xFF5B6CFF)], '2048', (b) => 'Best: $b', shelf: 'Puzzles'),
+  // Play
+  _GameInfo(_Game.snake, 'Snake', 'Eat, grow, dodge', Icons.gesture_rounded,
+      const [Color(0xFF1F8A4C), Color(0xFF14A06B)], 'snake', (b) => 'Longest: $b'),
+  _GameInfo(_Game.simon, 'Simon Says', 'Copy the lights', Icons.lightbulb_rounded,
+      const [Color(0xFF283066), Color(0xFF7B5CFF)], 'simon', (b) => 'Best: level $b'),
+  _GameInfo(_Game.ttt, 'Tic-Tac-Toe', 'Three in a row', Icons.tag_rounded,
+      const [Color(0xFFE0446A), Color(0xFF8C5BFF)], 'ttthard', (b) => 'Hard wins: $b'),
   _GameInfo(_Game.connect4, 'Connect Four', 'Outsmart the computer', Icons.blur_circular_rounded,
       const [Color(0xFF1C8ED6), Color(0xFF283066)], 'c4hard', (b) => 'Hard wins: $b'),
-  _GameInfo(_Game.memory, 'Memory Pro', 'Find all 8 pairs fast', Icons.psychology_rounded,
-      const [Color(0xFF5B6CFF), Color(0xFF9A6BFF)], 'memory', (b) => 'Best: ${b}s'),
+  // Create
   const _GameInfo(_Game.draw, 'Draw Studio', 'Paint whatever you like', Icons.brush_rounded,
-      [Color(0xFFD42A1A), Color(0xFFFF4D8D)], null, null),
+      [Color(0xFFD42A1A), Color(0xFFFF4D8D)], null, null, shelf: 'Create'),
+  const _GameInfo(_Game.pixel, 'Pixel Paint', 'Colour by number', Icons.palette_rounded,
+      [Color(0xFFE0446A), Color(0xFFF5A623)], null, null, shelf: 'Create'),
+  const _GameInfo(_Game.piano, 'Piano', 'Play songs', Icons.piano_rounded,
+      [Color(0xFF1A1340), Color(0xFF5B6CFF)], null, null, shelf: 'Create'),
 ];
+
+const _shelves = ['Learn', 'Puzzles', 'Play', 'Create'];
 
 class _KidsHome extends StatefulWidget {
   const _KidsHome({super.key, required this.container});
@@ -136,6 +183,7 @@ class _KidsHome extends StatefulWidget {
 
 class _KidsHomeState extends State<_KidsHome> {
   _Game? _game;
+  late final _tones = KidsTones(widget.container.sound.playFile);
 
   KidsManager get kids => widget.container.kids;
 
@@ -157,87 +205,189 @@ class _KidsHomeState extends State<_KidsHome> {
       _Game.connect4 => ConnectFour(key: const ValueKey('c4'), onBack: _back),
       _Game.memory => MemoryPro(key: const ValueKey('memory'), onBack: _back),
       _Game.draw => KidsDraw(key: const ValueKey('draw'), onBack: _back),
+      _Game.times => TimesTables(key: const ValueKey('times'), onBack: _back),
+      _Game.clock => TellingTime(key: const ValueKey('clock'), onBack: _back),
+      _Game.flags => FlagQuiz(key: const ValueKey('flags'), onBack: _back),
+      _Game.patterns => PatternsGame(key: const ValueKey('patterns'), onBack: _back),
+      _Game.sudoku => SudokuGame(key: const ValueKey('sudoku'), onBack: _back),
+      _Game.maze => MazeGame(key: const ValueKey('maze'), onBack: _back),
+      _Game.wordsearch => WordSearchGame(key: const ValueKey('wordsearch'), onBack: _back),
+      _Game.guess => WordGuess(key: const ValueKey('guess'), onBack: _back),
+      _Game.ttt => TicTacToe(key: const ValueKey('ttt'), onBack: _back),
+      _Game.snake => SnakeGame(key: const ValueKey('snake'), onBack: _back),
+      _Game.simon => SimonSays(key: const ValueKey('simon'), onBack: _back, tones: _tones),
+      _Game.pixel => PixelPaint(key: const ValueKey('pixel'), onBack: _back),
+      _Game.piano => KidsPiano(key: const ValueKey('piano'), onBack: _back, tones: _tones),
       null => _home(context),
     },
   );
 
+  /// The apps a child may open: the ones a parent added from Phoenix Home,
+  /// then the launcher's kiosk-allowed apps.
+  List<LauncherApp> get _apps {
+    final c = widget.container;
+    final seen = <String>{};
+    return [
+      for (final a in [...c.phoenixHome.kidsAppList, ...c.launcher.kioskApps])
+        if (seen.add(a.package)) a,
+    ];
+  }
+
   Widget _home(BuildContext context) {
     final name = kids.childName;
-    final apps = widget.container.launcher.kioskApps;
+    final apps = _apps;
+    final challenge = dailyChallenge(DateTime.now());
     return _KidsGround(
       key: const ValueKey('home'),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(28, 18, 28, 20),
+          padding: const EdgeInsets.fromLTRB(28, 18, 0, 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name.isEmpty ? 'Game time!' : 'Hey $name!',
-                          style: kidsText(40),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text('Pick a game. Earn stars. Beat your best.',
-                            style: kidsText(20, color: Colors.white70, weight: FontWeight.w700)),
-                      ],
-                    ),
-                  ),
-                  const _StarsPill(),
-                  const SizedBox(width: 12),
-                  _TimeLeftPill(kids: kids),
-                  const SizedBox(width: 12),
-                  _ParentLock(container: widget.container),
-                ],
-              ),
-              const SizedBox(height: 18),
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, box) {
-                    const gap = 16.0;
-                    final w = (box.maxWidth - gap * 2) / 3;
-                    final h = (box.maxHeight - gap) / 2;
-                    return Wrap(
-                      spacing: gap,
-                      runSpacing: gap,
-                      children: [
-                        for (final g in _games)
-                          SizedBox(
-                            width: w,
-                            height: h,
-                            child: _GameCard(info: g, onTap: () => setState(() => _game = g.game)),
+              Padding(
+                padding: const EdgeInsets.only(right: 28),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name.isEmpty ? 'Game time!' : 'Hey $name!',
+                            style: kidsText(40),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                      ],
-                    );
-                  },
+                          Text('Pick a game. Earn stars. Beat your best.',
+                              style: kidsText(20, color: Colors.white70, weight: FontWeight.w700)),
+                        ],
+                      ),
+                    ),
+                    const _StarsPill(),
+                    const SizedBox(width: 12),
+                    _TimeLeftPill(kids: kids),
+                    const SizedBox(width: 12),
+                    _ParentLock(container: widget.container),
+                  ],
                 ),
               ),
-              if (apps.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Text('My apps & games', style: kidsText(22, weight: FontWeight.w800)),
-                const SizedBox(height: 10),
-                SizedBox(
-                  height: 120,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: apps.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 14),
-                    itemBuilder: (context, i) => _AppTile(container: widget.container, app: apps[i]),
-                  ),
+              const SizedBox(height: 14),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.only(right: 28, bottom: 12),
+                  children: [
+                    _ChallengeCard(
+                      challenge: challenge,
+                      onPlay: () {
+                        for (final g in _games) {
+                          if (g.bestKey == challenge.game) {
+                            setState(() => _game = g.game);
+                            return;
+                          }
+                        }
+                      },
+                    ),
+                    if (apps.isNotEmpty) ...[
+                      const SizedBox(height: 18),
+                      Text('My apps', style: kidsText(26, weight: FontWeight.w800)),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 128,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: apps.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 14),
+                          itemBuilder: (context, i) => _AppTile(container: widget.container, app: apps[i]),
+                        ),
+                      ),
+                    ],
+                    for (final shelf in _shelves) ...[
+                      const SizedBox(height: 18),
+                      Text(shelf, style: kidsText(26, weight: FontWeight.w800)),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 210,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _games.where((g) => g.shelf == shelf).length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 16),
+                          itemBuilder: (context, i) {
+                            final g = _games.where((g) => g.shelf == shelf).elementAt(i);
+                            return SizedBox(
+                              width: 280,
+                              child: _GameCard(info: g, onTap: () => setState(() => _game = g.game)),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-              ],
+              ),
             ],
           ),
         ),
       ),
     );
   }
+}
+
+/// Today's challenge: one game, one target, three bonus stars once won.
+class _ChallengeCard extends StatelessWidget {
+  const _ChallengeCard({required this.challenge, required this.onPlay});
+  final DailyChallenge challenge;
+  final VoidCallback onPlay;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<int>(
+    valueListenable: KidsScores.changes,
+    builder: (context, _, _) => FutureBuilder<bool>(
+      future: KidsScores.challengeDone(),
+      builder: (context, snap) {
+        final done = snap.data ?? false;
+        return KidsBounce(
+          onTap: done ? null : onPlay,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              gradient: LinearGradient(
+                colors: done
+                    ? const [Color(0xFF14A06B), Color(0xFF52D69F)]
+                    : const [Color(0xFFF5A623), Color(0xFFD42A1A)],
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(done ? Icons.emoji_events_rounded : Icons.bolt_rounded, color: Colors.white, size: 52),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(done ? 'Challenge complete!' : "Today's challenge", style: kidsText(18, color: Colors.white70)),
+                      Text(challenge.text, style: kidsText(28)),
+                    ],
+                  ),
+                ),
+                Row(
+                  children: [
+                    for (var i = 0; i < 3; i++)
+                      Icon(Icons.star_rounded, color: done ? const Color(0xFFFFD27A) : Colors.white54, size: 34),
+                  ],
+                ),
+                if (!done) ...[
+                  const SizedBox(width: 12),
+                  KidsButton('Play', icon: Icons.play_arrow_rounded, onTap: onPlay, size: 22),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    ),
+  );
 }
 
 class _GameCard extends StatelessWidget {
@@ -401,9 +551,8 @@ class _TimeLeftPill extends StatelessWidget {
 /// The lock in the corner: with a parent PIN, a tap asks for it; without
 /// one, a three-second press-and-hold fills the ring and unlocks.
 class _ParentLock extends StatefulWidget {
-  const _ParentLock({required this.container, this.label});
+  const _ParentLock({required this.container});
   final AppContainer container;
-  final String? label;
 
   @override
   State<_ParentLock> createState() => _ParentLockState();

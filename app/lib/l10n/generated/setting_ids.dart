@@ -2872,4 +2872,16 @@ const settingMessageIds = <String, Map<String, String>>{
     "title": "settingKidsPinTitle",
     "description": "settingKidsPinDescription",
   },
+  "home.screen": {
+    "title": "settingHomeScreenTitle",
+    "description": "settingHomeScreenDescription",
+  },
+  "home.weather_city": {
+    "title": "settingHomeWeatherCityTitle",
+    "description": "settingHomeWeatherCityDescription",
+  },
+  "home.temperature_unit": {
+    "title": "settingHomeTemperatureUnitTitle",
+    "description": "settingHomeTemperatureUnitDescription",
+  },
 };

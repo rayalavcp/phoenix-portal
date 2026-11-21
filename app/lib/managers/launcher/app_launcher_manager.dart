@@ -129,6 +129,9 @@ class AppLauncherManager extends Manager with WidgetsBindingObserver {
   /// launcher is switched on and on every open, so new installs show up.
   List<LauncherApp> _installed = const [];
 
+  /// Every launchable app but this one (empty until the first listing).
+  List<LauncherApp> get installed => _installed;
+
   /// Bumped whenever [_installed] changes, so an open launcher redraws.
   final installedRevision = ValueNotifier<int>(0);
 
@@ -136,11 +139,11 @@ class AppLauncherManager extends Manager with WidgetsBindingObserver {
   static const _self = 'com.phoenix.portal';
 
   Future<void> refreshInstalled() async {
-    if (!Platform.isAndroid) return;
     try {
-      final raw = await _channel.invokeMethod<List<Object?>>('listApps');
+      final answer = await _channel.invokeMethod<Object?>('listApps');
+      final raw = answer is List ? answer : const <Object?>[];
       final next = [
-        for (final item in raw ?? const [])
+        for (final item in raw)
           if (item is Map &&
               '${item['package'] ?? ''}'.isNotEmpty &&
               item['package'] != _self)
@@ -197,6 +200,10 @@ class AppLauncherManager extends Manager with WidgetsBindingObserver {
     if (!_settings.get(defs.kioskEnabled)) return apps;
     return _settings.get(defs.kioskAllowApps) ? kioskApps : const [];
   }
+
+  /// Phoenix Home's app drawer, set by the container: showAppLauncher opens
+  /// it instead of this whitelist launcher while [available] holds.
+  ({bool Function() available, void Function() open})? allAppsDrawer;
 
   /// Opens the launcher. [unlocked] is the full menu's open, which shows
   /// every app even while kiosk mode is on.
@@ -275,6 +282,15 @@ class AppLauncherManager extends Manager with WidgetsBindingObserver {
             'Open the app launcher overlay. Fails when no apps are '
             'configured, so a caller can say so instead of showing nothing.',
         handler: (_) async {
+          // Phoenix Home's own app drawer, which holds every app, takes
+          // the open when it can (not while kiosk mode locks the screen).
+          if (allAppsDrawer case final drawer? when drawer.available()) {
+            await commands.execute('screenOn', const {});
+            await commands.execute('bringToFront', const {});
+            await commands.execute('stopScreensaver', const {});
+            drawer.open();
+            return const CommandResult.ok();
+          }
           // The master switch is a hard gate for every opener — the menu
           // checks it itself, and ESPHome and the remote API both land here.
           if (!_settings.get(defs.launcherEnabled)) {

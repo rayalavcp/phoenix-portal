@@ -6355,6 +6355,78 @@ abstract class UiStrings {
   /// Setting label.
   ///
   /// In en, this message translates to:
+  /// **'Home screen'**
+  String get settingHomeScreenTitle;
+
+  /// Help below this setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Phoenix Home is a launcher with your apps, the Kids Portal and smart home controls, and works without Home Assistant. Home Assistant dashboard shows the dashboard full screen instead.'**
+  String get settingHomeScreenDescription;
+
+  /// Setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'Weather location'**
+  String get settingHomeWeatherCityTitle;
+
+  /// Help below this setting.
+  ///
+  /// In en, this message translates to:
+  /// **'The city for the weather on Phoenix Home, for example Austin or Austin, US. Leave empty to use the tablet\'s location.'**
+  String get settingHomeWeatherCityDescription;
+
+  /// Setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'Temperature unit'**
+  String get settingHomeTemperatureUnitTitle;
+
+  /// Help below this setting.
+  ///
+  /// In en, this message translates to:
+  /// **'How Phoenix Home shows temperatures.'**
+  String get settingHomeTemperatureUnitDescription;
+
+  /// Option label.
+  ///
+  /// In en, this message translates to:
+  /// **'Phoenix Home'**
+  String get homeScreenPhoenix;
+
+  /// Option label.
+  ///
+  /// In en, this message translates to:
+  /// **'Home Assistant dashboard'**
+  String get homeScreenDashboard;
+
+  /// Option label.
+  ///
+  /// In en, this message translates to:
+  /// **'Fahrenheit (°F)'**
+  String get homeUnitFahrenheit;
+
+  /// Option label.
+  ///
+  /// In en, this message translates to:
+  /// **'Celsius (°C)'**
+  String get homeUnitCelsius;
+
+  /// Settings menu entry.
+  ///
+  /// In en, this message translates to:
+  /// **'Home Screen'**
+  String get settingsMenuHomeScreen;
+
+  /// Settings menu entry summary.
+  ///
+  /// In en, this message translates to:
+  /// **'Launcher, weather, Home Assistant'**
+  String get settingsMenuHomeScreenSummary;
+
+  /// Setting label.
+  ///
+  /// In en, this message translates to:
   /// **'Profile'**
   String get settingPhoenixProfileTitle;
 

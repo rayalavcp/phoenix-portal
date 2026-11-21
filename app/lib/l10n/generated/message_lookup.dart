@@ -955,6 +955,21 @@ String messageById(UiStrings strings, String? id, String fallback) =>
       'offlineNetworkHelp' => strings.offlineNetworkHelp,
       'offlineLost' => strings.offlineLost,
       'offlineRestored' => strings.offlineRestored,
+      'settingHomeScreenTitle' => strings.settingHomeScreenTitle,
+      'settingHomeScreenDescription' => strings.settingHomeScreenDescription,
+      'settingHomeWeatherCityTitle' => strings.settingHomeWeatherCityTitle,
+      'settingHomeWeatherCityDescription' =>
+        strings.settingHomeWeatherCityDescription,
+      'settingHomeTemperatureUnitTitle' =>
+        strings.settingHomeTemperatureUnitTitle,
+      'settingHomeTemperatureUnitDescription' =>
+        strings.settingHomeTemperatureUnitDescription,
+      'homeScreenPhoenix' => strings.homeScreenPhoenix,
+      'homeScreenDashboard' => strings.homeScreenDashboard,
+      'homeUnitFahrenheit' => strings.homeUnitFahrenheit,
+      'homeUnitCelsius' => strings.homeUnitCelsius,
+      'settingsMenuHomeScreen' => strings.settingsMenuHomeScreen,
+      'settingsMenuHomeScreenSummary' => strings.settingsMenuHomeScreenSummary,
       'settingPhoenixProfileTitle' => strings.settingPhoenixProfileTitle,
       'settingPhoenixProfileDescription' =>
         strings.settingPhoenixProfileDescription,

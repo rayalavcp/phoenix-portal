@@ -14852,6 +14852,61 @@ const kidsPin = SettingDef<String>(
   secret: true,
 );
 
+// ── Phoenix Portal: Phoenix Home ────────────────────────────────────────
+// The launcher home screen. Phoenix Home works on its own; Home Assistant is
+// an add-on reached from its Smart Home page. See PhoenixHomeManager.
+
+const homeScreen = SettingDef<String>(
+  key: 'home.screen',
+  type: SettingType.select,
+  defaultValue: 'phoenix',
+  title: 'Home screen',
+  description:
+      'Phoenix Home is a launcher with your apps, the Kids Portal and smart '
+      'home controls, and works without Home Assistant. Home Assistant '
+      'dashboard shows the dashboard full screen instead.',
+  category: 'Home Screen',
+  options: ['phoenix', 'dashboard'],
+  optionLabels: {
+    'phoenix': 'Phoenix Home',
+    'dashboard': 'Home Assistant dashboard',
+  },
+);
+
+const homeWeatherCity = SettingDef<String>(
+  key: 'home.weather_city',
+  type: SettingType.string,
+  defaultValue: '',
+  title: 'Weather location',
+  description:
+      'The city for the weather on Phoenix Home, for example Austin or '
+      'Austin, US. Leave empty to use the tablet\'s location.',
+  category: 'Home Screen',
+);
+
+const homeTemperatureUnit = SettingDef<String>(
+  key: 'home.temperature_unit',
+  type: SettingType.select,
+  defaultValue: 'fahrenheit',
+  title: 'Temperature unit',
+  description: 'How Phoenix Home shows temperatures.',
+  category: 'Home Screen',
+  options: ['fahrenheit', 'celsius'],
+  optionLabels: {'fahrenheit': 'Fahrenheit (°F)', 'celsius': 'Celsius (°C)'},
+);
+
+// Set when the first-time setup finishes without Home Assistant: the app is
+// configured even though it has no start URL.
+const homeSetupDone = SettingDef<bool>(
+  key: 'home.setup_done',
+  type: SettingType.boolean,
+  defaultValue: false,
+  title: 'Setup finished without Home Assistant',
+  description: 'Set by the first-time setup when Home Assistant is skipped.',
+  category: 'Home Screen',
+  hidden: true,
+);
+
 const List<SettingDef<Object>> allSettings = [
   navStyle,
   navCompassLayout,
@@ -15648,6 +15703,10 @@ const List<SettingDef<Object>> allSettings = [
   calendarAllowDelete,
   calendarIdleCloseMinutes,
   calendarMenu,
+  homeScreen,
+  homeWeatherCity,
+  homeTemperatureUnit,
+  homeSetupDone,
   phoenixProfile,
   kidsEnabled,
   kidsName,

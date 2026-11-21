@@ -177,6 +177,11 @@ class BackgroundBridge(
                 "launchApp" -> result.success(
                     launchApp(call.argument<String>("package")),
                 )
+                // Android's own page for one app (Phoenix Home's long press):
+                // uninstall, permissions, storage.
+                "openAppInfo" -> result.success(
+                    openAppInfo(call.argument<String>("package")),
+                )
                 // Every launchable app on the device, for the app launcher's
                 // whitelist pickers (issue #114). Visibility comes from the
                 // manifest's LAUNCHER <queries> filter, no QUERY_ALL_PACKAGES.
@@ -887,6 +892,21 @@ class BackgroundBridge(
             true
         } catch (e: Exception) {
             android.util.Log.w("kiosk_satellite", "launchApp $packageName failed", e)
+            false
+        }
+    }
+
+    private fun openAppInfo(packageName: String?): Boolean {
+        if (packageName.isNullOrBlank()) return false
+        return try {
+            context.startActivity(
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                    .setData(Uri.fromParts("package", packageName, null))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+            true
+        } catch (e: Exception) {
+            android.util.Log.w("kiosk_satellite", "openAppInfo $packageName failed", e)
             false
         }
     }

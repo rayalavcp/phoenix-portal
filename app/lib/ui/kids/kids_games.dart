@@ -99,13 +99,12 @@ class KidsResult extends StatelessWidget {
 
 /// A start card: the game's idea in one line, the best score, and Go.
 class _StartCard extends StatelessWidget {
-  const _StartCard({super.key, required this.icon, required this.text, required this.bestLabel, required this.game, required this.onStart, this.extra});
+  const _StartCard({super.key, required this.icon, required this.text, required this.bestLabel, required this.game, required this.onStart});
   final IconData icon;
   final String text;
   final String bestLabel;
   final String game;
   final VoidCallback onStart;
-  final Widget? extra;
 
   @override
   Widget build(BuildContext context) => Center(
@@ -123,7 +122,6 @@ class _StartCard extends StatelessWidget {
             style: kidsText(22, color: Colors.white70, weight: FontWeight.w700),
           ),
         ),
-        if (extra != null) ...[const SizedBox(height: 18), extra!],
         const SizedBox(height: 24),
         KidsButton('Start', icon: Icons.play_arrow_rounded, onTap: onStart, size: 32),
       ],
@@ -175,6 +173,7 @@ class _MathBlitzState extends State<MathBlitz> {
   Future<void> _finish() async {
     _timer?.cancel();
     final best = await KidsScores.offer('math', _score);
+    await KidsScores.offerChallenge('math', _score);
     await KidsScores.addStars(_stars);
     if (mounted) setState(() { _phase = _Phase.over; _newBest = best; });
   }
@@ -262,7 +261,7 @@ class _MathBlitzState extends State<MathBlitz> {
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 220),
                   transitionBuilder: (c, a) => ScaleTransition(scale: a, child: FadeTransition(opacity: a, child: c)),
-                  child: Text('${_problem.text} = ?', key: ValueKey(_problem.text + '$_score'), style: kidsText(96)),
+                  child: Text('${_problem.text} = ?', key: ValueKey('${_problem.text}$_score'), style: kidsText(96)),
                 ),
               ),
             ),
@@ -356,6 +355,7 @@ class _WordScrambleState extends State<WordScramble> {
 
   Future<void> _finish() async {
     final best = await KidsScores.offer('words', _score);
+    await KidsScores.offerChallenge('words', _score);
     await KidsScores.addStars(_stars);
     if (mounted) setState(() { _phase = _Phase.over; _newBest = best; });
   }
@@ -970,6 +970,7 @@ class _MemoryProState extends State<MemoryPro> {
       if (_matched.length == _cards.length) {
         _clock?.cancel();
         final best = await KidsScores.offer('memory', _seconds, lowerIsBetter: true);
+        await KidsScores.offerChallenge('memory', _seconds);
         await KidsScores.addStars(_stars);
         if (mounted) setState(() { _done = true; _newBest = best; });
       }

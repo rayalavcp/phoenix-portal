@@ -49,6 +49,7 @@ import 'managers/fleet/fleet_manager.dart';
 import 'managers/fleet/fleet_sync_manager.dart';
 import 'managers/intercom/intercom_manager.dart';
 import 'managers/alarms/alarm_manager.dart';
+import 'managers/home/phoenix_home_manager.dart';
 import 'managers/kids/kids_manager.dart';
 import 'managers/store/store_manager.dart';
 import 'managers/calendar/calendar_manager.dart';
@@ -286,6 +287,15 @@ class AppContainer {
       ..screensaverModeOverride = () => screensaver.modeOverride.value;
     calendar = CalendarManager(bus, commands, log, settings);
     kids = KidsManager(bus, commands, log, settings);
+    phoenixHome = PhoenixHomeManager(
+      bus,
+      commands,
+      log,
+      settings,
+      launcher,
+      location,
+      homeAssistant,
+    );
     store = StoreManager(bus, commands, log);
     musicLibrary = MusicLibraryManager(
       bus,
@@ -422,6 +432,7 @@ class AppContainer {
   late final AlarmManager alarms;
   late final CalendarManager calendar;
   late final KidsManager kids;
+  late final PhoenixHomeManager phoenixHome;
   late final StoreManager store;
   late final MusicLibraryManager musicLibrary;
   late final VoiceRequestsManager voiceRequests;
@@ -526,6 +537,8 @@ class AppContainer {
     // screen, the screensaver, the kiosk and the wake word's stop word.
     alarms,
     kids,
+    // After the launcher, whose installed list it shows.
+    phoenixHome,
     store,
     // Nothing reaches Home Assistant until a screen watches some days.
     calendar,
@@ -550,7 +563,22 @@ class AppContainer {
       }
     });
     // The dashboard page exists only while something uses it.
-    followDashboardPage(settings, bus, browser.pageNeeded);
+    followDashboardPage(
+      settings,
+      bus,
+      browser.pageNeeded,
+      dashboardOpen: phoenixHome.dashboardOpen,
+    );
+    // Gestures, ESPHome and the remote API open Phoenix Home's app drawer
+    // (every app) while it is the home screen and the kiosk is not locked.
+    launcher.allAppsDrawer = (
+      available: () =>
+          phoenixHome.active.value && !settings.get(kioskEnabled),
+      open: () {
+        phoenixHome.goHome();
+        phoenixHome.appsOpen.value = true;
+      },
+    );
     commands.register(
       Command(
         name: 'compassCloseOverlays',

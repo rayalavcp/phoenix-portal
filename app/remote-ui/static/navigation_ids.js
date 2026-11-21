@@ -80,5 +80,7 @@ export const navigationMessageIds = {
   "Ground Control": "settingsMenuGroundControl",
   "Voice Match and Vision Match": "settingsMenuGroundControlFeatures",
   "Kids Portal": "settingsMenuKidsPortal",
-  "Games, screen time, bedtime": "settingsMenuKidsPortalSummary"
+  "Games, screen time, bedtime": "settingsMenuKidsPortalSummary",
+  "Home Screen": "settingsMenuHomeScreen",
+  "Launcher, weather, Home Assistant": "settingsMenuHomeScreenSummary"
 };

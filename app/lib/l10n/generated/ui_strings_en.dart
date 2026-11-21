@@ -3559,6 +3559,46 @@ class UiStringsEn extends UiStrings {
   String get offlineRestored => 'Network connection restored';
 
   @override
+  String get settingHomeScreenTitle => 'Home screen';
+
+  @override
+  String get settingHomeScreenDescription =>
+      'Phoenix Home is a launcher with your apps, the Kids Portal and smart home controls, and works without Home Assistant. Home Assistant dashboard shows the dashboard full screen instead.';
+
+  @override
+  String get settingHomeWeatherCityTitle => 'Weather location';
+
+  @override
+  String get settingHomeWeatherCityDescription =>
+      'The city for the weather on Phoenix Home, for example Austin or Austin, US. Leave empty to use the tablet\'s location.';
+
+  @override
+  String get settingHomeTemperatureUnitTitle => 'Temperature unit';
+
+  @override
+  String get settingHomeTemperatureUnitDescription =>
+      'How Phoenix Home shows temperatures.';
+
+  @override
+  String get homeScreenPhoenix => 'Phoenix Home';
+
+  @override
+  String get homeScreenDashboard => 'Home Assistant dashboard';
+
+  @override
+  String get homeUnitFahrenheit => 'Fahrenheit (°F)';
+
+  @override
+  String get homeUnitCelsius => 'Celsius (°C)';
+
+  @override
+  String get settingsMenuHomeScreen => 'Home Screen';
+
+  @override
+  String get settingsMenuHomeScreenSummary =>
+      'Launcher, weather, Home Assistant';
+
+  @override
   String get settingPhoenixProfileTitle => 'Profile';
 
   @override

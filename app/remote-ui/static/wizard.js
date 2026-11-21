@@ -658,6 +658,29 @@ export function wizardSteps() {
       const card = wizardCard(b);
       wizardField(card, 'wzUrl', 'url', 'https://homeassistant.local:8123');
       wizardField(card, 'wzToken', 'password', t('settingHaTokenTitle'));
+      // Phoenix Portal: Home Assistant is optional. Phoenix Home is a
+      // launcher on its own; the connection can be added later.
+      const skip = wizardCard(b);
+      const note = document.createElement('div');
+      note.style.cssText = 'color:var(--muted); font-size:13px; line-height:1.5; margin-bottom:10px';
+      note.textContent = 'No Home Assistant? Phoenix Home works without it: apps, the Kids Portal, '
+        + 'timers, alarms and the weather. Connect Home Assistant later under Home Assistant.';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn-ghost';
+      btn.textContent = 'Skip Home Assistant for now';
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try {
+          await api('/api/settings', { method: 'PATCH',
+            body: JSON.stringify({ 'home.screen': 'phoenix', 'home.setup_done': true }) });
+          location.reload();
+        } catch (e) {
+          btn.disabled = false;
+          wizardShowError(e);
+        }
+      });
+      skip.append(note, btn);
     },
     next: async () => {
       const url = $('#wzUrl').value.trim(), token = $('#wzToken').value.trim();

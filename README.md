@@ -7,7 +7,7 @@
 </h1>
 
 <p align="center">
-  <b>Phoenix Portal</b> brings a Meta Portal back to life as a <b>Home Assistant hub</b>, a <b>kids game portal</b> and a <b>photo frame</b>.<br/>
+  <b>Phoenix Portal</b> brings a Meta Portal back to life as a <b>home hub launcher</b>, a <b>kids game portal</b> and a <b>photo frame</b>, with <b>Home Assistant</b> as an optional add-on.<br/>
   Fully local. No Facebook account. Built for the Portal's Android 9 and 10.
 </p>
 
@@ -17,7 +17,22 @@
 
 ## What it does
 
-**Home Assistant hub.** Your Home Assistant dashboard full screen, with Assist voice control and
+**Phoenix Home.** The home screen is a launcher that needs nothing else: the clock, the weather
+(Open-Meteo, set your city), big shortcuts (Kids Portal, all apps, Smart Home, School, timers,
+alarms, the App Store, the photo frame) and a dock of favourite apps. Every installed app is one
+tap away in the app drawer, with search, recent and most-used apps; press and hold an app to add
+it to the dock or the Kids Portal, hide it, or open its Android info page.
+
+**School.** This week's breakfast and lunch menus from the district's Nutrislice menu site
+(Frisco ISD by default; pick your school on the Portal), the school calendar from an iCal link
+(holidays, early release days), and the bell times with a "school starts in 20 min" line.
+
+**Smart Home (Home Assistant, optional).** Quick controls for lights, switches, covers, locks,
+climate, players, scenes and scripts, with favourites and rooms, and the full dashboard one tap
+away. Without Home Assistant, Phoenix Home works exactly the same; skip it in the setup wizard.
+Prefer the dashboard as the home screen? Settings > Home Screen.
+
+**Home Assistant dashboard.** Your Home Assistant dashboard full screen, with Assist voice control and
 wake words, timers, alarms, a family calendar, camera views, intercom between Portals and
 synchronized music. The Portal shows up in Home Assistant through ESPHome with its screen,
 volume, sensors, presence, and the new **Profile** switch.
@@ -32,8 +47,20 @@ volume, sensors, presence, and the new **Profile** switch.
 | **Connect Four** | Against the computer, Easy or Hard. |
 | **Memory Pro** | Eight pairs on the clock. |
 | **Draw Studio** | Finger painting with an eraser, undo and brush sizes. |
+| **Times Tables** | 20 questions from one table (×2 to ×12) or all of them mixed. |
+| **Telling the Time** | A real clock face: half hours, quarters, then five minutes. |
+| **Flag Quiz** | Flags of 42 countries, and their capitals. |
+| **Patterns** | What comes next? Adding, doubling, growing steps and squares. |
+| **Sudoku** | 4×4, 6×6 and 9×9, each with exactly one solution. |
+| **Maze** | Small to big mazes; swipe or use the arrows. |
+| **Word Search** | Animals, space, food or sports words, across, down and diagonal. |
+| **Word Guess** | Guess the word before the balloons are gone. |
+| **Snake**, **Simon Says**, **Tic-Tac-Toe** | Classic play; Simon plays real tones. |
+| **Pixel Paint**, **Piano** | Colour by number, and a two-octave piano with songs to follow. |
 
-Scored games keep a best and earn ⭐ stars. Below the games sit the apps a parent allows
+A **daily challenge** (a new one each day) is worth three bonus stars.
+
+Scored games keep a best and earn ⭐ stars. Above the games sit the apps a parent allows
 (Lemuroid for retro games, GCompris, Tux Paint, …). Parents get a **daily screen-time budget**,
 a **bedtime window**, and a **parent PIN** (or a three-second press on the lock). Leaving the
 portal or adding time needs a grown-up.

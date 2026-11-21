@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'kids_more_logic.dart';
+
 /// The rules of the Kids Portal games, kept apart from their widgets so they
 /// are unit-tested (test/kids_logic_test.dart). No Flutter UI in here.
 
@@ -38,6 +40,25 @@ abstract final class KidsScores {
     final raw = (await SharedPreferences.getInstance()).getString(_starsKey) ?? '';
     final parts = raw.split(':');
     return parts.length == 2 && parts[0] == _today(now ?? DateTime.now()) ? int.tryParse(parts[1]) ?? 0 : 0;
+  }
+
+  static const _challengeKey = 'phx.kids.challenge_done';
+
+  /// Whether today's challenge (kids_more_logic.dart) is already won.
+  static Future<bool> challengeDone({DateTime? now}) async =>
+      (await SharedPreferences.getInstance()).getString(_challengeKey) ==
+      _today(now ?? DateTime.now());
+
+  /// A finished round of [game]: when it is today's challenge and [score]
+  /// meets it, three bonus stars, once a day. True when this won it.
+  static Future<bool> offerChallenge(String game, int score, {DateTime? now}) async {
+    final day = now ?? DateTime.now();
+    final challenge = dailyChallenge(day);
+    if (challenge.game != game || !challenge.met(score)) return false;
+    if (await challengeDone(now: day)) return false;
+    await (await SharedPreferences.getInstance()).setString(_challengeKey, _today(day));
+    await addStars(3, now: day);
+    return true;
   }
 
   static Future<void> addStars(int stars, {DateTime? now}) async {

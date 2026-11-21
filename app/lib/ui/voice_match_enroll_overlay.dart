@@ -413,7 +413,7 @@ class _Passage extends StatelessWidget {
           ),
           layoutBuilder: (current, previous) => Stack(
             alignment: Alignment.centerLeft,
-            children: [...previous, if (current != null) current],
+            children: [...previous, ?current],
           ),
           child: Text(
             waiting ?? passage[at],

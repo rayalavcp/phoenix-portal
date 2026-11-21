@@ -73,6 +73,7 @@ import 'fleet_settings.dart';
 import 'intercom_settings.dart';
 import 'back_nav.dart';
 import 'key_nav.dart';
+import 'home/phoenix_home.dart';
 import 'kiosk_drawer.dart';
 import 'sendspin_player_overlay.dart';
 import 'assist/assist_overlay.dart';
@@ -322,6 +323,31 @@ class _KioskScreenState extends State<KioskScreen>
         );
       } else {
         unawaited(c.plugins.closeOverlay(c.plugins.backOverlay!));
+      }
+      return;
+    }
+    // Phoenix Home's own layers (the app drawer, the Smart Home page, the
+    // dashboard) close before anything else when nothing covers them.
+    if (_drawer.value == 0 &&
+        c.phoenixHome.active.value &&
+        c.phoenixHome.layerOpen &&
+        !c.screensaver.isActive &&
+        !c.launcher.visible.value &&
+        !c.intercom.rosterVisible.value &&
+        !c.alarms.visible.value &&
+        !c.voiceTimers.visible.value &&
+        !c.calendar.visible.value &&
+        !c.musicLibrary.visible.value &&
+        c.camera.activeViewId.value == null &&
+        c.browser.overlayUrl.value == null &&
+        !c.kiosk.lockdownActive) {
+      final home = c.phoenixHome;
+      if (home.appsOpen.value) {
+        home.appsOpen.value = false;
+      } else if (home.smartHomeOpen.value) {
+        home.smartHomeOpen.value = false;
+      } else {
+        home.goHome();
       }
       return;
     }
@@ -1000,6 +1026,7 @@ class _KioskScreenState extends State<KioskScreen>
     _homeSub = c.bus.on<HomeKeyPressed>().listen((_) {
       if (!mounted) return;
       if (_drawer.value > 0) _closeDrawer();
+      c.phoenixHome.goHome();
       if (_settingsOpen) Navigator.of(context).popUntil((r) => r.isFirst);
       c.launcher.visible.value = false;
       c.intercom.rosterVisible.value = false;
@@ -1438,6 +1465,24 @@ class _KioskScreenState extends State<KioskScreen>
   /// Apply or tear down kiosk mode against the current page.
   Future<void> _applyKioskMode() async {
     await c.browser.runJs(_kioskModeJs);
+  }
+
+  /// Phoenix Home's menu button: the drawer, restricted while locked, as
+  /// the edge swipe opens it.
+  void _openMenuFromHome() {
+    if (_drawer.value > 0) return;
+    setState(() => _drawerRestricted = c.kiosk.locked);
+    _drawer.fling(velocity: 1);
+  }
+
+  /// Phoenix Home's settings button: the PIN first when one is set.
+  Future<void> _openSettingsFromHome() async {
+    if (_settingsOpen) return;
+    if (c.kiosk.pinRequired) {
+      final ok = await _askPin();
+      if (!ok || !mounted) return;
+    }
+    await _openSettings();
   }
 
   /// Open the settings screen (One UI-style split view on wide screens).
@@ -1882,6 +1927,20 @@ class _KioskScreenState extends State<KioskScreen>
         // Over the offline cover too: with no WebView provider there is no
         // page to wait for, and the cover would hide the only explanation.
         if (c.browser.webViewMissing) const _WebViewMissingNotice(),
+        // Phoenix Home, the launcher home screen: over the dashboard's slot
+        // and its offline cover, so a missing or broken Home Assistant
+        // never shows unless the dashboard is opened. Every overlay below
+        // in this list and in the outer stack draws over it.
+        ValueListenableBuilder<bool>(
+          valueListenable: c.phoenixHome.active,
+          builder: (context, active, _) => active
+              ? PhoenixHome(
+                  container: c,
+                  onOpenMenu: _openMenuFromHome,
+                  onOpenSettings: () => unawaited(_openSettingsFromHome()),
+                )
+              : const SizedBox.shrink(),
+        ),
         // DuraSpeed refusing the renderer: the WebView stays mounted
         // underneath, still retrying, and the notice says what to do.
         ValueListenableBuilder<bool>(

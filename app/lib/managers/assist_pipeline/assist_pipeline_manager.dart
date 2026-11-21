@@ -132,8 +132,9 @@ class AssistPipelineManager extends Manager {
               'reactive bar. Fails when the native pipeline is disabled or '
               'the wake-word engine is not running.',
           handler: (_) async {
-            if (!_enabled)
+            if (!_enabled) {
               return const CommandResult.fail('native pipeline off');
+            }
             final ok = await _mic.openNativeAudioStream(_onChunk);
             if (!ok) return const CommandResult.fail('engine not running');
             _micOpen = true;
@@ -220,8 +221,9 @@ class AssistPipelineManager extends Manager {
             'sample_rate': 'STT sample rate (16000)',
           },
           handler: (p) async {
-            if (!_enabled)
+            if (!_enabled) {
               return const CommandResult.fail('native pipeline off');
+            }
             try {
               final runId = await _startRun(p);
               return CommandResult.ok({'runId': runId});

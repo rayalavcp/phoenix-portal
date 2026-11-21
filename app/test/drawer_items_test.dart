@@ -143,7 +143,11 @@ void main() {
       final container = AppContainer();
       await container.settings.init();
       addTearDown(container.settings.dispose);
-      final links = defs.allSettings.where((d) => d.linksTo != null).toList();
+      // Only the rows that lead to the drawer list (Voice Match's row links
+      // to its own page).
+      final links = defs.allSettings
+          .where((d) => d.linksTo == defs.uiDrawerItems.key)
+          .toList();
       // The old per-row switches, plus Compass's Menu items row, which
       // only leads to the same list.
       expect({

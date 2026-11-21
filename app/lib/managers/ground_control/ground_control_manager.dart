@@ -562,8 +562,9 @@ class GroundControlManager extends Manager {
     _retry?.cancel();
     _retry = Timer(wait, () {
       if (gen != _generation || !_enabled) return;
-      if (baseUrl == null && _discovered.isNotEmpty)
+      if (baseUrl == null && _discovered.isNotEmpty) {
         baseUrl = _discovered.values.first;
+      }
       _connect(gen);
     });
   }

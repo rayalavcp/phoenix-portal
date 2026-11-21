@@ -613,5 +613,13 @@
     "07:00": "kidsTime0700",
     "07:30": "kidsTime0730",
     "08:00": "kidsTime0800"
+  },
+  "home.screen": {
+    "phoenix": "homeScreenPhoenix",
+    "dashboard": "homeScreenDashboard"
+  },
+  "home.temperature_unit": {
+    "fahrenheit": "homeUnitFahrenheit",
+    "celsius": "homeUnitCelsius"
   }
 }

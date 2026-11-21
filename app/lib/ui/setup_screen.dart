@@ -306,6 +306,8 @@ class _SetupScreenState extends State<SetupScreen> {
           (e.value as String).isNotEmpty) {
         _enterKiosk();
       }
+      // Finished without Home Assistant, here or in the remote wizard.
+      if (e.key == defs.homeSetupDone.key && e.value == true) _enterKiosk();
     });
   }
 
@@ -319,8 +321,13 @@ class _SetupScreenState extends State<SetupScreen> {
     super.dispose();
   }
 
+  /// Entered once: the setting listener and the step that set it can both
+  /// ask.
+  bool _entered = false;
+
   void _enterKiosk() {
-    if (!mounted) return;
+    if (!mounted || _entered) return;
+    _entered = true;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(
         builder: (_) => KioskScreen(container: c, showMenuHint: true),
@@ -548,6 +555,24 @@ class _SetupScreenState extends State<SetupScreen> {
         );
         _enterKiosk();
     }
+  }
+
+  /// Finish without Home Assistant: the background grants every kiosk
+  /// needs, then Phoenix Home. Home Assistant connects later from the Smart
+  /// Home page or the settings.
+  Future<void> _skipHomeAssistant() async {
+    setState(() => _busy = true);
+    await c.commands.execute('requestOsPermissions', {
+      'which': [
+        'batteryOptimizations',
+        'notifications',
+        'overlay',
+        'writeSettings',
+      ],
+    });
+    await c.settings.set(defs.homeScreen, 'phoenix');
+    await c.settings.set(defs.homeSetupDone, true);
+    _enterKiosk();
   }
 
   void _back() => setState(() {
@@ -953,6 +978,22 @@ class _SetupScreenState extends State<SetupScreen> {
                           ),
                   ),
                 ),
+              ),
+            ),
+          ]),
+          // Phoenix Portal: Home Assistant is optional. Phoenix Home is a
+          // launcher on its own; the connection can be added later.
+          _Card([
+            ListTile(
+              leading: const Icon(Icons.home_outlined),
+              title: const Text('No Home Assistant?'),
+              subtitle: const Text(
+                'Phoenix Home works without it: apps, the Kids Portal, '
+                'timers, alarms, school menus and the weather.',
+              ),
+              trailing: TextButton(
+                onPressed: _busy ? null : _skipHomeAssistant,
+                child: const Text('Skip for now'),
               ),
             ),
           ]),

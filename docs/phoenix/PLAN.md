@@ -74,3 +74,23 @@ intercom, RTSP, the fleet agent.
 8. **Immortal fork:** kept as the `legacy-immortal` branch of
    [rayalavcp/phoenix-portal](https://github.com/rayalavcp/phoenix-portal); that repository's
    `main` now carries Phoenix Portal.
+9. **Launcher first, Home Assistant as an add-on: done.**
+   - **Phoenix Home** (`lib/ui/home/`, `lib/managers/home/phoenix_home_manager.dart`) is the
+     default home screen (`home.screen`: `phoenix`, or `dashboard` for the old full-screen
+     dashboard). It sits over the dashboard's slot, so Home Assistant's offline cover never shows
+     unless the dashboard is opened, and the dashboard page is only loaded while it is open
+     (`dashboardPageNeeded`).
+   - Weather from Open-Meteo by city (`home.weather_city`) or the tablet's location; °F or °C.
+   - App drawer with search, recent and most-used apps; long press pins to the dock, adds to the
+     Kids Portal, hides, or opens Android's app info. Every installed app is shown; the old
+     whitelist launcher remains for a locked kiosk.
+   - Smart Home page: quick controls over `haListEntities` / `haCallService`, pinned favourites,
+     rooms, and "Open dashboard".
+   - School page (`school_service.dart`): Nutrislice menus (district `friscoisd` by default, school
+     picked from the district's list), an iCal calendar link, bell times.
+   - The setup wizards (device and remote) can skip Home Assistant (`home.setup_done`).
+10. **Kids Portal, second shelf: done.** Times Tables, Telling the Time, Flag Quiz, Patterns,
+    Sudoku, Maze, Word Search, Word Guess, Snake, Simon Says, Tic-Tac-Toe, Pixel Paint and Piano
+    (tones synthesized to WAV and played by the native player), grouped as Learn / Puzzles / Play /
+    Create, plus a daily challenge worth three stars. Rules in `kids_more_logic.dart`, tested in
+    `test/kids_more_logic_test.dart`.

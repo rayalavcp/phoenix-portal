@@ -325,6 +325,13 @@ const _categories = <(String, String, Object, String)>[
     Icons.timer_outlined,
     'Full screen view, pills, shared timers',
   ),
+  // Phoenix Portal: the launcher home screen, Home Assistant as an add-on.
+  (
+    'Home Screen',
+    'Home Screen',
+    Icons.home_outlined,
+    'Launcher, weather, Home Assistant',
+  ),
   // Phoenix Portal: games, activities, screen time and the profile switch.
   (
     'Kids Portal',

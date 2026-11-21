@@ -13562,6 +13562,162 @@
       "remoteAdmin": []
     }
   },
+  "settingHomeScreenTitle": "Home screen",
+  "@settingHomeScreenTitle": {
+    "context": "Settings > Home Screen",
+    "description": "Setting label.",
+    "x-locations": {
+      "device": [
+        "Settings > Home Screen > Home screen"
+      ],
+      "remoteAdmin": [
+        "Home Screen > Home screen"
+      ]
+    }
+  },
+  "settingHomeScreenDescription": "Phoenix Home is a launcher with your apps, the Kids Portal and smart home controls, and works without Home Assistant. Home Assistant dashboard shows the dashboard full screen instead.",
+  "@settingHomeScreenDescription": {
+    "context": "Settings > Home Screen",
+    "description": "Help below this setting.",
+    "x-locations": {
+      "device": [
+        "Settings > Home Screen > Home screen"
+      ],
+      "remoteAdmin": [
+        "Home Screen > Home screen"
+      ]
+    }
+  },
+  "settingHomeWeatherCityTitle": "Weather location",
+  "@settingHomeWeatherCityTitle": {
+    "context": "Settings > Home Screen",
+    "description": "Setting label.",
+    "x-locations": {
+      "device": [
+        "Settings > Home Screen > Weather location"
+      ],
+      "remoteAdmin": [
+        "Home Screen > Weather location"
+      ]
+    }
+  },
+  "settingHomeWeatherCityDescription": "The city for the weather on Phoenix Home, for example Austin or Austin, US. Leave empty to use the tablet's location.",
+  "@settingHomeWeatherCityDescription": {
+    "context": "Settings > Home Screen",
+    "description": "Help below this setting.",
+    "x-locations": {
+      "device": [
+        "Settings > Home Screen > Weather location"
+      ],
+      "remoteAdmin": [
+        "Home Screen > Weather location"
+      ]
+    }
+  },
+  "settingHomeTemperatureUnitTitle": "Temperature unit",
+  "@settingHomeTemperatureUnitTitle": {
+    "context": "Settings > Home Screen",
+    "description": "Setting label.",
+    "x-locations": {
+      "device": [
+        "Settings > Home Screen > Temperature unit"
+      ],
+      "remoteAdmin": [
+        "Home Screen > Temperature unit"
+      ]
+    }
+  },
+  "settingHomeTemperatureUnitDescription": "How Phoenix Home shows temperatures.",
+  "@settingHomeTemperatureUnitDescription": {
+    "context": "Settings > Home Screen",
+    "description": "Help below this setting.",
+    "x-locations": {
+      "device": [
+        "Settings > Home Screen > Temperature unit"
+      ],
+      "remoteAdmin": [
+        "Home Screen > Temperature unit"
+      ]
+    }
+  },
+  "homeScreenPhoenix": "Phoenix Home",
+  "@homeScreenPhoenix": {
+    "context": "Settings > Home Screen",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Home Screen"
+      ],
+      "remoteAdmin": [
+        "Home Screen"
+      ]
+    }
+  },
+  "homeScreenDashboard": "Home Assistant dashboard",
+  "@homeScreenDashboard": {
+    "context": "Settings > Home Screen",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Home Screen"
+      ],
+      "remoteAdmin": [
+        "Home Screen"
+      ]
+    }
+  },
+  "homeUnitFahrenheit": "Fahrenheit (°F)",
+  "@homeUnitFahrenheit": {
+    "context": "Settings > Home Screen",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Home Screen"
+      ],
+      "remoteAdmin": [
+        "Home Screen"
+      ]
+    }
+  },
+  "homeUnitCelsius": "Celsius (°C)",
+  "@homeUnitCelsius": {
+    "context": "Settings > Home Screen",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Home Screen"
+      ],
+      "remoteAdmin": [
+        "Home Screen"
+      ]
+    }
+  },
+  "settingsMenuHomeScreen": "Home Screen",
+  "@settingsMenuHomeScreen": {
+    "context": "Settings:Menu",
+    "description": "Settings menu entry.",
+    "x-locations": {
+      "device": [
+        "Settings"
+      ],
+      "remoteAdmin": [
+        "Settings"
+      ]
+    }
+  },
+  "settingsMenuHomeScreenSummary": "Launcher, weather, Home Assistant",
+  "@settingsMenuHomeScreenSummary": {
+    "context": "Settings:Menu",
+    "description": "Settings menu entry summary.",
+    "x-locations": {
+      "device": [
+        "Settings"
+      ],
+      "remoteAdmin": [
+        "Settings"
+      ]
+    }
+  },
   "settingPhoenixProfileTitle": "Profile",
   "@settingPhoenixProfileTitle": {
     "context": "Settings > Kids Portal",

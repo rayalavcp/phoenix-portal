@@ -22,6 +22,9 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     c = AppContainer();
     await c.settings.init();
+    // These cover the dashboard home screen; Phoenix Home's own rule is in
+    // phoenix_home_test.dart.
+    await c.settings.set(defs.homeScreen, 'dashboard');
     followDashboardPage(c.settings, c.bus, c.browser.pageNeeded);
   });
   tearDown(() async {

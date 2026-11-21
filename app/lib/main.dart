@@ -330,7 +330,11 @@ class _KioskSatelliteAppState extends State<KioskSatelliteApp>
   @override
   Widget build(BuildContext context) {
     final container = widget.container;
-    final configured = container.settings.get(defs.startUrl).isNotEmpty;
+    // Set up: a dashboard chosen, or the setup finished without Home
+    // Assistant (Phoenix Home needs none).
+    final configured =
+        container.settings.get(defs.startUrl).isNotEmpty ||
+        container.settings.get(defs.homeSetupDone);
     final barsShown =
         !hidesStatusBar(container.settings) ||
         !hidesNavigationBar(container.settings);
