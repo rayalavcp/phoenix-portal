@@ -8,7 +8,7 @@ import '../../managers/launcher/app_launcher_manager.dart';
 import '../kit.dart' show PhoenixMark;
 import '../theme.dart';
 import 'home_apps.dart';
-import 'home_themes.dart';
+import 'home_glass.dart';
 import 'home_tiles.dart';
 import 'school_page.dart';
 import 'telugu_calendar_page.dart';
@@ -168,28 +168,33 @@ class _HomeScreen extends StatelessWidget {
       container.phoenixHome.editing,
       container.phoenixHome.weather,
       container.phoenixHome.weatherEffects,
+      container.phoenixHome.weatherDemo,
+      container.phoenixHome.glassOpacity,
     ]),
     builder: (context, _) {
-      final theme = homeTheme(container.phoenixHome.theme.value);
       final editing = container.phoenixHome.editing.value;
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: RadialGradient(
-            center: const Alignment(-0.6, -1.1),
-            radius: 1.5,
-            colors: theme.background,
-            stops: const [0, 0.45, 1],
-          ),
-        ),
+      return GlassScope(
+        opacity: container.phoenixHome.glassOpacity.value,
         child: Stack(
           fit: StackFit.expand,
           children: [
+            HomeWallpaper(container: container),
             if (container.phoenixHome.weatherEffects.value &&
-                container.phoenixHome.weather.value != null)
+                (container.phoenixHome.weather.value != null || container.phoenixHome.weatherDemo.value.isNotEmpty))
               WeatherBackdrop(
                 code: container.phoenixHome.weather.value?.code,
                 isDay: container.phoenixHome.weather.value?.isDay ?? true,
+                demo: container.phoenixHome.weatherDemo.value,
               ),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0x66000000), Color(0x1A000000), Color(0x73000000)],
+                ),
+              ),
+            ),
             SafeArea(
               child: LayoutBuilder(
                 builder: (context, box) {

@@ -2,7 +2,7 @@ name: kiosk_satellite
 description: "Modern kiosk browser for Home Assistant — companion app for Voice Satellite."
 publish_to: 'none'
 
-version: 2026.11.27+370
+version: 2026.11.28+371
 
 environment:
   sdk: ^3.12.2
@@ -163,6 +163,8 @@ flutter:
     - assets/wake_words/vswakeword/int8/
     - assets/mdi/
     - assets/store/
+    # Phoenix Home's built-in 4K wallpapers (rendered for this app).
+    - assets/wallpapers/
   fonts:
     # Rubik (SIL Open Font License) — an open geometric sans that gives the
     # clock the clean, friendly feel of Google Sans without the licensing.

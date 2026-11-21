@@ -104,9 +104,26 @@ function tilesSection() {
 
 function lookSection() {
   const camera = el('input', { type: 'text', class: 'field', value: model.camera || '', placeholder: 'camera.front_door' });
+  const wallLink = el('input', { type: 'url', class: 'field', value: (model.wallpaperUrl || '').startsWith('/th?') ? '' : (model.wallpaperUrl || ''), placeholder: 'http://tower/wallpapers/lake.jpg' });
+  const haPage = el('input', { type: 'url', class: 'field', value: model.smartHomePage || '', placeholder: 'http://homeassistant.local:8123/lovelace/home' });
+  const glass = el('input', { type: 'range', min: '0', max: '100', step: '5', value: String(Math.round((model.glass ?? 0.35) * 100)) });
+  glass.addEventListener('change', () => save({ glass: Number(glass.value) / 100 }, 'Glass'));
   return card('Look',
     row('Home layout', 'Today: glass cards over the photo of the day. Tiles: the resizable tile grid.',
       select([['today', 'Today (recommended)'], ['tiles', 'Tiles']], model.layout || 'today', (v) => save({ layout: v }, 'Layout'))),
+    row('Wallpaper', 'A built-in 4K photo, all of them rotating, Bing 4K, your photos, a link or plain colours',
+      select([['builtin', 'All photos, rotating'], ...(model.wallpapers || []).map((w) => [w.id, w.name]),
+        ['bing', 'Bing 4K, rotating'], ['photos', 'My photos (Immich or folder)'], ['url', 'Image link'], ['theme', 'Colours only']],
+      model.wallpaper || 'builtin', (v) => save({ wallpaper: v }, 'Wallpaper'))),
+    row('Wallpaper link', 'Used when the wallpaper is Image link',
+      el('div', { class: 'phx-inline' }, wallLink,
+        el('button', { class: 'btn-ghost', type: 'button', text: 'Save', onclick: () => save({ wallpaper: 'url', wallpaperUrl: wallLink.value.trim() }, 'Wallpaper link') }))),
+    row('Glass', 'How see-through the cards and tiles are (0 clear, 100 frosted)', glass),
+    row('Smart Home button', 'Open your Home Assistant dashboard, or Phoenix\'s own controls',
+      select([['ha', 'Home Assistant dashboard'], ['phoenix', 'Phoenix controls']], model.smartHome || 'ha', (v) => save({ smartHome: v }, 'Smart Home button'))),
+    row('Home Assistant page', 'The page the Smart Home button opens (your dashboard or HTML page)',
+      el('div', { class: 'phx-inline' }, haPage,
+        el('button', { class: 'btn-ghost', type: 'button', text: 'Save', onclick: () => save({ smartHomePage: haPage.value.trim() }, 'Home Assistant page') }))),
     row('Front door camera', 'A Home Assistant camera on the Today screen; empty shows favourite apps instead',
       el('div', { class: 'phx-inline' }, camera,
         el('button', { class: 'btn-ghost', type: 'button', text: 'Save', onclick: () => save({ camera: camera.value.trim() }, 'Camera') }))),

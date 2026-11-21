@@ -15,6 +15,7 @@ import '../kids/kids_logic.dart';
 import '../kids/kids_more_logic.dart';
 import '../toast.dart';
 import 'home_apps.dart';
+import 'home_glass.dart';
 import 'home_themes.dart';
 import 'photo_frame.dart';
 import 'school_page.dart';
@@ -175,7 +176,7 @@ class _Tile extends StatelessWidget {
       case 'apps':
         home.appsOpen.value = true;
       case 'smart':
-        home.openSmartHome();
+        home.openSmartHomeButton();
       case 'school':
         await showTodayAtSchool(context, c);
       case 'telugu':
@@ -218,17 +219,29 @@ class _Tile extends StatelessWidget {
         ? _Size.tall
         : _Size.small;
     final content = _content(context, size);
-    final tile = GestureDetector(
+    // Glass, with a thin line of the tile's colour along the top.
+    final tile = Glass(
+      blur: false,
+      padding: EdgeInsets.zero,
       onTap: editing ? null : () => unawaited(_open(context)),
       onLongPress: () => c.phoenixHome.editing.value = true,
-      child: Container(
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: colors),
-          boxShadow: [BoxShadow(color: colors.first.withValues(alpha: 0.25), blurRadius: 16, offset: const Offset(0, 6))],
-        ),
-        child: content,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          content,
+          Positioned(
+            left: 18,
+            right: 18,
+            top: 0,
+            height: 3,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: colors),
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(3)),
+              ),
+            ),
+          ),
+        ],
       ),
     );
     if (!editing) return tile;

@@ -180,6 +180,22 @@ void main() {
       expect(home.layout.value, 'today');
     });
 
+    test('glass, Smart Home button and built-in wallpapers', () async {
+      final home = c.phoenixHome;
+      expect(home.smartHomeTarget.value, 'ha');
+      await home.applyRemote({'glass': 0.7, 'smartHome': 'phoenix'});
+      expect(home.remoteState()['glass'], 0.7);
+      expect(home.smartHomeTarget.value, 'phoenix');
+      await home.applyRemote({'glass': 5});
+      expect(home.glassOpacity.value, 1.0);
+      // No Home Assistant page yet: the button opens Phoenix's own page.
+      await home.setSmartHomeTarget('ha');
+      home.openSmartHomeButton();
+      expect(home.smartHomeOpen.value, isTrue);
+      expect(home.dashboardOpen.value, isFalse);
+      expect(builtinWallpapers.where((w) => w.$3.isNotEmpty).length, greaterThanOrEqualTo(10));
+    });
+
     test('ignores an unknown theme', () async {
       await c.phoenixHome.applyRemote({'theme': 'neon'});
       expect(c.phoenixHome.theme.value, 'ember');
@@ -224,7 +240,8 @@ void main() {
         expect(tester.takeException(), isNull);
         expect(find.textContaining('Good '), findsOneWidget);
         if (size.width >= 860) expect(find.text('TELUGU WORD OF THE DAY'), findsOneWidget);
-        expect(find.byTooltip('Kids'), findsOneWidget);
+        expect(find.byTooltip('Kids Portal'), findsOneWidget);
+        expect(find.byTooltip('Smart Home'), findsOneWidget);
         expect(find.byTooltip('Night mode'), findsOneWidget);
       });
 

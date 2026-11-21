@@ -21,6 +21,40 @@ import 'panchang.dart';
 import 'photo_service.dart';
 import 'school_service.dart';
 
+/// The 4K wallpapers built into the app (assets/wallpapers): id, name and,
+/// for photos, the credit their licence asks for (see CREDITS.md there).
+const builtinWallpapers = <(String, String, String)>[
+  ('lake_louise', 'Lake Louise', 'Chensiyuan · CC BY-SA 4.0 · Wikimedia Commons'),
+  ('kathleen_lake', 'Kathleen Lake', 'Jakub Fryš · CC BY-SA 4.0 · Wikimedia Commons'),
+  ('flatirons_sunrise', 'Flatirons sunrise', 'Tyler Cipriani · CC BY-SA 4.0 · Wikimedia Commons'),
+  ('loch_tummel', 'Loch Tummel autumn', 'Eric Kilby · CC BY-SA 4.0 · Wikimedia Commons'),
+  ('dzukou_valley', 'Dzukou Valley', 'Samudra Bikash Hazarika, edited by UnpetitproleX · CC BY-SA 4.0 · Wikimedia Commons'),
+  ('above_the_clouds', 'Above the clouds', 'Dmytro Balkhovitin · CC BY-SA 4.0 · Wikimedia Commons'),
+  ('rundle_pond', 'Mount Rundle', 'The Cosmonaut · CC BY-SA 2.5 ca · Wikimedia Commons'),
+  ('alpine_valley', 'Alpine valley', 'Böhringer · CC BY-SA 3.0 at · Wikimedia Commons'),
+  ('titicaca_dawn', 'Lake Titicaca dawn', 'Diego Delso · CC BY-SA 4.0 · Wikimedia Commons'),
+  ('gokyo_lakes', 'Gokyo lakes', 'Megaurab09, edited by UnpetitproleX · CC BY-SA 4.0 · Wikimedia Commons'),
+  ('highland_loch', 'Highland loch', 'Michal Klajban · CC BY-SA 4.0 · Wikimedia Commons'),
+  ('zhangjiajie', 'Zhangjiajie', 'chensiyuan · CC BY-SA 4.0 · Wikimedia Commons'),
+  ('gavarnie_valley', 'Gavarnie valley', 'Moahim · CC BY-SA 4.0 · Wikimedia Commons'),
+  ('valle_de_la_luna', 'Valle de la Luna', 'Diego Delso · CC BY-SA 4.0 · Wikimedia Commons'),
+  ('mountains_dawn', 'Mountain dawn (minimal)', ''),
+  ('alpine_lake', 'Alpine lake (minimal)', ''),
+  ('misty_forest', 'Misty forest (minimal)', ''),
+  ('desert_dunes', 'Desert dunes (minimal)', ''),
+  ('autumn_valley', 'Autumn valley (minimal)', ''),
+  ('rolling_hills', 'Rolling hills (minimal)', ''),
+  ('ocean_sunset', 'Ocean sunset (minimal)', ''),
+  ('moonlit_bay', 'Moonlit bay (minimal)', ''),
+  ('aurora_night', 'Aurora (minimal)', ''),
+  ('deep_ocean', 'Deep ocean (minimal)', ''),
+  ('ember_flow', 'Ember (minimal)', ''),
+];
+
+String builtinWallpaperAsset(String id) => 'assets/wallpapers/$id.jpg';
+
+final _photoWallpapers = [for (final w in builtinWallpapers) if (w.$3.isNotEmpty) w];
+
 /// Today's weather and the next days, from Open-Meteo (no account, no key,
 /// no Home Assistant).
 @immutable
@@ -313,9 +347,46 @@ class PhoenixHomeManager extends Manager {
   /// The home camera (a Home Assistant camera entity) for the Today screen.
   final cameraEntity = ValueNotifier<String>('');
 
-  /// Today's background photo (Bing's photo of the day), cached on disk.
+  /// The wallpaper behind the Today screen, already downloaded.
   final backdrop = ValueNotifier<Uint8List?>(null);
-  String _backdropDay = '';
+
+  /// Where the wallpaper comes from: 'builtin:ID' (one of the built-in 4K
+  /// wallpapers), 'builtin' (all of them, a new one every three hours),
+  /// 'bing' (Bing's 4K photos, a new one every three hours), 'photos' (your
+  /// Immich or folder photos), 'url' (one image link) or 'theme' (colours).
+  final wallpaper = ValueNotifier<String>('builtin');
+
+  /// How see-through the glass cards and tiles are: 0 clear, 1 solid.
+  final glassOpacity = ValueNotifier<double>(0.35);
+
+  Future<void> setGlassOpacity(double value) async {
+    glassOpacity.value = value.clamp(0.0, 1.0);
+    await (await _prefs()).setDouble(_glassKey, glassOpacity.value);
+  }
+  final wallpaperUrl = ValueNotifier<String>('');
+
+  /// Show a weather effect whatever the weather ('' = the real weather), to
+  /// see what each one looks like. Not saved.
+  final weatherDemo = ValueNotifier<String>('');
+
+  String _backdropKey = '';
+  List<String> _bingList = const [];
+  String _bingListDay = '';
+
+  Future<void> setWallpaper(String source, {String? url}) async {
+    wallpaper.value = _validWallpaper(source) ? source : 'builtin';
+    if (url != null) wallpaperUrl.value = url.trim();
+    final prefs = await _prefs();
+    await prefs.setString(_wallpaperKey, wallpaper.value);
+    await prefs.setString(_wallpaperUrlKey, wallpaperUrl.value);
+    _backdropKey = '';
+    if (wallpaper.value == 'theme') backdrop.value = null;
+    await refreshBackdrop();
+  }
+
+  static bool _validWallpaper(String source) =>
+      const {'builtin', 'bing', 'photos', 'url', 'theme'}.contains(source) ||
+      builtinWallpapers.any((w) => 'builtin:${w.$1}' == source);
 
   Future<void> setLayout(String value) async {
     layout.value = value == 'tiles' ? 'tiles' : 'today';
@@ -331,49 +402,145 @@ class PhoenixHomeManager extends Manager {
   ({String base, String token}) get homeAssistantAuth =>
       (base: _homeAssistant.baseUrl, token: _settings.get(defs.haToken));
 
-  /// Bing's photo of the day as the background, once a day. A failed
-  /// download keeps yesterday's photo, or the theme's colours.
-  Future<void> refreshBackdrop() async {
+  /// Loads the wallpaper when it is due for a change (every three hours, or
+  /// when the source changes). A failed download keeps the current one.
+  Future<void> refreshBackdrop({bool force = false}) async {
     final now = DateTime.now();
-    final day = '${now.year}-${now.month}-${now.day}';
-    if (_backdropDay == day && backdrop.value != null) return;
-    final file = await _backdropFile();
+    final slot = '${wallpaper.value}|${wallpaperUrl.value}|${now.year}-${now.month}-${now.day}-${now.hour ~/ 3}';
+    if (!force && slot == _backdropKey && backdrop.value != null) return;
     try {
-      if (file != null && file.existsSync() && backdrop.value == null) {
-        backdrop.value = await file.readAsBytes();
+      final bytes = switch (wallpaper.value) {
+        'theme' => null,
+        'builtin' => await _builtin(_photoWallpapers[(now.day * 8 + now.hour ~/ 3) % _photoWallpapers.length].$1),
+        final w when w.startsWith('builtin:') => await _builtin(w.substring(8)),
+        'url' when wallpaperUrl.value.startsWith('/th?') => await _bingOne(wallpaperUrl.value),
+        'url' => await _download(Uri.parse(wallpaperUrl.value)),
+        'photos' => await _fromPhotos(now),
+        _ => await _fromBing(now),
+      };
+      if (bytes != null) {
+        backdrop.value = bytes;
+        _backdropKey = slot;
       }
-      final res = await _client
-          .get(Uri.https('www.bing.com', '/HPImageArchive.aspx', {
-            'format': 'js',
-            'idx': '0',
-            'n': '1',
-            'mkt': 'en-US',
-          }))
-          .timeout(const Duration(seconds: 15));
-      if (res.statusCode != 200) throw 'HTTP ${res.statusCode}';
-      final images = (jsonDecode(res.body) as Map)['images'];
-      if (images is! List || images.isEmpty) throw 'no image';
-      final image = images.first as Map;
-      final base = '${image['urlbase'] ?? ''}';
-      final path = base.isNotEmpty ? '${base}_1920x1080.jpg' : '${image['url']}';
-      final url = path.startsWith('http') ? path : 'https://www.bing.com$path';
-      final pic = await _client.get(Uri.parse(url)).timeout(const Duration(seconds: 30));
-      if (pic.statusCode != 200 || pic.bodyBytes.length < 10000) throw 'photo HTTP ${pic.statusCode}';
-      backdrop.value = pic.bodyBytes;
-      _backdropDay = day;
-      await file?.writeAsBytes(pic.bodyBytes, flush: true);
     } catch (e) {
-      log.warn(name, 'background photo: $e');
+      log.warn(name, 'wallpaper: $e');
+      if (backdrop.value == null) {
+        // Offline at boot: the last wallpaper that loaded, else a built-in.
+        final file = await _cacheFile('last');
+        if (file != null && file.existsSync()) {
+          backdrop.value = await file.readAsBytes();
+        } else {
+          try {
+            backdrop.value = await _builtin(builtinWallpapers.first.$1);
+          } catch (_) {}
+        }
+      }
     }
   }
 
-  Future<File?> _backdropFile() async {
+  Future<Uint8List> _builtin(String id) async {
+    final data = await rootBundle.load(builtinWallpaperAsset(id));
+    return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+  }
+
+  /// Bing's recent 4K photos, for the wallpaper picker: (id, thumbnail URL).
+  Future<List<(String, String)>> bingGallery() async {
+    final res = await _client
+        .get(Uri.https('www.bing.com', '/HPImageArchive.aspx', {'format': 'js', 'idx': '0', 'n': '8', 'mkt': 'en-US'}))
+        .timeout(const Duration(seconds: 15));
+    final res2 = await _client
+        .get(Uri.https('www.bing.com', '/HPImageArchive.aspx', {'format': 'js', 'idx': '7', 'n': '8', 'mkt': 'en-US'}))
+        .timeout(const Duration(seconds: 15));
+    final out = <(String, String)>[];
+    for (final r in [res, res2]) {
+      if (r.statusCode != 200) continue;
+      final images = (jsonDecode(r.body) as Map)['images'];
+      if (images is! List) continue;
+      for (final i in images) {
+        final base = i is Map ? '${i['urlbase'] ?? ''}' : '';
+        if (base.isEmpty || out.any((o) => o.$1 == base)) continue;
+        out.add((base, 'https://www.bing.com${base}_480x270.jpg'));
+      }
+    }
+    if (out.isEmpty) throw 'Bing sent no photos';
+    return out;
+  }
+
+  Future<Uint8List> _download(Uri url) async {
+    final res = await _client.get(url).timeout(const Duration(seconds: 60));
+    if (res.statusCode != 200 || res.bodyBytes.length < 10000) throw 'HTTP ${res.statusCode} from ${url.host}';
+    unawaited(_cacheFile('last').then((f) => f?.writeAsBytes(res.bodyBytes, flush: true)));
+    return res.bodyBytes;
+  }
+
+  /// Bing's last eight photos of the day in 4K (3840×2160), one every three
+  /// hours. Each is downloaded once and kept on disk.
+  Future<Uint8List> _fromBing(DateTime now) async {
+    final day = '${now.year}-${now.month}-${now.day}';
+    if (_bingListDay != day || _bingList.isEmpty) {
+      final res = await _client
+          .get(Uri.https('www.bing.com', '/HPImageArchive.aspx', {'format': 'js', 'idx': '0', 'n': '8', 'mkt': 'en-US'}))
+          .timeout(const Duration(seconds: 15));
+      if (res.statusCode != 200) throw 'Bing HTTP ${res.statusCode}';
+      final images = (jsonDecode(res.body) as Map)['images'];
+      if (images is! List || images.isEmpty) throw 'Bing sent no photos';
+      _bingList = [
+        for (final i in images)
+          if (i is Map && '${i['urlbase'] ?? ''}'.isNotEmpty) '${i['urlbase']}',
+      ];
+      _bingListDay = day;
+    }
+    final base = _bingList[(now.hour ~/ 3) % _bingList.length];
+    final id = RegExp(r'id=([^&]+)').firstMatch(base)?.group(1) ?? base.hashCode.toString();
+    final file = await _cacheFile('bing_${id.replaceAll(RegExp(r'[^A-Za-z0-9_.-]'), '_')}');
+    if (file != null && file.existsSync()) return file.readAsBytes();
+    Uint8List bytes;
     try {
-      final dir = await getApplicationSupportDirectory();
-      return File('${dir.path}/phoenix_backdrop.jpg');
+      bytes = await _download(Uri.parse('https://www.bing.com${base}_UHD.jpg'));
+    } catch (_) {
+      bytes = await _download(Uri.parse('https://www.bing.com${base}_1920x1080.jpg'));
+    }
+    await file?.writeAsBytes(bytes, flush: true);
+    await _pruneCache();
+    return bytes;
+  }
+
+  Future<Uint8List> _bingOne(String base) async {
+    final id = RegExp(r'id=([^&]+)').firstMatch(base)?.group(1) ?? base.hashCode.toString();
+    final file = await _cacheFile('bing_${id.replaceAll(RegExp(r'[^A-Za-z0-9_.-]'), '_')}');
+    if (file != null && file.existsSync()) return file.readAsBytes();
+    final bytes = await _download(Uri.parse('https://www.bing.com${base}_UHD.jpg'));
+    await file?.writeAsBytes(bytes, flush: true);
+    return bytes;
+  }
+
+  Future<Uint8List?> _fromPhotos(DateTime now) async {
+    if (!photos.configured) throw 'photos are not set up';
+    final list = await photos.photos();
+    if (list.isEmpty) throw 'no photos found';
+    return photos.bytes(list[(now.day * 8 + now.hour ~/ 3) % list.length]);
+  }
+
+  Future<File?> _cacheFile(String name) async {
+    try {
+      final dir = Directory('${(await getApplicationSupportDirectory()).path}/wallpapers');
+      if (!dir.existsSync()) dir.createSync(recursive: true);
+      return File('${dir.path}/$name.jpg');
     } catch (_) {
       return null;
     }
+  }
+
+  /// Keeps the ten newest Bing photos (about 30 MB).
+  Future<void> _pruneCache() async {
+    try {
+      final dir = Directory('${(await getApplicationSupportDirectory()).path}/wallpapers');
+      final files = dir.listSync().whereType<File>().where((f) => f.path.contains('/bing_')).toList()
+        ..sort((a, b) => b.statSync().modified.compareTo(a.statSync().modified));
+      for (final f in files.skip(10)) {
+        f.deleteSync();
+      }
+    } catch (_) {}
   }
 
   /// The animated weather in the background (weather_backdrop.dart).
@@ -431,6 +598,10 @@ class PhoenixHomeManager extends Manager {
   static const _weatherFxKey = 'phx.home.weather_fx';
   static const _layoutKey = 'phx.home.layout';
   static const _cameraKey = 'phx.home.camera';
+  static const _wallpaperKey = 'phx.home.wallpaper';
+  static const _smartTargetKey = 'phx.home.smart_target';
+  static const _glassKey = 'phx.home.glass';
+  static const _wallpaperUrlKey = 'phx.home.wallpaper_url';
   static const _weatherRefresh = Duration(minutes: 30);
 
   StreamSubscription<SettingChanged>? _settingSub;
@@ -593,6 +764,12 @@ class PhoenixHomeManager extends Manager {
     'weatherEffects': weatherEffects.value,
     'layout': layout.value,
     'camera': cameraEntity.value,
+    'wallpaper': wallpaper.value,
+    'smartHome': smartHomeTarget.value,
+    'glass': glassOpacity.value,
+    'wallpapers': [for (final (id, name, credit) in builtinWallpapers) {'id': 'builtin:$id', 'name': name, 'credit': credit}],
+    'smartHomePage': smartHomePage,
+    'wallpaperUrl': wallpaperUrl.value,
     'favorites': favorites.value,
     'hiddenApps': hidden.value.toList(),
     'kidsApps': kidsApps.value,
@@ -635,6 +812,19 @@ class PhoenixHomeManager extends Manager {
     if (p['weatherEffects'] is bool) await setWeatherEffects(p['weatherEffects'] as bool);
     if (p['layout'] is String) await setLayout(p['layout'] as String);
     if (p['camera'] is String) await setCameraEntity(p['camera'] as String);
+    if (p['glass'] is num) await setGlassOpacity((p['glass'] as num).toDouble());
+    if (p['smartHome'] is String || p['smartHomePage'] is String) {
+      await setSmartHomeTarget(
+        p['smartHome'] is String ? p['smartHome'] as String : smartHomeTarget.value,
+        page: p['smartHomePage'] is String ? p['smartHomePage'] as String : null,
+      );
+    }
+    if (p['wallpaper'] is String || p['wallpaperUrl'] is String) {
+      await setWallpaper(
+        p['wallpaper'] is String ? p['wallpaper'] as String : wallpaper.value,
+        url: p['wallpaperUrl'] is String ? p['wallpaperUrl'] as String : null,
+      );
+    }
     if (p['favorites'] is List) {
       favorites.value = _strings(p['favorites']);
       await prefs.setStringList(_favoritesKey, favorites.value);
@@ -682,6 +872,32 @@ class PhoenixHomeManager extends Manager {
     smartHomeOpen.value = false;
     appsOpen.value = false;
     dashboardOpen.value = true;
+  }
+
+  /// What the Smart Home button opens: 'ha' (your Home Assistant
+  /// dashboard, the default) or 'phoenix' (Phoenix's own lights and scenes).
+  final smartHomeTarget = ValueNotifier<String>('ha');
+
+  /// The Home Assistant page the Smart Home button opens (the browser's
+  /// start page: a dashboard such as /lovelace/home, or your own HTML page).
+  String get smartHomePage => _settings.get(defs.startUrl);
+
+  Future<void> setSmartHomeTarget(String target, {String? page}) async {
+    smartHomeTarget.value = target == 'phoenix' ? 'phoenix' : 'ha';
+    await (await _prefs()).setString(_smartTargetKey, smartHomeTarget.value);
+    if (page != null && page.trim().isNotEmpty && page.trim() != smartHomePage) {
+      await _settings.set(defs.startUrl, page.trim());
+    }
+  }
+
+  /// The Smart Home button: Home Assistant's dashboard, or Phoenix's own
+  /// page when that is chosen or Home Assistant is not set up yet.
+  void openSmartHomeButton() {
+    if (smartHomeTarget.value == 'ha' && smartHomePage.trim().isNotEmpty) {
+      openDashboard();
+    } else {
+      openSmartHome();
+    }
   }
 
   void openSmartHome() {
@@ -988,6 +1204,11 @@ class PhoenixHomeManager extends Manager {
     weatherEffects.value = prefs.getBool(_weatherFxKey) ?? true;
     layout.value = prefs.getString(_layoutKey) == 'tiles' ? 'tiles' : 'today';
     cameraEntity.value = prefs.getString(_cameraKey) ?? '';
+    final savedWall = prefs.getString(_wallpaperKey) ?? '';
+    wallpaper.value = _validWallpaper(savedWall) ? savedWall : 'builtin';
+    glassOpacity.value = (prefs.getDouble(_glassKey) ?? 0.35).clamp(0.0, 1.0);
+    smartHomeTarget.value = prefs.getString(_smartTargetKey) == 'phoenix' ? 'phoenix' : 'ha';
+    wallpaperUrl.value = prefs.getString(_wallpaperUrlKey) ?? '';
     usage.value = decodeUsage(prefs.getString(_usageKey));
   }
 
@@ -1019,6 +1240,11 @@ class PhoenixHomeManager extends Manager {
     layout.dispose();
     cameraEntity.dispose();
     backdrop.dispose();
+    wallpaper.dispose();
+    smartHomeTarget.dispose();
+    glassOpacity.dispose();
+    wallpaperUrl.dispose();
+    weatherDemo.dispose();
     editing.dispose();
     entities.dispose();
     entitiesLoading.dispose();
