@@ -500,6 +500,9 @@ class _SchoolSetup extends StatefulWidget {
 class _SchoolSetupState extends State<_SchoolSetup> {
   late SchoolConfig _cfg = widget.school.config.value;
   late final _district = TextEditingController(text: _cfg.district);
+  late final _schoolId = TextEditingController(text: _cfg.schoolSlug);
+  late final _line = TextEditingController(text: _cfg.servingLine);
+  late final _grade = TextEditingController(text: _cfg.grade);
   late final _name = TextEditingController(text: _cfg.schoolName);
   late final _calendar = TextEditingController(text: _cfg.calendarUrl);
   late final _start = TextEditingController(text: _cfg.startTime);
@@ -519,7 +522,7 @@ class _SchoolSetupState extends State<_SchoolSetup> {
 
   @override
   void dispose() {
-    for (final c in [_district, _name, _calendar, _start, _end, _filter]) {
+    for (final c in [_district, _schoolId, _line, _grade, _name, _calendar, _start, _end, _filter]) {
       c.dispose();
     }
     super.dispose();
@@ -533,7 +536,7 @@ class _SchoolSetupState extends State<_SchoolSetup> {
       _error = null;
     });
     try {
-      final list = await widget.school.schools(district);
+      final list = await widget.school.schools(district, provider: _cfg.provider);
       if (mounted) setState(() => _schools = list);
     } catch (e) {
       if (mounted) {
@@ -572,6 +575,12 @@ class _SchoolSetupState extends State<_SchoolSetup> {
     await widget.school.save(
       _cfg.copyWith(
         schoolName: _name.text.trim(),
+        schoolSlug: _schoolId.text.trim(),
+        servingLine: _line.text.trim().isEmpty ? 'Main Line' : _line.text.trim(),
+        grade: _grade.text.trim().isEmpty ? '02' : _grade.text.trim(),
+        menuTypes: _cfg.provider == 'schoolcafe' && _cfg.menuTypes.isEmpty
+            ? const [('Breakfast', 'Breakfast'), ('Lunch', 'Lunch')]
+            : _cfg.menuTypes,
         district: _district.text.trim().toLowerCase(),
         calendarUrl: _calendar.text.trim(),
         startTime: start,
@@ -595,15 +604,28 @@ class _SchoolSetupState extends State<_SchoolSetup> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'schoolcafe', label: Text('SchoolCafe (Frisco ISD)')),
+                  ButtonSegment(value: 'nutrislice', label: Text('Nutrislice')),
+                ],
+                selected: {_cfg.provider},
+                onSelectionChanged: (v) => setState(() {
+                  _cfg = _cfg.copyWith(provider: v.first, menuTypes: const []);
+                  _schools = null;
+                }),
+              ),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
                     child: TextField(
                       controller: _district,
-                      decoration: const InputDecoration(
-                        labelText: 'School district (menu site)',
-                        helperText:
-                            'friscoisd for Frisco ISD (friscoisd.nutrislice.com)',
+                      decoration: InputDecoration(
+                        labelText: 'School district',
+                        helperText: _cfg.provider == 'schoolcafe'
+                            ? 'friscoisd for Frisco ISD on schoolcafe.com'
+                            : 'friscoisd for friscoisd.nutrislice.com',
                       ),
                       onSubmitted: (_) => unawaited(_loadSchools()),
                     ),
@@ -657,6 +679,7 @@ class _SchoolSetupState extends State<_SchoolSetup> {
                                       m,
                                 ];
                                 _name.text = s.name;
+                                _schoolId.text = s.slug;
                                 _cfg = _cfg.copyWith(
                                   schoolSlug: s.slug,
                                   schoolName: s.name,
@@ -669,6 +692,36 @@ class _SchoolSetupState extends State<_SchoolSetup> {
                         ],
                       ),
               ),
+              if (_cfg.provider == 'schoolcafe') ...[
+                TextField(
+                  controller: _schoolId,
+                  decoration: const InputDecoration(
+                    labelText: 'SchoolCafe school ID',
+                    helperText:
+                        'Filled in when you pick the school above. If the list does not load, paste the '
+                        'SchoolId from your Home Assistant SchoolCafe setup (it looks like 1a2b3c4d-...).',
+                    helperMaxLines: 3,
+                  ),
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _line,
+                        decoration: const InputDecoration(labelText: 'Serving line', hintText: 'Main Line'),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextField(
+                        controller: _grade,
+                        decoration: const InputDecoration(labelText: 'Grade', hintText: '02'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
               if (_cfg.schoolSlug.isNotEmpty) ...[
                 Text(
                   'Menus to show',
@@ -698,9 +751,10 @@ class _SchoolSetupState extends State<_SchoolSetup> {
               TextField(
                 controller: _calendar,
                 decoration: const InputDecoration(
-                  labelText: 'Calendar link (iCal / .ics)',
+                  labelText: 'School calendar',
                   helperText:
-                      "Copy the district calendar's iCal or Subscribe link. webcal:// works too.",
+                      "The district calendar's iCal (.ics) or Subscribe link, or a Home Assistant "
+                      'calendar such as calendar.frisco_isd.',
                   helperMaxLines: 2,
                 ),
               ),

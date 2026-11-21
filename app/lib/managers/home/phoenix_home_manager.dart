@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/command_registry.dart';
@@ -268,7 +270,15 @@ class PhoenixHomeManager extends Manager {
   final schoolOpen = ValueNotifier<bool>(false);
 
   /// School menus and calendar (Frisco ISD's Nutrislice by default).
-  late final school = SchoolService(_client, _prefs, log);
+  late final school = SchoolService(
+    _client,
+    _prefs,
+    log,
+    homeAssistant: () => (
+      base: _homeAssistant.baseUrl,
+      token: _settings.get(defs.haToken),
+    ),
+  );
 
   final weather = ValueNotifier<HomeWeather?>(null);
 
@@ -295,6 +305,76 @@ class PhoenixHomeManager extends Manager {
 
   /// The colour theme (home_themes.dart).
   final theme = ValueNotifier<String>('ember');
+
+  /// 'today': the glass-card Today screen (the default). 'tiles': the
+  /// resizable tile grid.
+  final layout = ValueNotifier<String>('today');
+
+  /// The home camera (a Home Assistant camera entity) for the Today screen.
+  final cameraEntity = ValueNotifier<String>('');
+
+  /// Today's background photo (Bing's photo of the day), cached on disk.
+  final backdrop = ValueNotifier<Uint8List?>(null);
+  String _backdropDay = '';
+
+  Future<void> setLayout(String value) async {
+    layout.value = value == 'tiles' ? 'tiles' : 'today';
+    await (await _prefs()).setString(_layoutKey, layout.value);
+  }
+
+  Future<void> setCameraEntity(String entity) async {
+    cameraEntity.value = entity.trim();
+    await (await _prefs()).setString(_cameraKey, cameraEntity.value);
+  }
+
+  /// Home Assistant's address and token, for camera snapshots.
+  ({String base, String token}) get homeAssistantAuth =>
+      (base: _homeAssistant.baseUrl, token: _settings.get(defs.haToken));
+
+  /// Bing's photo of the day as the background, once a day. A failed
+  /// download keeps yesterday's photo, or the theme's colours.
+  Future<void> refreshBackdrop() async {
+    final now = DateTime.now();
+    final day = '${now.year}-${now.month}-${now.day}';
+    if (_backdropDay == day && backdrop.value != null) return;
+    final file = await _backdropFile();
+    try {
+      if (file != null && file.existsSync() && backdrop.value == null) {
+        backdrop.value = await file.readAsBytes();
+      }
+      final res = await _client
+          .get(Uri.https('www.bing.com', '/HPImageArchive.aspx', {
+            'format': 'js',
+            'idx': '0',
+            'n': '1',
+            'mkt': 'en-US',
+          }))
+          .timeout(const Duration(seconds: 15));
+      if (res.statusCode != 200) throw 'HTTP ${res.statusCode}';
+      final images = (jsonDecode(res.body) as Map)['images'];
+      if (images is! List || images.isEmpty) throw 'no image';
+      final image = images.first as Map;
+      final base = '${image['urlbase'] ?? ''}';
+      final path = base.isNotEmpty ? '${base}_1920x1080.jpg' : '${image['url']}';
+      final url = path.startsWith('http') ? path : 'https://www.bing.com$path';
+      final pic = await _client.get(Uri.parse(url)).timeout(const Duration(seconds: 30));
+      if (pic.statusCode != 200 || pic.bodyBytes.length < 10000) throw 'photo HTTP ${pic.statusCode}';
+      backdrop.value = pic.bodyBytes;
+      _backdropDay = day;
+      await file?.writeAsBytes(pic.bodyBytes, flush: true);
+    } catch (e) {
+      log.warn(name, 'background photo: $e');
+    }
+  }
+
+  Future<File?> _backdropFile() async {
+    try {
+      final dir = await getApplicationSupportDirectory();
+      return File('${dir.path}/phoenix_backdrop.jpg');
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// The animated weather in the background (weather_backdrop.dart).
   final weatherEffects = ValueNotifier<bool>(true);
@@ -349,6 +429,8 @@ class PhoenixHomeManager extends Manager {
   static const _hiddenTilesKey = 'phx.home.hidden_tiles';
   static const _themeKey = 'phx.home.theme';
   static const _weatherFxKey = 'phx.home.weather_fx';
+  static const _layoutKey = 'phx.home.layout';
+  static const _cameraKey = 'phx.home.camera';
   static const _weatherRefresh = Duration(minutes: 30);
 
   StreamSubscription<SettingChanged>? _settingSub;
@@ -380,8 +462,10 @@ class PhoenixHomeManager extends Manager {
       unawaited(_recordLaunch(e.package));
     });
     unawaited(refreshWeather());
+    unawaited(refreshBackdrop());
     _weatherTimer = Timer.periodic(_weatherRefresh, (_) {
       unawaited(refreshWeather());
+      unawaited(refreshBackdrop());
       unawaited(school.refresh());
     });
     unawaited(_launcher.refreshInstalled());
@@ -462,12 +546,13 @@ class PhoenixHomeManager extends Manager {
       ..register(
         Command(
           name: 'phoenixSchoolList',
-          description: "A district's schools and their menus, from Nutrislice.",
-          params: const {'district': 'the menu site name, e.g. friscoisd'},
+          description: "A district's schools and their menus, from SchoolCafe or Nutrislice.",
+          params: const {'district': 'the district, e.g. friscoisd', 'provider': 'schoolcafe or nutrislice'},
           handler: (p) async {
             final district = '${p['district'] ?? school.config.value.district}'.trim().toLowerCase();
             try {
-              final list = await school.schools(district);
+              final provider = p['provider'] is String ? p['provider'] as String : null;
+              final list = await school.schools(district, provider: provider);
               return CommandResult.ok([
                 for (final s in list)
                   {
@@ -506,6 +591,8 @@ class PhoenixHomeManager extends Manager {
     'theme': theme.value,
     'themes': themeIds,
     'weatherEffects': weatherEffects.value,
+    'layout': layout.value,
+    'camera': cameraEntity.value,
     'favorites': favorites.value,
     'hiddenApps': hidden.value.toList(),
     'kidsApps': kidsApps.value,
@@ -546,6 +633,8 @@ class PhoenixHomeManager extends Manager {
     }
     if (p['theme'] is String && themeIds.contains(p['theme'])) await setTheme(p['theme'] as String);
     if (p['weatherEffects'] is bool) await setWeatherEffects(p['weatherEffects'] as bool);
+    if (p['layout'] is String) await setLayout(p['layout'] as String);
+    if (p['camera'] is String) await setCameraEntity(p['camera'] as String);
     if (p['favorites'] is List) {
       favorites.value = _strings(p['favorites']);
       await prefs.setStringList(_favoritesKey, favorites.value);
@@ -897,6 +986,8 @@ class PhoenixHomeManager extends Manager {
     hiddenTiles.value = {...?prefs.getStringList(_hiddenTilesKey)};
     theme.value = prefs.getString(_themeKey) ?? 'ember';
     weatherEffects.value = prefs.getBool(_weatherFxKey) ?? true;
+    layout.value = prefs.getString(_layoutKey) == 'tiles' ? 'tiles' : 'today';
+    cameraEntity.value = prefs.getString(_cameraKey) ?? '';
     usage.value = decodeUsage(prefs.getString(_usageKey));
   }
 
@@ -925,6 +1016,9 @@ class PhoenixHomeManager extends Manager {
     hiddenTiles.dispose();
     theme.dispose();
     weatherEffects.dispose();
+    layout.dispose();
+    cameraEntity.dispose();
+    backdrop.dispose();
     editing.dispose();
     entities.dispose();
     entitiesLoading.dispose();

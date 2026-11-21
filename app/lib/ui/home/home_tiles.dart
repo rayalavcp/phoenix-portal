@@ -762,6 +762,14 @@ class HomeEditBar extends StatelessWidget {
                 ],
               ),
             ),
+            TextButton.icon(
+              onPressed: () {
+                home.editing.value = false;
+                unawaited(home.setLayout('today'));
+              },
+              icon: const Icon(Icons.wb_sunny_rounded),
+              label: const Text('Today layout'),
+            ),
             TextButton(onPressed: () => unawaited(home.resetTiles()), child: const Text('Reset')),
             const SizedBox(width: 6),
             FilledButton(

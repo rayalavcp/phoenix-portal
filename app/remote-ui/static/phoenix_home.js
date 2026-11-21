@@ -103,7 +103,13 @@ function tilesSection() {
 }
 
 function lookSection() {
+  const camera = el('input', { type: 'text', class: 'field', value: model.camera || '', placeholder: 'camera.front_door' });
   return card('Look',
+    row('Home layout', 'Today: glass cards over the photo of the day. Tiles: the resizable tile grid.',
+      select([['today', 'Today (recommended)'], ['tiles', 'Tiles']], model.layout || 'today', (v) => save({ layout: v }, 'Layout'))),
+    row('Front door camera', 'A Home Assistant camera on the Today screen; empty shows favourite apps instead',
+      el('div', { class: 'phx-inline' }, camera,
+        el('button', { class: 'btn-ghost', type: 'button', text: 'Save', onclick: () => save({ camera: camera.value.trim() }, 'Camera') }))),
     row('Theme', 'Colours of the background and the tiles',
       select(model.themes.map((id) => [id, THEME_NAMES[id] || id]), model.theme, (v) => save({ theme: v }, 'Theme'))),
     row('Weather in the background', 'Rain, snow, clouds, sun or stars from the current weather',
@@ -152,7 +158,11 @@ function schoolSection() {
   const s = { ...model.school, menus: [...(model.school.menus || [])] };
   const name = el('input', { type: 'text', class: 'field', value: s.schoolName || '', placeholder: 'Miller Elementary' });
   const district = el('input', { type: 'text', class: 'field', value: s.district || 'friscoisd', placeholder: 'friscoisd' });
-  const calendar = el('input', { type: 'url', class: 'field', value: s.calendar || '', placeholder: 'https://… .ics or webcal://…' });
+  let provider = s.provider || 'schoolcafe';
+  const schoolId = el('input', { type: 'text', class: 'field', value: provider === 'schoolcafe' ? (s.school || '') : '', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' });
+  const line = el('input', { type: 'text', class: 'field', value: s.servingLine || 'Main Line', placeholder: 'Main Line' });
+  const grade = el('input', { type: 'text', class: 'field', value: s.grade || '02', placeholder: '02' });
+  const calendar = el('input', { type: 'text', class: 'field', value: s.calendar || '', placeholder: 'calendar.frisco_isd or https://… .ics' });
   const start = el('input', { type: 'time', class: 'field', value: hhmm(s.start) });
   const end = el('input', { type: 'time', class: 'field', value: hhmm(s.end) });
   const picker = el('div');
@@ -169,7 +179,7 @@ function schoolSection() {
   };
   const load = async () => {
     picker.replaceChildren(el('div', { class: 'desc', text: 'Loading schools…' }));
-    const r = await cmd('phoenixSchoolList', { district: district.value.trim() }).catch(() => null);
+    const r = await cmd('phoenixSchoolList', { district: district.value.trim(), provider }).catch(() => null);
     if (!r?.ok) {
       picker.replaceChildren(el('div', { class: 'desc', text: r?.error || "Couldn't load the schools" }));
       return;
@@ -178,6 +188,7 @@ function schoolSection() {
     const sel = select([['', 'Choose a school'], ...schools.map((x) => [x.slug, x.name])], s.school, (v) => {
       const pick = schools.find((x) => x.slug === v);
       s.school = v;
+      if (provider === 'schoolcafe') schoolId.value = v;
       if (pick) {
         name.value = pick.name;
         s.menus = pick.menus.filter((m) => /breakfast|lunch/.test(m.slug));
@@ -191,18 +202,25 @@ function schoolSection() {
   drawMenus();
   return card('School',
     row('School name', 'Shown on the School tile and page', name),
-    row('District menu site', 'friscoisd for Frisco ISD (friscoisd.nutrislice.com)',
+    row('Menu source', 'Frisco ISD posts its menus on SchoolCafe',
+      select([['schoolcafe', 'SchoolCafe (Frisco ISD)'], ['nutrislice', 'Nutrislice']], provider, (v) => { provider = v; })),
+    row('SchoolCafe school ID', 'The school\'s ID from SchoolCafe (the same one your Home Assistant SchoolCafe setup uses)', schoolId),
+    row('Serving line', 'Usually Main Line', line),
+    row('Grade', 'Two digits, e.g. 02 for 2nd grade', grade),
+    row('District', 'friscoisd for Frisco ISD',
       el('div', { class: 'phx-inline' }, district, el('button', { class: 'btn-ghost', type: 'button', text: 'Load schools', onclick: load }))),
     row('School', s.school ? `Picked: ${s.school}` : 'Pick it for its menus', picker),
     row('Menus', 'Which menus to show', menus),
-    row('Calendar link', 'The school or district calendar as iCal (.ics)', calendar),
+    row('School calendar', 'A Home Assistant calendar (calendar.frisco_isd) or an iCal (.ics) link', calendar),
     row('School starts', null, start),
     row('School ends', null, end),
     el('div', { class: 'phx-actions' }, el('button', {
       class: 'btn-primary', type: 'button', text: 'Save school',
       onclick: () => save({
         school: {
-          schoolName: name.value.trim(), district: district.value.trim().toLowerCase(), school: s.school || '',
+          provider, servingLine: line.value.trim() || 'Main Line', grade: grade.value.trim() || '02',
+          schoolName: name.value.trim(), district: district.value.trim().toLowerCase(),
+          school: provider === 'schoolcafe' ? schoolId.value.trim() : (s.school || ''),
           menus: s.menus, calendar: calendar.value.trim(), start: start.value.replace(/^0(\d)/, '$1'), end: end.value.replace(/^0(\d)/, '$1'),
         },
       }, 'School'),

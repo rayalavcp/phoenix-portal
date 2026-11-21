@@ -171,6 +171,15 @@ void main() {
       expect(home.photos.configured, isTrue);
     });
 
+    test('layout and camera round-trip; unknown layouts mean Today', () async {
+      final home = c.phoenixHome;
+      await home.applyRemote({'layout': 'tiles', 'camera': ' camera.front_door '});
+      expect(home.remoteState()['layout'], 'tiles');
+      expect(home.remoteState()['camera'], 'camera.front_door');
+      await home.applyRemote({'layout': 'weird'});
+      expect(home.layout.value, 'today');
+    });
+
     test('ignores an unknown theme', () async {
       await c.phoenixHome.applyRemote({'theme': 'neon'});
       expect(c.phoenixHome.theme.value, 'ember');
@@ -209,7 +218,18 @@ void main() {
     }
 
     for (final size in const [Size(1280, 800), Size(800, 1280), Size(1024, 600), Size(800, 600)]) {
-      testWidgets('lays out without Home Assistant at $size', (tester) async {
+      testWidgets('the Today screen lays out without Home Assistant at $size', (tester) async {
+        expect(c.phoenixHome.layout.value, 'today');
+        await pump(tester, size);
+        expect(tester.takeException(), isNull);
+        expect(find.textContaining('Good '), findsOneWidget);
+        if (size.width >= 860) expect(find.text('TELUGU WORD OF THE DAY'), findsOneWidget);
+        expect(find.byTooltip('Kids'), findsOneWidget);
+        expect(find.byTooltip('Night mode'), findsOneWidget);
+      });
+
+      testWidgets('the tile layout lays out without Home Assistant at $size', (tester) async {
+        c.phoenixHome.layout.value = 'tiles';
         await pump(tester, size);
         expect(tester.takeException(), isNull);
         expect(find.text('Kids Portal'), findsOneWidget);

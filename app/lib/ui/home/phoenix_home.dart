@@ -12,6 +12,7 @@ import 'home_themes.dart';
 import 'home_tiles.dart';
 import 'school_page.dart';
 import 'telugu_calendar_page.dart';
+import 'today_home.dart';
 import 'weather_backdrop.dart';
 import 'smart_home_page.dart';
 
@@ -98,10 +99,19 @@ class _PhoenixHomeState extends State<PhoenixHome> {
         return Stack(
           fit: StackFit.expand,
           children: [
-            _HomeScreen(
-              container: c,
-              onOpenMenu: widget.onOpenMenu,
-              onOpenSettings: widget.onOpenSettings,
+            ValueListenableBuilder(
+              valueListenable: home.layout,
+              builder: (context, layout, _) => layout == 'tiles'
+                  ? _HomeScreen(
+                      container: c,
+                      onOpenMenu: widget.onOpenMenu,
+                      onOpenSettings: widget.onOpenSettings,
+                    )
+                  : TodayHome(
+                      container: c,
+                      onOpenMenu: widget.onOpenMenu,
+                      onOpenSettings: widget.onOpenSettings,
+                    ),
             ),
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 220),

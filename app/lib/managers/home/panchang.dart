@@ -437,3 +437,23 @@ class PanchangCalculator {
 
   static const _minor = {'Ekadashi (ఏకాదశి)', 'Pournami (పౌర్ణమి)', 'Amavasya (అమావాస్య)', 'Sankashti Chaturthi', 'Kartika Somavaram'};
 }
+
+// ── Moon phase ──────────────────────────────────────────────────────────────
+
+/// The Moon's phase at [t]: its name and how much of it is lit, 0..100.
+(String, int) moonPhase(DateTime t) {
+  final e = elongation(julianDay(t));
+  final lit = ((1 - math.cos(e * math.pi / 180)) / 2 * 100).round();
+  final name = switch (e) {
+    < 7 => 'New Moon',
+    < 83 => 'Waxing Crescent',
+    < 97 => 'First Quarter',
+    < 173 => 'Waxing Gibbous',
+    < 187 => 'Full Moon',
+    < 263 => 'Waning Gibbous',
+    < 277 => 'Last Quarter',
+    < 353 => 'Waning Crescent',
+    _ => 'New Moon',
+  };
+  return (name, lit);
+}

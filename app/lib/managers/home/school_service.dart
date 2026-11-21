@@ -15,24 +15,40 @@ import '../../core/logging.dart';
 @immutable
 class SchoolConfig {
   const SchoolConfig({
+    this.provider = 'schoolcafe',
+    this.servingLine = 'Main Line',
+    this.grade = '02',
     this.district = 'friscoisd',
     this.schoolSlug = '',
     this.schoolName = 'Miller Elementary',
-    this.menuTypes = const [],
+    this.menuTypes = const [('Breakfast', 'Breakfast'), ('Lunch', 'Lunch')],
     this.calendarUrl = '',
     this.startTime = '',
     this.endTime = '',
   });
 
-  /// The district's Nutrislice name: friscoisd.nutrislice.com → friscoisd.
+  /// Where the menus come from: 'schoolcafe' (Frisco ISD and many Texas
+  /// districts, schoolcafe.com) or 'nutrislice'.
+  final String provider;
+
+  /// SchoolCafe's serving line ("Main Line") and grade ("02"), which pick
+  /// the menu a student sees.
+  final String servingLine;
+  final String grade;
+
+  /// The district: SchoolCafe's short name (friscoisd) or the Nutrislice
+  /// site (friscoisd.nutrislice.com → friscoisd).
   final String district;
+
+  /// The school: SchoolCafe's school id (a GUID) or the Nutrislice slug.
   final String schoolSlug;
   final String schoolName;
 
   /// The menus to show, as (slug, name): lunch, breakfast.
   final List<(String, String)> menuTypes;
 
-  /// An iCal (.ics) link to the school or district calendar.
+  /// The school calendar: an iCal (.ics) link, or a Home Assistant calendar
+  /// entity (calendar.frisco_isd).
   final String calendarUrl;
 
   /// Bell times as H:MM in 24 hours ("7:50", "15:05"), empty when unset.
@@ -43,6 +59,9 @@ class SchoolConfig {
       district.isNotEmpty && schoolSlug.isNotEmpty && menuTypes.isNotEmpty;
 
   SchoolConfig copyWith({
+    String? provider,
+    String? servingLine,
+    String? grade,
     String? district,
     String? schoolSlug,
     String? schoolName,
@@ -51,6 +70,9 @@ class SchoolConfig {
     String? startTime,
     String? endTime,
   }) => SchoolConfig(
+    provider: provider ?? this.provider,
+    servingLine: servingLine ?? this.servingLine,
+    grade: grade ?? this.grade,
     district: district ?? this.district,
     schoolSlug: schoolSlug ?? this.schoolSlug,
     schoolName: schoolName ?? this.schoolName,
@@ -61,6 +83,9 @@ class SchoolConfig {
   );
 
   Map<String, Object?> toJson() => {
+    'provider': provider,
+    'servingLine': servingLine,
+    'grade': grade,
     'district': district,
     'school': schoolSlug,
     'schoolName': schoolName,
@@ -74,16 +99,20 @@ class SchoolConfig {
 
   static SchoolConfig fromJson(Object? raw) {
     if (raw is! Map) return const SchoolConfig();
+    final menus = <(String, String)>[
+      if (raw['menus'] is List)
+        for (final m in raw['menus'] as List)
+          if (m is Map && '${m['slug'] ?? ''}'.isNotEmpty)
+            ('${m['slug']}', '${m['name'] ?? m['slug']}'),
+    ];
     return SchoolConfig(
+      provider: raw['provider'] == 'nutrislice' ? 'nutrislice' : 'schoolcafe',
+      servingLine: '${raw['servingLine'] ?? 'Main Line'}',
+      grade: '${raw['grade'] ?? '02'}',
       district: '${raw['district'] ?? 'friscoisd'}',
       schoolSlug: '${raw['school'] ?? ''}',
       schoolName: '${raw['schoolName'] ?? 'Miller Elementary'}',
-      menuTypes: [
-        if (raw['menus'] is List)
-          for (final m in raw['menus'] as List)
-            if (m is Map && '${m['slug'] ?? ''}'.isNotEmpty)
-              ('${m['slug']}', '${m['name'] ?? m['slug']}'),
-      ],
+      menuTypes: raw['menus'] is List ? menus : const [('Breakfast', 'Breakfast'), ('Lunch', 'Lunch')],
       calendarUrl: '${raw['calendar'] ?? ''}',
       startTime: '${raw['start'] ?? ''}',
       endTime: '${raw['end'] ?? ''}',
@@ -147,7 +176,11 @@ class SchoolEvent {
 }
 
 class SchoolService {
-  SchoolService(this._client, this._prefs, this._log);
+  SchoolService(this._client, this._prefs, this._log, {this.homeAssistant});
+
+  /// Home Assistant's address and token, for a calendar entity as the
+  /// school calendar.
+  final ({String base, String token}) Function()? homeAssistant;
 
   final http.Client _client;
   final Future<SharedPreferences> Function() _prefs;
@@ -216,20 +249,24 @@ class SchoolService {
       }
       if (c.calendarUrl.isNotEmpty) {
         try {
-          final res = await _client
-              .get(Uri.parse(_webcal(c.calendarUrl)))
-              .timeout(const Duration(seconds: 20));
-          if (res.statusCode != 200) throw 'HTTP ${res.statusCode}';
           final now = DateTime.now();
           final from = DateTime(
             now.year,
             now.month,
             now.day,
           ).subtract(const Duration(days: 1));
+          final List<SchoolEvent> all;
+          if (c.calendarUrl.startsWith('calendar.')) {
+            all = await _haCalendar(c.calendarUrl, from);
+          } else {
+            final res = await _client
+                .get(Uri.parse(_webcal(c.calendarUrl)))
+                .timeout(const Duration(seconds: 20));
+            if (res.statusCode != 200) throw 'HTTP ${res.statusCode}';
+            all = parseIcs(utf8.decode(res.bodyBytes, allowMalformed: true));
+          }
           events.value = [
-            for (final e in parseIcs(
-              utf8.decode(res.bodyBytes, allowMalformed: true),
-            ))
+            for (final e in all)
               if (e.end.isAfter(from)) e,
           ]..sort((a, b) => a.start.compareTo(b.start));
         } catch (e) {
@@ -329,8 +366,30 @@ class SchoolService {
     }
   }
 
+  /// A Home Assistant calendar's events for the next year.
+  Future<List<SchoolEvent>> _haCalendar(String entity, DateTime from) async {
+    final ha = homeAssistant?.call();
+    if (ha == null || ha.base.isEmpty || ha.token.isEmpty) {
+      throw 'Home Assistant is not connected';
+    }
+    final uri = Uri.parse('${ha.base}/api/calendars/$entity').replace(
+      queryParameters: {
+        'start': from.toUtc().toIso8601String(),
+        'end': from.add(const Duration(days: 366)).toUtc().toIso8601String(),
+      },
+    );
+    final res = await _client
+        .get(uri, headers: {'Authorization': 'Bearer ${ha.token}'})
+        .timeout(const Duration(seconds: 20));
+    if (res.statusCode != 200) throw 'HTTP ${res.statusCode}';
+    return parseHaCalendar(jsonDecode(utf8.decode(res.bodyBytes)));
+  }
+
+  static const _schoolCafe = 'webapis.schoolcafe.com';
+
   /// The district's schools and their menus, for the school picker.
-  Future<List<SchoolChoice>> schools(String district) async {
+  Future<List<SchoolChoice>> schools(String district, {String? provider}) async {
+    if ((provider ?? config.value.provider) == 'schoolcafe') return _schoolCafeSchools(district);
     final res = await _client
         .get(Uri.https('$district.api.nutrislice.com', '/menu/api/schools/'))
         .timeout(const Duration(seconds: 20));
@@ -338,11 +397,47 @@ class SchoolService {
     return parseNutrisliceSchools(jsonDecode(utf8.decode(res.bodyBytes)));
   }
 
+  /// SchoolCafe's district and school lists. Not published as an API, so
+  /// read tolerantly: any list of objects with a school id and a name.
+  Future<List<SchoolChoice>> _schoolCafeSchools(String district) async {
+    final isd = await _client
+        .get(Uri.https(_schoolCafe, '/api/GetISDByShortName', {'shortname': district}))
+        .timeout(const Duration(seconds: 20));
+    if (isd.statusCode != 200) throw 'district HTTP ${isd.statusCode}';
+    final isdId = findSchoolCafeId(jsonDecode(utf8.decode(isd.bodyBytes)), 'ISD');
+    if (isdId == null) throw 'district $district not found on SchoolCafe';
+    final res = await _client
+        .get(Uri.https(_schoolCafe, '/api/GetSchoolsList', {'districtId': isdId}))
+        .timeout(const Duration(seconds: 20));
+    if (res.statusCode != 200) throw 'schools HTTP ${res.statusCode}';
+    return parseSchoolCafeSchools(jsonDecode(utf8.decode(res.bodyBytes)));
+  }
+
   Future<List<MenuDay>> _week(
     SchoolConfig c,
     String type,
     DateTime monday,
   ) async {
+    if (c.provider == 'schoolcafe') {
+      final days = <MenuDay>[];
+      for (var i = 0; i < 5; i++) {
+        final day = monday.add(Duration(days: i));
+        final date = '${day.month.toString().padLeft(2, '0')}/${day.day.toString().padLeft(2, '0')}/${day.year}';
+        final res = await _client
+            .get(Uri.https(_schoolCafe, '/api/CalendarView/GetDailyMenuitemsByGrade', {
+              'SchoolId': c.schoolSlug,
+              'ServingDate': date,
+              'ServingLine': c.servingLine,
+              'MealType': type,
+              'Grade': c.grade,
+              'PersonId': 'null',
+            }))
+            .timeout(const Duration(seconds: 20));
+        if (res.statusCode != 200) throw 'HTTP ${res.statusCode}';
+        days.add(parseSchoolCafeDay(jsonDecode(utf8.decode(res.bodyBytes)), day));
+      }
+      return days;
+    }
     final uri = Uri.https(
       '${c.district}.api.nutrislice.com',
       '/menu/api/weeks/school/${c.schoolSlug}/menu-type/$type/'
@@ -441,6 +536,105 @@ DateTime? _at(DateTime day, String hm) {
 String _hm(DateTime t) {
   final h = t.hour % 12 == 0 ? 12 : t.hour % 12;
   return '$h:${t.minute.toString().padLeft(2, '0')} ${t.hour < 12 ? 'AM' : 'PM'}';
+}
+
+/// SchoolCafe's day: {CATEGORY: [{MenuItemId, MenuItemDescription}]}, the
+/// categories ("ENTREES", "LUNCH- HOT", "FRUIT") as section headings.
+MenuDay parseSchoolCafeDay(Object? data, DateTime day) {
+  final sections = <(String, List<String>)>[];
+  if (data is Map) {
+    for (final e in data.entries) {
+      if (e.value is! List) continue;
+      final items = <String>[];
+      for (final item in e.value as List) {
+        if (item is! Map) continue;
+        final name = '${item['MenuItemDescription'] ?? ''}'.trim();
+        if (name.isNotEmpty && !items.contains(name)) items.add(name);
+      }
+      if (items.isNotEmpty) sections.add((_title('${e.key}'), items));
+    }
+  }
+  return MenuDay(DateTime(day.year, day.month, day.day), sections);
+}
+
+/// "LUNCH- HOT" → "Lunch Hot", "ENTREES" → "Entrees".
+String _title(String raw) => raw
+    .replaceAll(RegExp(r'[-_]+'), ' ')
+    .split(RegExp(r'\s+'))
+    .where((w) => w.isNotEmpty)
+    .map((w) => w[0].toUpperCase() + w.substring(1).toLowerCase())
+    .join(' ');
+
+/// The first GUID-looking id in SchoolCafe's answer, preferring a key that
+/// mentions [kind] ("ISD", "School").
+String? findSchoolCafeId(Object? data, String kind) {
+  final guid = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+  String? any;
+  void walk(Object? v) {
+    if (v is Map) {
+      for (final e in v.entries) {
+        final value = e.value;
+        if (value is String && guid.hasMatch(value)) {
+          if ('${e.key}'.toLowerCase().contains(kind.toLowerCase())) {
+            any = value;
+            return;
+          }
+          any ??= value;
+        } else {
+          walk(value);
+        }
+      }
+    } else if (v is List && v.isNotEmpty) {
+      walk(v.first);
+    }
+  }
+
+  walk(data);
+  return any;
+}
+
+/// SchoolCafe's school list: objects with an id (SchoolId, SchoolGuid, Id)
+/// and a name (SchoolName, Name), sorted by name.
+List<SchoolChoice> parseSchoolCafeSchools(Object? data) {
+  final list = data is Map ? (data.values.firstWhere((v) => v is List, orElse: () => const [])) : data;
+  if (list is! List) return const [];
+  String? pick(Map m, List<String> keys) {
+    for (final k in m.keys) {
+      if (keys.contains('$k'.toLowerCase()) && '${m[k] ?? ''}'.trim().isNotEmpty) return '${m[k]}'.trim();
+    }
+    return null;
+  }
+
+  return [
+    for (final s in list)
+      if (s is Map)
+        if ((pick(s, ['schoolid', 'schoolguid', 'id', 'guid']), pick(s, ['schoolname', 'name'])) case (final String id, final String name))
+          SchoolChoice(id, name, const [('Breakfast', 'Breakfast'), ('Lunch', 'Lunch')]),
+  ]..sort((a, b) => a.name.compareTo(b.name));
+}
+
+/// Home Assistant's calendar events: [{summary, start: {date|dateTime},
+/// end: {date|dateTime}}].
+List<SchoolEvent> parseHaCalendar(Object? data) {
+  if (data is! List) return const [];
+  DateTime? when(Object? v) {
+    if (v is Map) {
+      final d = v['date'] ?? v['dateTime'];
+      return d == null ? null : DateTime.tryParse('$d')?.toLocal();
+    }
+    return v == null ? null : DateTime.tryParse('$v')?.toLocal();
+  }
+
+  return [
+    for (final e in data)
+      if (e is Map && when(e['start']) != null)
+        SchoolEvent(
+          when(e['start'])!,
+          when(e['end']) ?? when(e['start'])!.add(const Duration(days: 1)),
+          '${e['summary'] ?? 'Event'}',
+          allDay: e['start'] is Map && (e['start'] as Map).containsKey('date'),
+        ),
+  ];
 }
 
 /// Nutrislice's school list: [{name, slug, active_menu_types: [{name, slug}]}].

@@ -218,7 +218,8 @@ function Provision($json) {
 }
 
 Step 'Making Phoenix Portal the home screen'
-Provision '{"home.enabled":true,"launcher.enabled":true,"home.screen":"phoenix"}' | Out-Null
+Provision '{"home.enabled":true,"launcher.enabled":true,"home.screen":"phoenix","kiosk.start_on_boot":true}' | Out-Null
+Ok 'Phoenix Home is the start screen and opens after every reboot'
 Sh "pm enable $HomeAlias" | Out-Null
 if ($sdk -ge 29) { Sh "cmd role add-role-holder android.app.role.HOME $Pkg" | Out-Null }
 else { Sh "cmd package set-home-activity $HomeAlias" | Out-Null }
@@ -235,6 +236,25 @@ foreach ($h in $homes) {
     else { Warn "Couldn't turn it off: $r" }
   }
 }
+# Apps that open themselves after a reboot (Portal HA Bridge does) cover
+# Phoenix Home even when Phoenix is the home screen. Offer to stop only their
+# start-at-boot; the apps stay installed and still open from All apps.
+Step 'Checking for apps that take over the screen after a reboot'
+$bootRx = (Sh 'cmd package query-receivers --brief -a android.intent.action.BOOT_COMPLETED') -split "`n" |
+  ForEach-Object { $_.Trim() } |
+  Where-Object { $_ -match '^[a-zA-Z0-9_.]+/[a-zA-Z0-9_.$]+$' -and $_ -notlike "$Pkg/*" -and $_ -notlike 'com.facebook.*' -and $_ -notlike 'com.android.*' -and $_ -notlike 'com.google.*' -and $_ -notlike 'android/*' -and $_ -notlike 'com.oculus.*' -and $_ -notlike 'com.meta.*' }
+$takeovers = $bootRx | Where-Object { $_ -match '(?i)homeassistant|hass|bridge|kiosk|launcher|dashboard|fully' }
+if (-not $takeovers) { Ok 'No other app opens itself at boot' }
+foreach ($r in $takeovers) {
+  $app = $r.Split('/')[0]
+  Warn "$app starts itself after a reboot ($r). This is what sends the Portal back to Home Assistant."
+  if (Ask "Stop $app from opening at boot (the app stays installed and still works)?" $true) {
+    $out = Sh "pm disable --user 0 $r"
+    if ($out -match 'disabled') { Ok "$app no longer opens at boot" }
+    else { Warn "Couldn't change it: $out" }
+  }
+}
+
 $resolved = Sh 'cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME'
 if ($resolved -like "*$Pkg/*") { Ok 'Phoenix Portal is the home screen' }
 else { Warn "Home screen resolves to: $resolved" }
@@ -260,6 +280,21 @@ Sh "am start -n $Main" | Out-Null
 Start-Sleep -Seconds 6
 Sh 'input keyevent KEYCODE_HOME' | Out-Null
 Start-Sleep -Seconds 4
+
+# A reboot proves it: Phoenix Home should be on screen, not Home Assistant.
+if (Ask 'Reboot the Portal now to check Phoenix Home comes back on its own (about 1 minute)?' $false) {
+  Sh 'reboot' | Out-Null
+  Start-Sleep -Seconds 20
+  Adb wait-for-device | Out-Null
+  for ($i = 0; $i -lt 60; $i++) {
+    if ((Sh 'getprop sys.boot_completed').Trim() -eq '1') { break }
+    Start-Sleep -Seconds 2
+  }
+  Start-Sleep -Seconds 25
+  $top = Sh 'dumpsys activity activities | grep -m1 -E "topResumedActivity|mResumedActivity"'
+  if ($top -like "*$Pkg*") { Ok 'After a reboot Phoenix Home is on screen' }
+  else { Warn "After a reboot the screen shows: $($top.Trim()). Run this installer again and say Y to the boot question." }
+}
 
 $after = Sh "dumpsys package $Pkg | grep versionName"
 if ($after -match [regex]::Escape($Version)) { Ok "Version: $($after.Trim())" } else { Fail "Version is $($after.Trim()), expected $Version" }
