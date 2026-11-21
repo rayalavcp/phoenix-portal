@@ -13718,6 +13718,19 @@
       ]
     }
   },
+  "screensaverModePhoenixPhotos": "Phoenix Photo Frame",
+  "@screensaverModePhoenixPhotos": {
+    "context": "Settings > Screensaver",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Screensaver"
+      ],
+      "remoteAdmin": [
+        "Screensaver"
+      ]
+    }
+  },
   "settingPhoenixProfileTitle": "Profile",
   "@settingPhoenixProfileTitle": {
     "context": "Settings > Kids Portal",

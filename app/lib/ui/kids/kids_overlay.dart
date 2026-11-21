@@ -106,6 +106,7 @@ enum _Game {
   times, clock, flags, patterns,
   sudoku, maze, wordsearch, guess,
   ttt, snake, simon, pixel, piano,
+  fractions, money, science, spelling, opposites, mole, lights,
 }
 
 /// The hub's cards: title, pitch, icon, colours, shelf and how the best
@@ -140,6 +141,16 @@ final _games = <_GameInfo>[
       const [Color(0xFF14A06B), Color(0xFF1C8ED6)], 'words', (b) => 'Best: $b pts', shelf: 'Learn'),
   _GameInfo(_Game.patterns, 'Patterns', 'What comes next?', Icons.auto_graph_rounded,
       const [Color(0xFF8C5BFF), Color(0xFFE0446A)], 'patterns', (b) => 'Best: $b of 10', shelf: 'Learn'),
+  _GameInfo(_Game.fractions, 'Fractions', 'Slices of pie', Icons.pie_chart_rounded,
+      const [Color(0xFF14A06B), Color(0xFFF5A623)], 'fractions', (b) => 'Best: $b of 10', shelf: 'Learn'),
+  _GameInfo(_Game.money, 'Money', 'Count the coins', Icons.savings_rounded,
+      const [Color(0xFF128A5A), Color(0xFF1F8A4C)], 'money', (b) => 'Best: $b of 10', shelf: 'Learn'),
+  _GameInfo(_Game.science, 'Science', 'Plants, animals, space', Icons.science_rounded,
+      const [Color(0xFF1C8ED6), Color(0xFF14A06B)], 'science', (b) => 'Best: $b of 10', shelf: 'Learn'),
+  _GameInfo(_Game.spelling, 'Spelling', 'Spot the right spelling', Icons.spellcheck_rounded,
+      const [Color(0xFFE08A00), Color(0xFF8C5BFF)], 'spelling', (b) => 'Best: $b of 10', shelf: 'Learn'),
+  _GameInfo(_Game.opposites, 'Opposites', 'Hot and cold, up and down', Icons.compare_arrows_rounded,
+      const [Color(0xFFE0446A), Color(0xFF1C8ED6)], 'opposites', (b) => 'Best: $b of 10', shelf: 'Learn'),
   // Puzzles
   _GameInfo(_Game.sudoku, 'Sudoku', '4×4, 6×6 or 9×9', Icons.grid_on_rounded,
       const [Color(0xFF283066), Color(0xFF5B6CFF)], 'sudoku4', (b) => '4×4 best: ${_mmss(b)}', shelf: 'Puzzles'),
@@ -153,9 +164,13 @@ final _games = <_GameInfo>[
       const [Color(0xFF5B6CFF), Color(0xFF9A6BFF)], 'memory', (b) => 'Best: ${b}s', shelf: 'Puzzles'),
   _GameInfo(_Game.g2048, '2048', 'Slide, merge, reach 2048', Icons.grid_4x4_rounded,
       const [Color(0xFF8C5BFF), Color(0xFF5B6CFF)], '2048', (b) => 'Best: $b', shelf: 'Puzzles'),
+  _GameInfo(_Game.lights, 'Lights Out', 'Turn every light off', Icons.lightbulb_rounded,
+      const [Color(0xFF1A1340), Color(0xFF283066)], 'lights3', (b) => '3×3 best: $b moves', shelf: 'Puzzles'),
   // Play
   _GameInfo(_Game.snake, 'Snake', 'Eat, grow, dodge', Icons.gesture_rounded,
       const [Color(0xFF1F8A4C), Color(0xFF14A06B)], 'snake', (b) => 'Longest: $b'),
+  _GameInfo(_Game.mole, 'Whack-a-Mole', 'Quick! Tap the moles', Icons.pest_control_rodent_rounded,
+      const [Color(0xFF6B4E1F), Color(0xFF1F8A4C)], 'mole1', (b) => 'Easy best: $b'),
   _GameInfo(_Game.simon, 'Simon Says', 'Copy the lights', Icons.lightbulb_rounded,
       const [Color(0xFF283066), Color(0xFF7B5CFF)], 'simon', (b) => 'Best: level $b'),
   _GameInfo(_Game.ttt, 'Tic-Tac-Toe', 'Three in a row', Icons.tag_rounded,
@@ -218,6 +233,13 @@ class _KidsHomeState extends State<_KidsHome> {
       _Game.simon => SimonSays(key: const ValueKey('simon'), onBack: _back, tones: _tones),
       _Game.pixel => PixelPaint(key: const ValueKey('pixel'), onBack: _back),
       _Game.piano => KidsPiano(key: const ValueKey('piano'), onBack: _back, tones: _tones),
+      _Game.fractions => FractionsQuiz(key: const ValueKey('fractions'), onBack: _back),
+      _Game.money => MoneyQuiz(key: const ValueKey('money'), onBack: _back),
+      _Game.science => ScienceQuiz(key: const ValueKey('science'), onBack: _back),
+      _Game.spelling => SpellingQuiz(key: const ValueKey('spelling'), onBack: _back),
+      _Game.opposites => OppositesQuiz(key: const ValueKey('opposites'), onBack: _back),
+      _Game.mole => WhackAMole(key: const ValueKey('mole'), onBack: _back),
+      _Game.lights => LightsOut(key: const ValueKey('lights'), onBack: _back),
       null => _home(context),
     },
   );

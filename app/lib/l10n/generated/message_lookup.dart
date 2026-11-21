@@ -970,6 +970,7 @@ String messageById(UiStrings strings, String? id, String fallback) =>
       'homeUnitCelsius' => strings.homeUnitCelsius,
       'settingsMenuHomeScreen' => strings.settingsMenuHomeScreen,
       'settingsMenuHomeScreenSummary' => strings.settingsMenuHomeScreenSummary,
+      'screensaverModePhoenixPhotos' => strings.screensaverModePhoenixPhotos,
       'settingPhoenixProfileTitle' => strings.settingPhoenixProfileTitle,
       'settingPhoenixProfileDescription' =>
         strings.settingPhoenixProfileDescription,

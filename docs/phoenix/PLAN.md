@@ -94,3 +94,9 @@ intercom, RTSP, the fleet agent.
     (tones synthesized to WAV and played by the native player), grouped as Learn / Puzzles / Play /
     Create, plus a daily challenge worth three stars. Rules in `kids_more_logic.dart`, tested in
     `test/kids_more_logic_test.dart`.
+11. **Home, round two: done.** Live tiles with any size (`home_tiles.dart`, `packTiles`), six
+    themes, a weather backdrop, the Telugu calendar (`panchang.dart`: Meeus Sun and Moon, Lahiri
+    ayanamsa, festivals by masa and tithi at local sunrise, tested against 2026's dates), photos
+    from Immich or an http folder with the Phoenix Photo Frame screensaver (`photo_service.dart`),
+    the school's month calendar with menus and events, and Kids Portal levels plus Fractions, Money,
+    Science, Spelling, Opposites, Whack-a-Mole and Lights Out.

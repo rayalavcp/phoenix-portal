@@ -111,4 +111,65 @@ void main() {
     expect(String.fromCharCodes(wav.sublist(8, 12)), 'WAVE');
     expect(wav.length, 44 + 22050 ~/ 10 * 2);
   });
+
+  test('fractions: four different answers, simplest form at level 3', () {
+    for (final level in [1, 2, 3]) {
+      for (var i = 0; i < 200; i++) {
+        final q = fractionQuestion(level, rng);
+        expect(q.choices.toSet(), hasLength(4));
+        expect(q.choices, contains(q.answer));
+        expect(q.shaded, inInclusiveRange(1, q.parts - 1));
+      }
+    }
+    // 6 of 12 is 1/2 in simplest form.
+    for (var i = 0; i < 400; i++) {
+      final q = fractionQuestion(3, rng);
+      final [a, b] = q.answer.split('/').map(int.parse).toList();
+      expect(a * q.parts, b * q.shaded);
+    }
+  });
+
+  test('money adds up, and the change is from a dollar', () {
+    for (final level in [1, 2, 3]) {
+      for (var i = 0; i < 200; i++) {
+        final q = moneyQuestion(level, rng);
+        final total = q.coins.fold(0, (a, b) => a + b);
+        expect(q.answer, cents(level == 3 ? 100 - total : total));
+        expect(q.choices.toSet(), hasLength(4));
+        expect(q.choices, contains(q.answer));
+        if (level == 1) expect(q.coins.every((c) => c != 25), isTrue);
+      }
+    }
+    expect(cents(35), '35¢');
+    expect(cents(125), '\$1.25');
+  });
+
+  test('question banks offer four different answers', () {
+    for (final bank in kidsScience.values) {
+      for (final (_, answer, wrong) in bank) {
+        expect({answer, ...wrong}, hasLength(4));
+      }
+    }
+    for (final bank in kidsSpelling.values) {
+      for (final (word, wrong) in bank) {
+        expect({word, ...wrong}, hasLength(4));
+      }
+    }
+    for (final bank in kidsOpposites.values) {
+      for (final (_, opposite, wrong) in bank) {
+        expect({opposite, ...wrong}, hasLength(4));
+      }
+    }
+  });
+
+  test('lights out puzzles start lit and pressing twice undoes', () {
+    for (final n in [3, 4, 5]) {
+      final b = lightsOutPuzzle(n, 6, rng);
+      expect(b.contains(true), isTrue);
+      final copy = [...b];
+      lightsOutPress(b, n, n + 1);
+      lightsOutPress(b, n, n + 1);
+      expect(b, copy);
+    }
+  });
 }

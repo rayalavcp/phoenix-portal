@@ -17,7 +17,7 @@ class SchoolConfig {
   const SchoolConfig({
     this.district = 'friscoisd',
     this.schoolSlug = '',
-    this.schoolName = '',
+    this.schoolName = 'Miller Elementary',
     this.menuTypes = const [],
     this.calendarUrl = '',
     this.startTime = '',
@@ -39,7 +39,8 @@ class SchoolConfig {
   final String startTime;
   final String endTime;
 
-  bool get hasMenu => district.isNotEmpty && schoolSlug.isNotEmpty && menuTypes.isNotEmpty;
+  bool get hasMenu =>
+      district.isNotEmpty && schoolSlug.isNotEmpty && menuTypes.isNotEmpty;
 
   SchoolConfig copyWith({
     String? district,
@@ -63,7 +64,9 @@ class SchoolConfig {
     'district': district,
     'school': schoolSlug,
     'schoolName': schoolName,
-    'menus': [for (final (slug, name) in menuTypes) {'slug': slug, 'name': name}],
+    'menus': [
+      for (final (slug, name) in menuTypes) {'slug': slug, 'name': name},
+    ],
     'calendar': calendarUrl,
     'start': startTime,
     'end': endTime,
@@ -74,11 +77,12 @@ class SchoolConfig {
     return SchoolConfig(
       district: '${raw['district'] ?? 'friscoisd'}',
       schoolSlug: '${raw['school'] ?? ''}',
-      schoolName: '${raw['schoolName'] ?? ''}',
+      schoolName: '${raw['schoolName'] ?? 'Miller Elementary'}',
       menuTypes: [
         if (raw['menus'] is List)
           for (final m in raw['menus'] as List)
-            if (m is Map && '${m['slug'] ?? ''}'.isNotEmpty) ('${m['slug']}', '${m['name'] ?? m['slug']}'),
+            if (m is Map && '${m['slug'] ?? ''}'.isNotEmpty)
+              ('${m['slug']}', '${m['name'] ?? m['slug']}'),
       ],
       calendarUrl: '${raw['calendar'] ?? ''}',
       startTime: '${raw['start'] ?? ''}',
@@ -121,14 +125,22 @@ class SchoolEvent {
 
   bool covers(DateTime day) {
     final d = DateTime(day.year, day.month, day.day);
-    return !d.isBefore(DateTime(start.year, start.month, start.day)) && d.isBefore(end);
+    return !d.isBefore(DateTime(start.year, start.month, start.day)) &&
+        d.isBefore(end);
   }
 
   /// Days off read as holidays: no school, breaks, holidays, closures.
   bool get noSchool {
     final t = title.toLowerCase();
-    return const ['no school', 'holiday', 'break', 'closed', 'student holiday', 'staff development', 'teacher work']
-        .any(t.contains);
+    return const [
+      'no school',
+      'holiday',
+      'break',
+      'closed',
+      'student holiday',
+      'staff development',
+      'teacher work',
+    ].any(t.contains);
   }
 
   bool get earlyRelease => title.toLowerCase().contains('early release');
@@ -145,8 +157,12 @@ class SchoolService {
 
   final config = ValueNotifier<SchoolConfig>(const SchoolConfig());
 
-  /// Menus by type slug: this week's and next week's days.
+  /// Menus by type slug, every day loaded so far (this week and next at
+  /// once, more as the calendar pages through months), by date.
   final menus = ValueNotifier<Map<String, List<MenuDay>>>(const {});
+
+  /// Mondays already fetched, so paging the calendar loads each week once.
+  final _weeks = <String>{};
   final events = ValueNotifier<List<SchoolEvent>>(const []);
   final loading = ValueNotifier<bool>(false);
   final problem = ValueNotifier<String?>(null);
@@ -171,37 +187,49 @@ class SchoolService {
   /// Load the menus and the calendar, at most every 3 hours unless [force].
   Future<void> refresh({bool force = false}) async {
     final at = _loadedAt;
-    if (!force && at != null && DateTime.now().difference(at) < const Duration(hours: 3)) return;
+    if (!force &&
+        at != null &&
+        DateTime.now().difference(at) < const Duration(hours: 3)) {
+      return;
+    }
     final c = config.value;
     loading.value = true;
     final problems = <String>[];
     try {
-      if (c.hasMenu) {
-        final next = <String, List<MenuDay>>{};
+      if (!c.hasMenu && c.schoolName.isNotEmpty && c.district.isNotEmpty) {
+        // A name but no school picked yet (Miller Elementary out of the
+        // box): find it in the district's list.
+        await _resolveSchool(c);
+      }
+      final cfg = config.value;
+      if (cfg.hasMenu) {
+        _weeks.clear();
+        menus.value = const {};
         final monday = _monday(DateTime.now());
-        for (final (slug, name) in c.menuTypes) {
-          try {
-            next[slug] = [
-              ...await _week(c, slug, monday),
-              ...await _week(c, slug, monday.add(const Duration(days: 7))),
-            ];
-          } catch (e) {
-            _log.warn('phoenix_home', 'school menu $slug: $e');
-            problems.add('the $name menu');
-          }
-        }
-        menus.value = next;
+        final failed = await loadWeeks([
+          monday,
+          monday.add(const Duration(days: 7)),
+        ]);
+        problems.addAll(failed);
       } else {
         menus.value = const {};
       }
       if (c.calendarUrl.isNotEmpty) {
         try {
-          final res = await _client.get(Uri.parse(_webcal(c.calendarUrl))).timeout(const Duration(seconds: 20));
+          final res = await _client
+              .get(Uri.parse(_webcal(c.calendarUrl)))
+              .timeout(const Duration(seconds: 20));
           if (res.statusCode != 200) throw 'HTTP ${res.statusCode}';
           final now = DateTime.now();
-          final from = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 1));
+          final from = DateTime(
+            now.year,
+            now.month,
+            now.day,
+          ).subtract(const Duration(days: 1));
           events.value = [
-            for (final e in parseIcs(utf8.decode(res.bodyBytes, allowMalformed: true)))
+            for (final e in parseIcs(
+              utf8.decode(res.bodyBytes, allowMalformed: true),
+            ))
               if (e.end.isAfter(from)) e,
           ]..sort((a, b) => a.start.compareTo(b.start));
         } catch (e) {
@@ -211,10 +239,93 @@ class SchoolService {
       } else {
         events.value = const [];
       }
-      problem.value = problems.isEmpty ? null : "Couldn't load ${problems.join(' and ')}. Showing what we have.";
+      problem.value = !cfg.hasMenu && cfg.schoolName.isNotEmpty
+          ? "Couldn't find ${cfg.schoolName}'s menus yet. Pick the school under Set up."
+          : problems.isEmpty
+          ? null
+          : "Couldn't load ${problems.join(' and ')}. Showing what we have.";
       _loadedAt = DateTime.now();
     } finally {
       loading.value = false;
+    }
+  }
+
+  /// Load the menus of the weeks starting on [mondays] not loaded yet, and
+  /// merge them in. Answers the menus that failed, by name.
+  Future<List<String>> loadWeeks(List<DateTime> mondays) async {
+    final c = config.value;
+    if (!c.hasMenu) return const [];
+    final todo = [
+      for (final m in mondays)
+        if (_weeks.add('${c.schoolSlug}/${m.year}-${m.month}-${m.day}')) m,
+    ];
+    if (todo.isEmpty) return const [];
+    final failed = <String>{};
+    final next = {
+      for (final e in menus.value.entries) e.key: [...e.value],
+    };
+    for (final (slug, name) in c.menuTypes) {
+      final days = {
+        for (final d in next[slug] ?? const <MenuDay>[]) _key(d.date): d,
+      };
+      for (final monday in todo) {
+        try {
+          for (final d in await _week(c, slug, monday)) {
+            days[_key(d.date)] = d;
+          }
+        } catch (e) {
+          _log.warn('phoenix_home', 'school menu $slug: $e');
+          failed.add('the $name menu');
+        }
+      }
+      next[slug] = days.values.toList()
+        ..sort((a, b) => a.date.compareTo(b.date));
+    }
+    menus.value = next;
+    return failed.toList();
+  }
+
+  /// The weeks a month view shows, loaded.
+  Future<void> loadMonth(DateTime month) async {
+    final first = DateTime(month.year, month.month);
+    var monday = first.subtract(Duration(days: first.weekday - 1));
+    final mondays = <DateTime>[];
+    while (monday.isBefore(DateTime(month.year, month.month + 1))) {
+      mondays.add(monday);
+      monday = monday.add(const Duration(days: 7));
+    }
+    loading.value = true;
+    try {
+      await loadWeeks(mondays);
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  /// One menu's day, null when nothing is published for it.
+  MenuDay? menuOn(String slug, DateTime day) {
+    for (final d in menus.value[slug] ?? const <MenuDay>[]) {
+      if (_key(d.date) == _key(day)) return d;
+    }
+    return null;
+  }
+
+  Future<void> _resolveSchool(SchoolConfig c) async {
+    try {
+      final match = bestSchoolMatch(await schools(c.district), c.schoolName);
+      if (match == null) return;
+      final picked = [
+        for (final m in match.menuTypes)
+          if (m.$1.contains('breakfast') || m.$1.contains('lunch')) m,
+      ];
+      final next = c.copyWith(
+        schoolSlug: match.slug,
+        menuTypes: picked.isEmpty ? match.menuTypes : picked,
+      );
+      config.value = next;
+      await (await _prefs()).setString(_configKey, jsonEncode(next.toJson()));
+    } catch (e) {
+      _log.warn('phoenix_home', 'school lookup: $e');
     }
   }
 
@@ -227,7 +338,11 @@ class SchoolService {
     return parseNutrisliceSchools(jsonDecode(utf8.decode(res.bodyBytes)));
   }
 
-  Future<List<MenuDay>> _week(SchoolConfig c, String type, DateTime monday) async {
+  Future<List<MenuDay>> _week(
+    SchoolConfig c,
+    String type,
+    DateTime monday,
+  ) async {
     final uri = Uri.https(
       '${c.district}.api.nutrislice.com',
       '/menu/api/weeks/school/${c.schoolSlug}/menu-type/$type/'
@@ -239,20 +354,33 @@ class SchoolService {
   }
 
   /// Today's events: holidays, early release, anything else on the day.
-  List<SchoolEvent> eventsOn(DateTime day) => [for (final e in events.value) if (e.covers(day)) e];
+  List<SchoolEvent> eventsOn(DateTime day) => [
+    for (final e in events.value)
+      if (e.covers(day)) e,
+  ];
 
   /// The status line for [now]: no school, before, during or after school.
   String status(DateTime now) {
     final today = eventsOn(now);
-    if (now.weekday >= DateTime.saturday) return 'No school today, it is the weekend';
-    if (today.any((e) => e.noSchool)) return 'No school today: ${today.firstWhere((e) => e.noSchool).title}';
+    if (now.weekday >= DateTime.saturday) {
+      return 'No school today, it is the weekend';
+    }
+    if (today.any((e) => e.noSchool)) {
+      return 'No school today: ${today.firstWhere((e) => e.noSchool).title}';
+    }
     final c = config.value;
     final start = _at(now, c.startTime), end = _at(now, c.endTime);
-    final early = today.any((e) => e.earlyRelease) ? ' (early release today)' : '';
-    if (start == null || end == null) return today.isEmpty ? 'School day' : 'School day: ${today.first.title}';
+    final early = today.any((e) => e.earlyRelease)
+        ? ' (early release today)'
+        : '';
+    if (start == null || end == null) {
+      return today.isEmpty ? 'School day' : 'School day: ${today.first.title}';
+    }
     if (now.isBefore(start)) {
       final m = start.difference(now).inMinutes;
-      return m <= 90 ? 'School starts in $m min$early' : 'School starts at ${_hm(start)}$early';
+      return m <= 90
+          ? 'School starts in $m min$early'
+          : 'School starts at ${_hm(start)}$early';
     }
     if (now.isBefore(end)) return 'At school until ${_hm(end)}$early';
     return 'School is out for today';
@@ -267,19 +395,47 @@ class SchoolService {
   }
 }
 
+String _key(DateTime d) => '${d.year}-${d.month}-${d.day}';
+
+/// The district school that best matches a typed [name]: every word of the
+/// name in the school's name, the shortest such name first ("Miller" finds
+/// "Miller Elementary", not "Miller Middle Annex" before it).
+SchoolChoice? bestSchoolMatch(List<SchoolChoice> schools, String name) {
+  final words = name
+      .toLowerCase()
+      .split(RegExp(r'[^a-z0-9]+'))
+      .where((w) => w.isNotEmpty)
+      .toList();
+  if (words.isEmpty) return null;
+  final hits = [
+    for (final s in schools)
+      if (words.every(s.name.toLowerCase().contains)) s,
+  ]..sort((a, b) => a.name.length.compareTo(b.name.length));
+  return hits.firstOrNull;
+}
+
 DateTime _monday(DateTime d) {
   final day = DateTime(d.year, d.month, d.day);
   // On the weekend, show the coming week.
-  if (day.weekday >= DateTime.saturday) return day.add(Duration(days: 8 - day.weekday));
+  if (day.weekday >= DateTime.saturday) {
+    return day.add(Duration(days: 8 - day.weekday));
+  }
   return day.subtract(Duration(days: day.weekday - 1));
 }
 
-String _webcal(String url) => url.startsWith('webcal://') ? 'https://${url.substring(9)}' : url;
+String _webcal(String url) =>
+    url.startsWith('webcal://') ? 'https://${url.substring(9)}' : url;
 
 DateTime? _at(DateTime day, String hm) {
   final m = RegExp(r'^(\d{1,2}):(\d{2})$').firstMatch(hm.trim());
   if (m == null) return null;
-  return DateTime(day.year, day.month, day.day, int.parse(m[1]!), int.parse(m[2]!));
+  return DateTime(
+    day.year,
+    day.month,
+    day.day,
+    int.parse(m[1]!),
+    int.parse(m[2]!),
+  );
 }
 
 String _hm(DateTime t) {
@@ -293,14 +449,14 @@ List<SchoolChoice> parseNutrisliceSchools(Object? data) {
   return [
     for (final s in data)
       if (s is Map && '${s['slug'] ?? ''}'.isNotEmpty)
-        SchoolChoice(
-          '${s['slug']}',
-          '${s['name'] ?? s['slug']}',
-          [
-            for (final t in (s['active_menu_types'] is List ? s['active_menu_types'] as List : const []))
-              if (t is Map && '${t['slug'] ?? ''}'.isNotEmpty) ('${t['slug']}', '${t['name'] ?? t['slug']}'),
-          ],
-        ),
+        SchoolChoice('${s['slug']}', '${s['name'] ?? s['slug']}', [
+          for (final t
+              in (s['active_menu_types'] is List
+                  ? s['active_menu_types'] as List
+                  : const []))
+            if (t is Map && '${t['slug'] ?? ''}'.isNotEmpty)
+              ('${t['slug']}', '${t['name'] ?? t['slug']}'),
+        ]),
   ]..sort((a, b) => a.name.compareTo(b.name));
 }
 
@@ -316,7 +472,8 @@ List<MenuDay> parseNutrisliceWeek(Object? data) {
     final sections = <(String, List<String>)>[];
     var heading = '';
     var items = <String>[];
-    for (final item in (d['menu_items'] is List ? d['menu_items'] as List : const [])) {
+    for (final item
+        in (d['menu_items'] is List ? d['menu_items'] as List : const [])) {
       if (item is! Map) continue;
       if (item['is_section_title'] == true) {
         if (items.isNotEmpty) sections.add((heading, items));
@@ -355,13 +512,24 @@ List<SchoolEvent> parseIcs(String text) {
       final start = _icsDate(cur['DTSTART']);
       if (start != null) {
         final allDay = !(cur['DTSTART'] ?? '').contains('T');
-        final end = _icsDate(cur['DTEND']) ?? start.add(allDay ? const Duration(days: 1) : const Duration(hours: 1));
+        final end =
+            _icsDate(cur['DTEND']) ??
+            start.add(
+              allDay ? const Duration(days: 1) : const Duration(hours: 1),
+            );
         final title = (cur['SUMMARY'] ?? '')
             .replaceAll(r'\,', ',')
             .replaceAll(r'\;', ';')
             .replaceAll(r'\n', ' ')
             .trim();
-        events.add(SchoolEvent(start, end, title.isEmpty ? 'Event' : title, allDay: allDay));
+        events.add(
+          SchoolEvent(
+            start,
+            end,
+            title.isEmpty ? 'Event' : title,
+            allDay: allDay,
+          ),
+        );
       }
       cur = null;
     } else if (cur != null) {
@@ -376,10 +544,28 @@ List<SchoolEvent> parseIcs(String text) {
 
 DateTime? _icsDate(String? v) {
   if (v == null) return null;
-  final m = RegExp(r'^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?').firstMatch(v.trim());
+  final m = RegExp(
+    r'^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?',
+  ).firstMatch(v.trim());
   if (m == null) return null;
   final y = int.parse(m[1]!), mo = int.parse(m[2]!), d = int.parse(m[3]!);
   if (m[4] == null) return DateTime(y, mo, d);
-  final t = DateTime.utc(y, mo, d, int.parse(m[4]!), int.parse(m[5]!), int.parse(m[6]!));
-  return m[7] == 'Z' ? t.toLocal() : DateTime(y, mo, d, int.parse(m[4]!), int.parse(m[5]!), int.parse(m[6]!));
+  final t = DateTime.utc(
+    y,
+    mo,
+    d,
+    int.parse(m[4]!),
+    int.parse(m[5]!),
+    int.parse(m[6]!),
+  );
+  return m[7] == 'Z'
+      ? t.toLocal()
+      : DateTime(
+          y,
+          mo,
+          d,
+          int.parse(m[4]!),
+          int.parse(m[5]!),
+          int.parse(m[6]!),
+        );
 }

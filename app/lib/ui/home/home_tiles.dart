@@ -1,0 +1,770 @@
+import 'dart:async';
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
+import '../../app_container.dart';
+import '../../core/command_registry.dart';
+import '../../managers/alarms/alarm_model.dart';
+import '../../managers/home/panchang.dart';
+import '../../managers/home/phoenix_home_manager.dart';
+import '../../managers/home/school_service.dart';
+import '../../managers/settings/definitions.dart' as defs;
+import '../kids/kids_logic.dart';
+import '../kids/kids_more_logic.dart';
+import '../toast.dart';
+import 'home_apps.dart';
+import 'home_themes.dart';
+import 'photo_frame.dart';
+import 'school_page.dart';
+import 'telugu_calendar_page.dart';
+
+/// Phoenix Home's tiles: live, resizable, reorderable, themed.
+///
+/// Each tile shows current data and more of it as it grows: a 1×1 tile its
+/// headline, a wide one a line more, a 2×2 one the details. In edit mode
+/// every tile gets its size, order and hide controls.
+class HomeTileGrid extends StatefulWidget {
+  const HomeTileGrid({super.key, required this.container, required this.onOpenSettings});
+
+  final AppContainer container;
+  final VoidCallback onOpenSettings;
+
+  @override
+  State<HomeTileGrid> createState() => _HomeTileGridState();
+}
+
+class _HomeTileGridState extends State<HomeTileGrid> {
+  AppContainer get c => widget.container;
+  late final Timer _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    // Clocks in tiles (timers, alarms, school countdown) move on.
+    _tick = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
+    if (c.phoenixHome.homeAssistantConfigured) unawaited(c.phoenixHome.loadEntities());
+  }
+
+  @override
+  void dispose() {
+    _tick.cancel();
+    super.dispose();
+  }
+
+  /// Whether a tile has anything to show on this device.
+  bool _available(String id) => switch (id) {
+    'kids' => c.settings.get(defs.kidsEnabled),
+    'calendar' => c.phoenixHome.homeAssistantConfigured,
+    'cameras' => c.camera.config.defaultView != null,
+    _ => true,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final home = c.phoenixHome;
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        home.tiles,
+        home.hiddenTiles,
+        home.theme,
+        home.editing,
+        home.school.menus,
+        home.school.config,
+        home.school.events,
+        home.entities,
+        home.photos.settings,
+        c.voiceTimers.timers,
+        c.alarms.alarms,
+        c.launcher.installedRevision,
+        home.usage,
+        KidsScores.changes,
+      ]),
+      builder: (context, _) {
+        final theme = homeTheme(home.theme.value);
+        final editing = home.editing.value;
+        final specs = [
+          for (final t in home.tiles.value)
+            if (_available(t.id) && !home.hiddenTiles.value.contains(t.id)) t,
+        ];
+        return LayoutBuilder(
+          builder: (context, box) {
+            final columns = box.maxWidth > box.maxHeight ? 6 : 4;
+            const gap = 14.0;
+            final cell = (box.maxWidth - gap * (columns - 1)) / columns;
+            final spots = packTiles([for (final t in specs) (t.w, t.h)], columns);
+            final rows = spots.isEmpty
+                ? 1
+                : [for (var i = 0; i < specs.length; i++) spots[i].$2 + specs[i].h].reduce(math.max);
+            // Rows share the height when they fit; tall layouts scroll.
+            final rowH = math.max(104.0, math.min(cell, (box.maxHeight - gap * (rows - 1)) / rows));
+            final height = rows * rowH + (rows - 1) * gap;
+            return SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: SizedBox(
+                height: math.max(height, editing ? height : 0),
+                child: Stack(
+                  children: [
+                    for (var i = 0; i < specs.length; i++)
+                      AnimatedPositioned(
+                        key: ValueKey(specs[i].id),
+                        duration: const Duration(milliseconds: 260),
+                        curve: Curves.easeOutCubic,
+                        left: spots[i].$1 * (cell + gap),
+                        top: spots[i].$2 * (rowH + gap),
+                        width: math.min(specs[i].w, columns) * cell + (math.min(specs[i].w, columns) - 1) * gap,
+                        height: specs[i].h * rowH + (specs[i].h - 1) * gap,
+                        child: _Tile(
+                          container: c,
+                          spec: specs[i],
+                          colors: theme.tile(i),
+                          editing: editing,
+                          onOpenSettings: widget.onOpenSettings,
+                          index: i,
+                          count: specs.length,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _Tile extends StatelessWidget {
+  const _Tile({
+    required this.container,
+    required this.spec,
+    required this.colors,
+    required this.editing,
+    required this.onOpenSettings,
+    required this.index,
+    required this.count,
+  });
+
+  final AppContainer container;
+  final HomeTileSpec spec;
+  final List<Color> colors;
+  final bool editing;
+  final VoidCallback onOpenSettings;
+  final int index;
+  final int count;
+
+  AppContainer get c => container;
+
+  Future<void> _command(BuildContext context, String name, String what) async {
+    final overlay = Overlay.maybeOf(context);
+    final CommandResult result = await c.commands.execute(name, const {});
+    if (!result.ok && overlay != null && overlay.mounted) {
+      showToastIn(overlay, title: "Couldn't open $what", message: result.error, kind: ToastKind.error);
+    }
+  }
+
+  Future<void> _open(BuildContext context) async {
+    final home = c.phoenixHome;
+    switch (spec.id) {
+      case 'kids':
+        await _command(context, 'openKids', 'the Kids Portal');
+      case 'apps':
+        home.appsOpen.value = true;
+      case 'smart':
+        home.openSmartHome();
+      case 'school':
+        await showTodayAtSchool(context, c);
+      case 'telugu':
+        home.openTelugu();
+      case 'photos':
+        if (!home.photos.configured) {
+          await showPhotoSetup(context, c);
+        } else {
+          await Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (route) => GestureDetector(
+                onTap: () => Navigator.pop(route),
+                child: PhoenixPhotoFrame(container: c),
+              ),
+            ),
+          );
+        }
+      case 'timers':
+        await _command(context, 'openTimers', 'timers');
+      case 'alarms':
+        await _command(context, 'openAlarms', 'alarms');
+      case 'store':
+        await _command(context, 'openStore', 'the store');
+      case 'calendar':
+        await _command(context, 'openCalendar', 'the calendar');
+      case 'cameras':
+        if (c.camera.config.defaultView case final view?) c.camera.showView(view.id);
+      case 'settings':
+        onOpenSettings();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = spec.w >= 2 && spec.h >= 2
+        ? _Size.large
+        : spec.w >= 2
+        ? _Size.wide
+        : spec.h >= 2
+        ? _Size.tall
+        : _Size.small;
+    final content = _content(context, size);
+    final tile = GestureDetector(
+      onTap: editing ? null : () => unawaited(_open(context)),
+      onLongPress: () => c.phoenixHome.editing.value = true,
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: colors),
+          boxShadow: [BoxShadow(color: colors.first.withValues(alpha: 0.25), blurRadius: 16, offset: const Offset(0, 6))],
+        ),
+        child: content,
+      ),
+    );
+    if (!editing) return tile;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        AnimatedScale(scale: 0.96, duration: const Duration(milliseconds: 200), child: tile),
+        _EditControls(container: c, spec: spec, index: index, count: count),
+      ],
+    );
+  }
+
+  Widget _content(BuildContext context, _Size size) {
+    final home = c.phoenixHome;
+    final now = DateTime.now();
+    switch (spec.id) {
+      case 'kids':
+        final left = c.kids.minutesLeft;
+        final challenge = dailyChallenge(now);
+        return _Body(
+          icon: Icons.child_care_rounded,
+          title: 'Kids Portal',
+          line: left == null ? 'Games & learning' : '$left min of play left today',
+          size: size,
+          extra: FutureBuilder<(int, bool)>(
+            future: _kidsStatus(),
+            builder: (context, snap) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Chip(Icons.star_rounded, '${snap.data?.$1 ?? 0} stars today'),
+                const SizedBox(height: 6),
+                Text(
+                  snap.data?.$2 == true ? "Today's challenge done!" : "Today's challenge: ${challenge.text}",
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+        );
+      case 'apps':
+        final recent = home.recent(size == _Size.large ? 8 : 4);
+        return _Body(
+          icon: Icons.apps_rounded,
+          title: 'All apps',
+          line: home.apps.length == 1 ? '1 app' : '${home.apps.length} apps',
+          size: size,
+          extra: recent.isEmpty
+              ? null
+              : Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [for (final a in recent) HomeAppIcon(container: c, app: a, size: 40)],
+                ),
+        );
+      case 'smart':
+        if (!home.homeAssistantConfigured) {
+          return _Body(icon: Icons.home_work_rounded, title: 'Smart Home', line: 'Optional add-on', size: size);
+        }
+        final all = home.entities.value ?? const <HomeEntity>[];
+        final lights = all.where((e) => e.domain == 'light' && e.active).length;
+        final pinned = [
+          for (final id in home.pinnedEntities.value)
+            for (final e in all)
+              if (e.id == id) e,
+        ];
+        return _Body(
+          icon: Icons.home_work_rounded,
+          title: 'Smart Home',
+          line: all.isEmpty ? 'Lights, scenes, climate' : (lights == 0 ? 'All lights off' : '$lights light${lights == 1 ? '' : 's'} on'),
+          size: size,
+          extra: pinned.isEmpty
+              ? null
+              : Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final e in pinned.take(4))
+                      ActionChip(
+                        avatar: Icon(e.active ? Icons.toggle_on_rounded : Icons.toggle_off_outlined, size: 18),
+                        label: Text(e.name, overflow: TextOverflow.ellipsis),
+                        onPressed: () => unawaited(home.activate(e)),
+                      ),
+                  ],
+                ),
+        );
+      case 'school':
+        final school = home.school;
+        // Today's lunch, or the next school day's on a weekend or holiday.
+        final day = nextMenuDay(school);
+        final lunch = _menuOn(school, 'lunch', day);
+        final when = day.year == now.year && day.month == now.month && day.day == now.day
+            ? 'Lunch'
+            : '${DateFormat('EEEE').format(day)} lunch';
+        return _Body(
+          icon: Icons.school_rounded,
+          title: school.config.value.schoolName.isEmpty ? 'School' : school.config.value.schoolName,
+          line: lunch == null || lunch.isEmpty ? school.status(now) : '$when: ${lunch.items.first}',
+          size: size,
+          extra: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (lunch != null && !lunch.isEmpty) Text(school.status(now), style: const TextStyle(color: Colors.white70, fontSize: 13)),
+              if (lunch != null)
+                for (final item in lunch.items.skip(1).take(size == _Size.large ? 5 : 2))
+                  Text('• $item', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 13.5)),
+            ],
+          ),
+        );
+      case 'telugu':
+        final calc = home.panchang;
+        final today = calc.day(now);
+        final (title, line) = teluguTileLines(calc);
+        final (rs, re) = today.rahuKalam;
+        return _Body(
+          icon: Icons.brightness_5_rounded,
+          title: title,
+          line: line,
+          size: size,
+          extra: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('${today.varaNameTe} · ${nakshatraTe[today.nakshatra]} · ${today.samvatsaraName}',
+                  maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 13.5)),
+              Text('Sunrise ${DateFormat.jm().format(today.sunrise)} · Rahu ${DateFormat.jm().format(rs)}–${DateFormat.jm().format(re)}',
+                  maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70, fontSize: 12.5)),
+            ],
+          ),
+        );
+      case 'photos':
+        if (!home.photos.configured) {
+          return _Body(icon: Icons.photo_library_rounded, title: 'Photos', line: 'Immich or a network folder: tap to set up', size: size);
+        }
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            PhoenixPhotoFrame(key: ValueKey(home.photos.settings.value), container: c, showClock: false, seconds: 15),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black54], stops: [0.6, 1]),
+              ),
+            ),
+            Positioned(
+              left: 14,
+              bottom: 10,
+              child: Row(
+                children: [
+                  const Icon(Icons.photo_library_rounded, color: Colors.white, size: 20),
+                  const SizedBox(width: 6),
+                  Text(home.photos.settings.value.source == 'immich' ? 'Immich' : 'Photos',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                ],
+              ),
+            ),
+            Positioned(
+              right: 4,
+              top: 4,
+              child: IconButton(
+                color: Colors.white70,
+                tooltip: 'Photo settings',
+                icon: const Icon(Icons.tune_rounded),
+                onPressed: () => unawaited(showPhotoSetup(context, c)),
+              ),
+            ),
+          ],
+        );
+      case 'timers':
+        final running = [...c.voiceTimers.timers.value]..sort((a, b) => a.endsAt(now).compareTo(b.endsAt(now)));
+        final first = running.firstOrNull;
+        String fmt(int s) => s >= 3600 ? '${s ~/ 3600}h ${(s % 3600) ~/ 60}m' : '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
+        return _Body(
+          icon: Icons.timer_rounded,
+          title: 'Timers',
+          line: first == null ? 'None running' : '${first.name.isEmpty ? 'Timer' : first.name} ${fmt(first.remaining(now))}',
+          size: size,
+          extra: running.length < 2
+              ? null
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final t in running.skip(1).take(3))
+                      Text('${t.name.isEmpty ? 'Timer' : t.name} ${fmt(t.remaining(now))}', style: const TextStyle(color: Colors.white, fontSize: 13.5)),
+                  ],
+                ),
+        );
+      case 'alarms':
+        final upcoming = [
+          for (final a in c.alarms.alarms.value)
+            if (nextRing(a, now) case final at?) (at, a),
+        ]..sort((x, y) => x.$1.compareTo(y.$1));
+        final next = upcoming.firstOrNull;
+        String when(DateTime at) =>
+            '${at.day == now.day ? '' : '${DateFormat('EEE').format(at)} '}${DateFormat.jm().format(at)}';
+        return _Body(
+          icon: Icons.alarm_rounded,
+          title: 'Alarms',
+          line: next == null ? 'No alarms set' : 'Next ${when(next.$1)}',
+          size: size,
+          extra: upcoming.length < 2
+              ? null
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final (at, a) in upcoming.skip(1).take(3))
+                      Text('${when(at)} ${a.label}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 13.5)),
+                  ],
+                ),
+        );
+      case 'store':
+        return _Body(icon: Icons.storefront_rounded, title: 'App Store', line: 'Free apps for Portal', size: size);
+      case 'calendar':
+        return _Body(icon: Icons.calendar_month_rounded, title: 'Calendar', line: 'Family calendars', size: size);
+      case 'cameras':
+        return _Body(icon: Icons.videocam_rounded, title: 'Cameras', line: c.camera.config.defaultView?.name ?? '', size: size);
+      default:
+        return _Body(icon: Icons.settings_rounded, title: 'Settings', line: 'Home screen, Wi-Fi, more', size: size);
+    }
+  }
+}
+
+Future<(int, bool)> _kidsStatus() async => (await KidsScores.starsToday(), await KidsScores.challengeDone());
+
+MenuDay? _menuOn(SchoolService school, String kind, DateTime day) {
+  for (final (slug, _) in school.config.value.menuTypes) {
+    if (slug.contains(kind)) return school.menuOn(slug, day);
+  }
+  return null;
+}
+
+enum _Size { small, wide, tall, large }
+
+/// A tile's face: icon, title, a live line, and [extra] when there is room.
+class _Body extends StatelessWidget {
+  const _Body({required this.icon, required this.title, required this.line, required this.size, this.extra});
+
+  final IconData icon;
+  final String title;
+  final String line;
+  final _Size size;
+  final Widget? extra;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(16),
+    child: LayoutBuilder(
+      builder: (context, box) {
+        final roomy = box.maxHeight >= 84;
+        final showExtra = extra != null && size != _Size.small && box.maxHeight >= 120;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: Colors.white, size: roomy ? 30 : 24),
+                if (size != _Size.small) ...[
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+                  ),
+                ],
+              ],
+            ),
+            if (showExtra) ...[
+              const SizedBox(height: 10),
+              Expanded(child: ClipRect(child: SingleChildScrollView(physics: const NeverScrollableScrollPhysics(), child: extra))),
+            ] else
+              const Spacer(),
+            if (size == _Size.small)
+              Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800)),
+            if (roomy || size != _Size.small)
+              Text(line, maxLines: size == _Size.small ? 1 : 2, overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 13.5, fontWeight: FontWeight.w500)),
+          ],
+        );
+      },
+    ),
+  );
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip(this.icon, this.text);
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.22), borderRadius: BorderRadius.circular(14)),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: const Color(0xFFFFD27A)),
+        const SizedBox(width: 4),
+        Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+      ],
+    ),
+  );
+}
+
+// ── Edit mode ─────────────────────────────────────────────────────────────
+
+const _presetSizes = [(1, 1, 'S'), (2, 1, 'W'), (1, 2, 'T'), (2, 2, 'L'), (3, 2, 'XL')];
+
+class _EditControls extends StatelessWidget {
+  const _EditControls({required this.container, required this.spec, required this.index, required this.count});
+
+  final AppContainer container;
+  final HomeTileSpec spec;
+  final int index;
+  final int count;
+
+  Future<void> _resize(int w, int h) async {
+    final home = container.phoenixHome;
+    await home.setTiles([for (final t in home.tiles.value) t.id == spec.id ? t.sized(w, h) : t]);
+  }
+
+  Future<void> _move(int delta) async {
+    final home = container.phoenixHome;
+    final list = [...home.tiles.value];
+    final visible = [
+      for (final t in list)
+        if (!home.hiddenTiles.value.contains(t.id)) t.id,
+    ];
+    final at = visible.indexOf(spec.id);
+    final to = at + delta;
+    if (at < 0 || to < 0 || to >= visible.length) return;
+    final a = list.indexWhere((t) => t.id == spec.id), b = list.indexWhere((t) => t.id == visible[to]);
+    final tmp = list[a];
+    list[a] = list[b];
+    list[b] = tmp;
+    await home.setTiles(list);
+  }
+
+  Future<void> _custom(BuildContext context) async {
+    var w = spec.w, h = spec.h;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => StatefulBuilder(
+        builder: (context, set) => AlertDialog(
+          title: const Text('Custom size'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final (label, value, max, change) in [
+                ('Width', w, 6, (int v) => set(() => w = v)),
+                ('Height', h, 4, (int v) => set(() => h = v)),
+              ])
+                Row(
+                  children: [
+                    SizedBox(width: 70, child: Text(label)),
+                    IconButton(onPressed: value > 1 ? () => change(value - 1) : null, icon: const Icon(Icons.remove_circle_outline)),
+                    Text('$value', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
+                    IconButton(onPressed: value < max ? () => change(value + 1) : null, icon: const Icon(Icons.add_circle_outline)),
+                    Text(label == 'Width' ? 'columns' : 'rows'),
+                  ],
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialog, false), child: const Text('Cancel')),
+            FilledButton(onPressed: () => Navigator.pop(dialog, true), child: const Text('Apply')),
+          ],
+        ),
+      ),
+    );
+    if (ok == true) await _resize(w, h);
+  }
+
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      color: Colors.black.withValues(alpha: 0.45),
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(color: Colors.white70, width: 2),
+    ),
+    padding: const EdgeInsets.all(6),
+    child: FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            alignment: WrapAlignment.center,
+            children: [
+              for (final (w, h, label) in _presetSizes)
+                _SizeButton(
+                  label: label,
+                  selected: spec.w == w && spec.h == h,
+                  onTap: () => unawaited(_resize(w, h)),
+                ),
+              _SizeButton(label: '${spec.w}×${spec.h}…', selected: false, onTap: () => unawaited(_custom(context))),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton.filledTonal(tooltip: 'Move earlier', onPressed: index > 0 ? () => unawaited(_move(-1)) : null, icon: const Icon(Icons.arrow_back_rounded)),
+              IconButton.filledTonal(
+                tooltip: 'Hide tile',
+                onPressed: () => unawaited(container.phoenixHome.setTileHidden(spec.id, true)),
+                icon: const Icon(Icons.visibility_off_rounded),
+              ),
+              IconButton.filledTonal(tooltip: 'Move later', onPressed: index < count - 1 ? () => unawaited(_move(1)) : null, icon: const Icon(Icons.arrow_forward_rounded)),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _SizeButton extends StatelessWidget {
+  const _SizeButton({required this.label, required this.selected, required this.onTap});
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: selected ? Colors.white : Colors.white24,
+    borderRadius: BorderRadius.circular(10),
+    child: InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Text(label, style: TextStyle(color: selected ? Colors.black : Colors.white, fontWeight: FontWeight.w800)),
+      ),
+    ),
+  );
+}
+
+/// The edit bar under the grid: hidden tiles back, themes, reset, done.
+class HomeEditBar extends StatelessWidget {
+  const HomeEditBar({super.key, required this.container});
+  final AppContainer container;
+
+  static const _names = {
+    'telugu': 'Telugu calendar',
+    'kids': 'Kids Portal',
+    'photos': 'Photos',
+    'school': 'School',
+    'apps': 'All apps',
+    'smart': 'Smart Home',
+    'timers': 'Timers',
+    'alarms': 'Alarms',
+    'store': 'App Store',
+    'settings': 'Settings',
+    'calendar': 'Calendar',
+    'cameras': 'Cameras',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final home = container.phoenixHome;
+    return ListenableBuilder(
+      listenable: Listenable.merge([home.hiddenTiles, home.theme, home.weatherEffects]),
+      builder: (context, _) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(color: const Color(0xFF181B21), borderRadius: BorderRadius.circular(24)),
+        child: Row(
+          children: [
+            const Icon(Icons.dashboard_customize_rounded, color: Colors.white),
+            const SizedBox(width: 10),
+            const Text('Edit home', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+            const SizedBox(width: 16),
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (final t in homeThemes)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Tooltip(
+                          message: t.name,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(20),
+                            onTap: () => unawaited(home.setTheme(t.id)),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(colors: t.tiles.first),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: home.theme.value == t.id ? Colors.white : Colors.transparent, width: 2),
+                              ),
+                              child: Text(t.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            if (home.hiddenTiles.value.isNotEmpty)
+              PopupMenuButton<String>(
+                tooltip: 'Add a tile',
+                onSelected: (id) => unawaited(home.setTileHidden(id, false)),
+                itemBuilder: (_) => [
+                  for (final id in home.hiddenTiles.value) PopupMenuItem(value: id, child: Text(_names[id] ?? id)),
+                ],
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(children: [Icon(Icons.add_circle_outline, color: Colors.white), SizedBox(width: 6), Text('Add tile', style: TextStyle(color: Colors.white))]),
+                ),
+              ),
+            Tooltip(
+              message: 'Weather in the background',
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.thunderstorm_rounded, color: Colors.white70, size: 20),
+                  Switch(
+                    value: home.weatherEffects.value,
+                    onChanged: (v) => unawaited(home.setWeatherEffects(v)),
+                  ),
+                ],
+              ),
+            ),
+            TextButton(onPressed: () => unawaited(home.resetTiles()), child: const Text('Reset')),
+            const SizedBox(width: 6),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: homeTheme(home.theme.value).accent, foregroundColor: Colors.black),
+              onPressed: () => home.editing.value = false,
+              child: const Text('Done'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

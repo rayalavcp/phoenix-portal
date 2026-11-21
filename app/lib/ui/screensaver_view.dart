@@ -29,6 +29,7 @@ import 'calendar_overlay.dart'
 import '../managers/calendar/calendar_manager.dart';
 import '../managers/calendar/calendar_model.dart' as cal_model;
 import '../app_container.dart';
+import 'home/photo_frame.dart';
 import '../l10n/messages.dart';
 import '../core/events.dart';
 import '../core/locale_dates.dart';
@@ -342,6 +343,11 @@ class _ScreensaverOverlayState extends State<ScreensaverOverlay> {
                   'immich' => _Dismissable(
                     container: container,
                     child: ImmichScreensaver(container: container),
+                  ),
+                  // Phoenix Home's photos: Immich or a network folder.
+                  'phoenix_photos' => _Dismissable(
+                    container: container,
+                    child: PhoenixPhotoFrame(container: container),
                   ),
                   // The camera grid reports its own touches (the WebView
                   // swallows Flutter gestures), so it dismisses itself

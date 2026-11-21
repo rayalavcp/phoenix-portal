@@ -23,6 +23,22 @@ alarms, the App Store, the photo frame) and a dock of favourite apps. Every inst
 tap away in the app drawer, with search, recent and most-used apps; press and hold an app to add
 it to the dock or the Kids Portal, hide it, or open its Android info page.
 
+**Live, resizable tiles and themes.** Every tile shows current data (today's tithi and festival,
+the next school lunch, stars and the kids' challenge, running timers, the next alarm, lights on,
+your photos) and more of it as it grows. Press and hold, or tap the edit button, to resize tiles
+(small, wide, tall, large, extra large or any custom size), reorder or hide them, and pick a theme:
+Ember, Ocean, Forest, Midnight, Sunset or Graphite. The background shows the weather: rain, snow,
+clouds, fog, sun, stars or a storm.
+
+**Telugu calendar (తెలుగు క్యాలెండర్).** A full panchangam computed on the Portal for your city:
+tithi, nakshatra, yoga, karana, masa (adhika masa included), paksha, ritu and samvatsara, sunrise
+and sunset, Rahu Kalam and Yamagandam, and the Telugu festivals (Ugadi, Sri Rama Navami, Vinayaka
+Chavithi, Dasara, Deepavali, Kartika Pournami, Sankranti and more) in a month view. The tile shows
+today's date and what is special about it.
+
+**Photos.** A photo tile and the Phoenix Photo Frame screensaver from Immich (the photo server
+most Unraid setups run) or a network folder served over http.
+
 **School.** This week's breakfast and lunch menus from the district's Nutrislice menu site
 (Frisco ISD by default; pick your school on the Portal), the school calendar from an iCal link
 (holidays, early release days), and the bell times with a "school starts in 20 min" line.
@@ -57,6 +73,11 @@ volume, sensors, presence, and the new **Profile** switch.
 | **Word Guess** | Guess the word before the balloons are gone. |
 | **Snake**, **Simon Says**, **Tic-Tac-Toe** | Classic play; Simon plays real tones. |
 | **Pixel Paint**, **Piano** | Colour by number, and a two-octave piano with songs to follow. |
+| **Fractions**, **Money**, **Science**, **Spelling**, **Opposites** | Easy, Medium and Hard levels each. |
+| **Whack-a-Mole**, **Lights Out** | Three speeds; 3×3, 4×4 and 5×5 boards. |
+
+Games with levels: Sudoku, Maze, Word Search, Word Guess, Snake, Telling the Time, Patterns,
+Times Tables and every quiz above.
 
 A **daily challenge** (a new one each day) is worth three bonus stars.
 

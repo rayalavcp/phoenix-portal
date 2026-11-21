@@ -451,7 +451,209 @@ const kidsGuessWords = [
   'DOLPHIN', 'JUNGLE', 'CASTLE', 'GIRAFFE', 'MAGNET', 'PLANET', 'ROBOT',
   'SANDWICH', 'TORNADO', 'UMBRELLA', 'WIZARD', 'ASTRONAUT', 'BICYCLE',
   'CHOCOLATE', 'FIREWORKS', 'HELICOPTER', 'OCTOPUS', 'SNOWFLAKE',
+  'APPLE', 'TIGER', 'CLOUD', 'HOUSE', 'PIZZA', 'TRAIN', 'BEACH', 'HORSE', 'SPOON', 'GHOST',
+  'TELESCOPE', 'DETECTIVE', 'WATERFALL', 'SKATEBOARD', 'BLUEBERRY', 'CROCODILE',
 ];
+
+// ── Fractions ────────────────────────────────────────────────────────────
+
+/// A fraction question: the picture's parts and shaded parts, the answer
+/// as "a/b", and four choices. Level 1 halves to quarters, 2 up to tenths,
+/// 3 in simplest form.
+@immutable
+class FractionQuestion {
+  const FractionQuestion(this.parts, this.shaded, this.prompt, this.answer, this.choices);
+  final int parts;
+  final int shaded;
+  final String prompt;
+  final String answer;
+  final List<String> choices;
+}
+
+int _gcd(int a, int b) => b == 0 ? a : _gcd(b, a % b);
+
+FractionQuestion fractionQuestion(int level, math.Random rng) {
+  final parts = switch (level) {
+    <= 1 => [2, 3, 4][rng.nextInt(3)],
+    2 => 2 + rng.nextInt(9),
+    _ => [4, 6, 8, 9, 10, 12][rng.nextInt(6)],
+  };
+  final shaded = 1 + rng.nextInt(parts - 1);
+  String frac(int a, int b) => '$a/$b';
+  final g = _gcd(shaded, parts);
+  final answer = level >= 3 ? frac(shaded ~/ g, parts ~/ g) : frac(shaded, parts);
+  final choices = <String>{answer};
+  for (var guard = 0; choices.length < 4 && guard < 80; guard++) {
+    final b = level >= 3 ? 2 + rng.nextInt(10) : math.max(2, parts + rng.nextInt(3) - 1);
+    final a = 1 + rng.nextInt(b - 1);
+    choices.add(frac(a, b));
+  }
+  while (choices.length < 4) {
+    choices.add(frac(choices.length, choices.length + 5));
+  }
+  return FractionQuestion(
+    parts,
+    shaded,
+    level >= 3 ? 'What part is shaded? (simplest form)' : 'What part is shaded?',
+    answer,
+    choices.toList()..shuffle(rng),
+  );
+}
+
+// ── Money ────────────────────────────────────────────────────────────────
+
+@immutable
+class MoneyQuestion {
+  const MoneyQuestion(this.coins, this.prompt, this.answer, this.choices);
+
+  /// Coin values in cents, as drawn.
+  final List<int> coins;
+  final String prompt;
+  final String answer;
+  final List<String> choices;
+}
+
+String cents(int c) => c >= 100 ? '\$${(c / 100).toStringAsFixed(2)}' : '$c¢';
+
+/// Level 1 counts pennies, nickels and dimes; 2 adds quarters; 3 asks for
+/// the change from a dollar.
+MoneyQuestion moneyQuestion(int level, math.Random rng) {
+  final kinds = level <= 1 ? [1, 5, 10] : [1, 5, 10, 25];
+  final n = 2 + rng.nextInt(level <= 1 ? 3 : 4);
+  final coins = [for (var i = 0; i < n; i++) kinds[rng.nextInt(kinds.length)]]..sort((a, b) => b.compareTo(a));
+  while (level >= 3 && coins.fold(0, (a, b) => a + b) >= 100) {
+    coins.removeAt(0);
+  }
+  final total = coins.fold(0, (a, b) => a + b);
+  final value = level >= 3 ? 100 - total : total;
+  final choices = <int>{value};
+  for (var guard = 0; choices.length < 4 && guard < 80; guard++) {
+    final off = [1, 5, 10, 15, 25][rng.nextInt(5)] * (rng.nextBool() ? 1 : -1);
+    if (value + off > 0) choices.add(value + off);
+  }
+  return MoneyQuestion(
+    coins,
+    level >= 3 ? 'You pay one dollar for this. How much change?' : 'How much money is this?',
+    cents(value),
+    [for (final c in choices.toList()..shuffle(rng)) cents(c)],
+  );
+}
+
+// ── Science, spelling, opposites ─────────────────────────────────────────
+
+/// (question, answer, three wrong answers) by level.
+const kidsScience = <int, List<(String, String, List<String>)>>{
+  1: [
+    ('What do plants need from the sun?', 'Light', ['Sand', 'Snow', 'Noise']),
+    ('Which animal lays eggs?', 'Chicken', ['Dog', 'Cow', 'Cat']),
+    ('What is ice made of?', 'Water', ['Milk', 'Glass', 'Salt']),
+    ('How many legs does a spider have?', '8', ['6', '4', '10']),
+    ('Which is the closest star to Earth?', 'The Sun', ['The Moon', 'Mars', 'Polaris']),
+    ('What do bees make?', 'Honey', ['Milk', 'Silk', 'Bread']),
+    ('Which sense uses your nose?', 'Smell', ['Taste', 'Touch', 'Hearing']),
+    ('What season comes after winter?', 'Spring', ['Summer', 'Fall', 'Autumn']),
+    ('Which animal is a mammal?', 'Whale', ['Shark', 'Frog', 'Eagle']),
+    ('What gas do we need to breathe?', 'Oxygen', ['Helium', 'Smoke', 'Steam']),
+    ('Which planet do we live on?', 'Earth', ['Mars', 'Venus', 'Jupiter']),
+    ('What helps a fish breathe?', 'Gills', ['Lungs', 'Fins', 'Scales']),
+  ],
+  2: [
+    ('Which planet is the largest?', 'Jupiter', ['Saturn', 'Earth', 'Neptune']),
+    ('What part of a plant makes its food?', 'Leaves', ['Roots', 'Stem', 'Flower']),
+    ('Water boils at how many °C?', '100', ['50', '0', '212']),
+    ('What force pulls things down to Earth?', 'Gravity', ['Magnetism', 'Friction', 'Wind']),
+    ('Which organ pumps blood?', 'Heart', ['Lungs', 'Brain', 'Stomach']),
+    ('A caterpillar turns into a…', 'Butterfly', ['Beetle', 'Bee', 'Spider']),
+    ('Which of these is a liquid?', 'Juice', ['Rock', 'Steam', 'Wood']),
+    ('Animals that eat only plants are…', 'Herbivores', ['Carnivores', 'Omnivores', 'Predators']),
+    ('Which planet is called the Red Planet?', 'Mars', ['Venus', 'Mercury', 'Jupiter']),
+    ('How many bones does an adult human have?', '206', ['106', '306', '26']),
+    ('What do magnets attract?', 'Iron', ['Wood', 'Plastic', 'Glass']),
+    ('Which layer of Earth do we live on?', 'Crust', ['Core', 'Mantle', 'Magma']),
+  ],
+  3: [
+    ('What is H₂O?', 'Water', ['Salt', 'Oxygen', 'Hydrogen']),
+    ('Plants take in which gas?', 'Carbon dioxide', ['Oxygen', 'Nitrogen', 'Helium']),
+    ('What is the center of an atom called?', 'Nucleus', ['Electron', 'Shell', 'Cell']),
+    ('Sound travels fastest through…', 'Solids', ['Air', 'Space', 'Gas']),
+    ('Which blood cells fight germs?', 'White blood cells', ['Red blood cells', 'Platelets', 'Plasma']),
+    ('Water boils at how many °F?', '212', ['100', '180', '32']),
+    ('Rock made from cooled lava is…', 'Igneous', ['Sedimentary', 'Metamorphic', 'Fossil']),
+    ('Which part of a cell holds DNA?', 'Nucleus', ['Membrane', 'Wall', 'Cytoplasm']),
+    ('The Moon shines because it…', 'Reflects sunlight', ['Burns gas', 'Has lamps', 'Is a star']),
+    ('Which simple machine is a ramp?', 'Inclined plane', ['Lever', 'Pulley', 'Wheel']),
+    ('A scientist who studies rocks is a…', 'Geologist', ['Biologist', 'Chemist', 'Astronomer']),
+    ('What is the closest planet to the Sun?', 'Mercury', ['Venus', 'Earth', 'Mars']),
+  ],
+};
+
+/// (correct spelling, misspellings) by level.
+const kidsSpelling = <int, List<(String, List<String>)>>{
+  1: [
+    ('because', ['becuase', 'becaus', 'beacause']), ('friend', ['freind', 'frend', 'friendd']),
+    ('school', ['skool', 'shcool', 'scool']), ('said', ['sed', 'siad', 'sayd']),
+    ('their', ['thier', 'theyr', 'thir']), ('people', ['poeple', 'peeple', 'pepole']),
+    ('animal', ['animel', 'aminal', 'anemal']), ('water', ['watter', 'wator', 'warter']),
+    ('little', ['littel', 'litle', 'lttle']), ('happy', ['hapy', 'happey', 'happie']),
+  ],
+  2: [
+    ('different', ['diffrent', 'diferent', 'differant']), ('beautiful', ['beutiful', 'beautifull', 'butiful']),
+    ('library', ['libary', 'liberry', 'librery']), ('February', ['Febuary', 'Februery', 'Febrary']),
+    ('separate', ['seperate', 'saparate', 'seprate']), ('surprise', ['suprise', 'surprize', 'serprise']),
+    ('believe', ['beleive', 'belive', 'beleeve']), ('neighbor', ['nieghbor', 'nabor', 'naybor']),
+    ('calendar', ['calender', 'calandar', 'callendar']), ('favorite', ['favrite', 'faverite', 'favorit']),
+  ],
+  3: [
+    ('necessary', ['neccessary', 'necessery', 'nessecary']), ('definitely', ['definately', 'defiantly', 'definetly']),
+    ('rhythm', ['rythm', 'rhythem', 'rhytm']), ('occasion', ['occassion', 'ocasion', 'occation']),
+    ('environment', ['enviroment', 'environmant', 'envirnment']), ('government', ['goverment', 'govermant', 'governmint']),
+    ('restaurant', ['restaraunt', 'resturant', 'restarant']), ('conscience', ['concience', 'conscence', 'consience']),
+    ('embarrass', ['embarass', 'embarras', 'embaress']), ('accommodate', ['accomodate', 'acommodate', 'accomadate']),
+  ],
+};
+
+/// (word, opposite, three others) by level.
+const kidsOpposites = <int, List<(String, String, List<String>)>>{
+  1: [
+    ('hot', 'cold', ['warm', 'big', 'wet']), ('up', 'down', ['over', 'top', 'high']),
+    ('happy', 'sad', ['glad', 'funny', 'kind']), ('big', 'small', ['tall', 'huge', 'wide']),
+    ('fast', 'slow', ['quick', 'far', 'loud']), ('day', 'night', ['noon', 'sun', 'week']),
+    ('open', 'closed', ['wide', 'empty', 'free']), ('full', 'empty', ['heavy', 'whole', 'big']),
+  ],
+  2: [
+    ('ancient', 'modern', ['old', 'early', 'past']), ('brave', 'afraid', ['bold', 'strong', 'calm']),
+    ('generous', 'selfish', ['kind', 'giving', 'rich']), ('include', 'exclude', ['contain', 'add', 'invite']),
+    ('arrive', 'depart', ['reach', 'enter', 'stay']), ('victory', 'defeat', ['win', 'trophy', 'game']),
+    ('rough', 'smooth', ['hard', 'bumpy', 'tough']), ('increase', 'decrease', ['grow', 'raise', 'add']),
+  ],
+  3: [
+    ('abundant', 'scarce', ['plenty', 'ample', 'large']), ('transparent', 'opaque', ['clear', 'shiny', 'thin']),
+    ('optimistic', 'pessimistic', ['hopeful', 'cheerful', 'positive']), ('expand', 'contract', ['grow', 'stretch', 'swell']),
+    ('voluntary', 'compulsory', ['optional', 'free', 'willing']), ('minimum', 'maximum', ['least', 'small', 'lowest']),
+    ('humble', 'arrogant', ['modest', 'meek', 'shy']), ('temporary', 'permanent', ['brief', 'short', 'passing']),
+  ],
+};
+
+// ── Lights Out ───────────────────────────────────────────────────────────
+
+/// Press a light and it and its neighbours flip. A puzzle made by pressing
+/// random lights on a dark board is always solvable.
+List<bool> lightsOutPuzzle(int n, int presses, math.Random rng) {
+  final b = List<bool>.filled(n * n, false);
+  for (var i = 0; i < presses; i++) {
+    lightsOutPress(b, n, rng.nextInt(n * n));
+  }
+  if (!b.contains(true)) lightsOutPress(b, n, rng.nextInt(n * n));
+  return b;
+}
+
+void lightsOutPress(List<bool> b, int n, int i) {
+  final x = i % n, y = i ~/ n;
+  for (final (dx, dy) in const [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)]) {
+    final nx = x + dx, ny = y + dy;
+    if (nx >= 0 && ny >= 0 && nx < n && ny < n) b[ny * n + nx] = !b[ny * n + nx];
+  }
+}
 
 /// [word] with unguessed letters as underscores.
 String maskedWord(String word, Set<String> guessed) =>

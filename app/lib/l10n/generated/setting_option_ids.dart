@@ -64,7 +64,8 @@ const settingOptionMessageIds = <String, Map<String, String>>{
     "weather_mood": "screensaverWeatherMood",
     "dashboard": "screensaverModeDashboard",
     "celestial": "screensaverModeCelestial",
-    "calendar": "calendarTitle"
+    "calendar": "calendarTitle",
+    "phoenix_photos": "screensaverModePhoenixPhotos"
   },
   "screensaver.calendar_view": {
     "day": "calendarViewDay",

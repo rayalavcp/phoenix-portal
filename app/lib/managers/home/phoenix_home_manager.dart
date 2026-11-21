@@ -14,6 +14,9 @@ import '../launcher/app_launcher_manager.dart';
 import '../location/location_manager.dart';
 import '../settings/definitions.dart' as defs;
 import '../settings/settings_manager.dart';
+import '../screensaver/immich_manager.dart';
+import 'panchang.dart';
+import 'photo_service.dart';
 import 'school_service.dart';
 
 /// Today's weather and the next days, from Open-Meteo (no account, no key,
@@ -84,6 +87,93 @@ class HomeEntity {
   bool get runs => domain == 'scene' || domain == 'script';
 }
 
+/// One tile on Phoenix Home: which, and how many grid cells it spans.
+@immutable
+class HomeTileSpec {
+  const HomeTileSpec(this.id, this.w, this.h);
+  final String id;
+  final int w;
+  final int h;
+
+  HomeTileSpec sized(int w, int h) => HomeTileSpec(id, w.clamp(1, 6), h.clamp(1, 4));
+
+  Map<String, Object?> toJson() => {'id': id, 'w': w, 'h': h};
+}
+
+/// Every tile Phoenix Home knows, in the default order and size (a six
+/// column grid). Tiles a device has no use for (cameras without a view,
+/// the calendar without Home Assistant) are skipped when drawn.
+const defaultHomeTiles = [
+  HomeTileSpec('telugu', 2, 1),
+  HomeTileSpec('kids', 2, 2),
+  HomeTileSpec('photos', 2, 2),
+  HomeTileSpec('school', 2, 1),
+  HomeTileSpec('apps', 1, 1),
+  HomeTileSpec('smart', 1, 1),
+  HomeTileSpec('timers', 1, 1),
+  HomeTileSpec('alarms', 1, 1),
+  HomeTileSpec('store', 1, 1),
+  HomeTileSpec('settings', 1, 1),
+  HomeTileSpec('calendar', 1, 1),
+  HomeTileSpec('cameras', 1, 1),
+];
+
+/// The stored layout: known tiles in the stored order and size, then any
+/// tile added since, so an update's new tiles appear.
+List<HomeTileSpec> decodeTileLayout(String? raw) {
+  final known = {for (final t in defaultHomeTiles) t.id: t};
+  final out = <HomeTileSpec>[];
+  try {
+    final data = raw == null ? null : jsonDecode(raw);
+    if (data is List) {
+      for (final t in data) {
+        if (t is! Map || !known.containsKey(t['id']) || out.any((o) => o.id == t['id'])) continue;
+        out.add(known[t['id']]!.sized(t['w'] is int ? t['w'] as int : 1, t['h'] is int ? t['h'] as int : 1));
+      }
+    }
+  } catch (_) {}
+  for (final t in defaultHomeTiles) {
+    if (!out.any((o) => o.id == t.id)) out.add(t);
+  }
+  return out;
+}
+
+/// Where each tile lands in a [columns]-wide grid: the first free spot,
+/// row by row, so small tiles fill the gaps big ones leave. Answers
+/// (column, row) per tile, in order.
+List<(int, int)> packTiles(List<(int, int)> sizes, int columns) {
+  final taken = <(int, int)>{};
+  bool free(int c, int r, int w, int h) {
+    if (c + w > columns) return false;
+    for (var y = r; y < r + h; y++) {
+      for (var x = c; x < c + w; x++) {
+        if (taken.contains((x, y))) return false;
+      }
+    }
+    return true;
+  }
+
+  final out = <(int, int)>[];
+  for (final (w0, h) in sizes) {
+    final w = w0.clamp(1, columns);
+    var placed = false;
+    for (var r = 0; !placed; r++) {
+      for (var c = 0; c < columns && !placed; c++) {
+        if (free(c, r, w, h)) {
+          for (var y = r; y < r + h; y++) {
+            for (var x = c; x < c + w; x++) {
+              taken.add((x, y));
+            }
+          }
+          out.add((c, r));
+          placed = true;
+        }
+      }
+    }
+  }
+  return out;
+}
+
 /// The domains the Smart Home page offers, in the order it groups them.
 const homeEntityDomains = [
   'light',
@@ -110,7 +200,8 @@ class PhoenixHomeManager extends Manager {
     this._settings,
     this._launcher,
     this._location,
-    this._homeAssistant, {
+    this._homeAssistant,
+    this._immich, {
     http.Client? client,
     Future<SharedPreferences> Function()? prefs,
   }) : _client = client ?? http.Client(),
@@ -120,6 +211,10 @@ class PhoenixHomeManager extends Manager {
   final AppLauncherManager _launcher;
   final LocationManager _location;
   final HomeAssistantManager _homeAssistant;
+  final ImmichManager _immich;
+
+  /// The Photos tile and the Phoenix Photo Frame screensaver.
+  late final photos = PhotoService(_client, _prefs, log, _immich);
   final http.Client _client;
   final Future<SharedPreferences> Function() _prefs;
 
@@ -141,7 +236,8 @@ class PhoenixHomeManager extends Manager {
       dashboardOpen.value ||
       smartHomeOpen.value ||
       appsOpen.value ||
-      schoolOpen.value;
+      schoolOpen.value ||
+      teluguOpen.value;
 
   /// The Home Assistant dashboard is on screen over Phoenix Home. The
   /// dashboard page is only loaded while this holds (dashboard_page.dart).
@@ -152,6 +248,21 @@ class PhoenixHomeManager extends Manager {
 
   /// The full app drawer (every app, with search) is on screen.
   final appsOpen = ValueNotifier<bool>(false);
+
+  /// The Telugu calendar page is on screen.
+  final teluguOpen = ValueNotifier<bool>(false);
+
+  /// The Telugu calendar for the weather's place (Frisco, Texas until a
+  /// city is set): computed here, no network.
+  PanchangCalculator get panchang {
+    final g = _geo;
+    final lat = g?.lat ?? 33.1507, lon = g?.lon ?? -96.8236;
+    final calc = _panchang;
+    if (calc != null && calc.lat == lat && calc.lon == lon) return calc;
+    return _panchang = PanchangCalculator(lat, lon);
+  }
+
+  PanchangCalculator? _panchang;
 
   /// The School page (menus, calendar, bell times) is on screen.
   final schoolOpen = ValueNotifier<bool>(false);
@@ -178,6 +289,47 @@ class PhoenixHomeManager extends Manager {
   /// Apps a parent put in the Kids Portal's "My apps" row, by package.
   final kidsApps = ValueNotifier<List<String>>(const []);
 
+  /// Phoenix Home's tiles in order and size, and the ones taken off.
+  final tiles = ValueNotifier<List<HomeTileSpec>>(defaultHomeTiles);
+  final hiddenTiles = ValueNotifier<Set<String>>(const {});
+
+  /// The colour theme (home_themes.dart).
+  final theme = ValueNotifier<String>('ember');
+
+  /// The animated weather in the background (weather_backdrop.dart).
+  final weatherEffects = ValueNotifier<bool>(true);
+
+  Future<void> setWeatherEffects(bool on) async {
+    weatherEffects.value = on;
+    await (await _prefs()).setBool(_weatherFxKey, on);
+  }
+
+  /// Rearranging tiles: sizes, order, hiding.
+  final editing = ValueNotifier<bool>(false);
+
+  Future<void> setTiles(List<HomeTileSpec> next) async {
+    tiles.value = next;
+    await (await _prefs()).setString(_tilesKey, jsonEncode([for (final t in next) t.toJson()]));
+  }
+
+  Future<void> setTileHidden(String id, bool hide) async {
+    final next = {...hiddenTiles.value};
+    hide ? next.add(id) : next.remove(id);
+    hiddenTiles.value = next;
+    await (await _prefs()).setStringList(_hiddenTilesKey, next.toList());
+  }
+
+  Future<void> setTheme(String id) async {
+    theme.value = id;
+    await (await _prefs()).setString(_themeKey, id);
+  }
+
+  Future<void> resetTiles() async {
+    await setTiles(defaultHomeTiles);
+    hiddenTiles.value = const {};
+    await (await _prefs()).remove(_hiddenTilesKey);
+  }
+
   /// Smart Home entities pinned to the page's top, by entity id.
   final pinnedEntities = ValueNotifier<List<String>>(const []);
 
@@ -193,6 +345,10 @@ class PhoenixHomeManager extends Manager {
   static const _usageKey = 'phx.home.usage';
   static const _pinnedKey = 'phx.home.pinned_entities';
   static const _kidsAppsKey = 'phx.home.kids_apps';
+  static const _tilesKey = 'phx.home.tiles';
+  static const _hiddenTilesKey = 'phx.home.hidden_tiles';
+  static const _themeKey = 'phx.home.theme';
+  static const _weatherFxKey = 'phx.home.weather_fx';
   static const _weatherRefresh = Duration(minutes: 30);
 
   StreamSubscription<SettingChanged>? _settingSub;
@@ -206,6 +362,7 @@ class PhoenixHomeManager extends Manager {
   Future<void> init() async {
     await _load();
     await school.init();
+    await photos.init();
     unawaited(school.refresh());
     _settingSub = bus.on<SettingChanged>().listen((e) {
       if (e.key == defs.homeWeatherCity.key ||
@@ -295,6 +452,12 @@ class PhoenixHomeManager extends Manager {
     smartHomeOpen.value = false;
     appsOpen.value = false;
     schoolOpen.value = false;
+    teluguOpen.value = false;
+  }
+
+  void openTelugu() {
+    goHome();
+    teluguOpen.value = true;
   }
 
   void openSchool() {
@@ -609,6 +772,10 @@ class PhoenixHomeManager extends Manager {
     hidden.value = {...?prefs.getStringList(_hiddenKey)};
     pinnedEntities.value = prefs.getStringList(_pinnedKey) ?? const [];
     kidsApps.value = prefs.getStringList(_kidsAppsKey) ?? const [];
+    tiles.value = decodeTileLayout(prefs.getString(_tilesKey));
+    hiddenTiles.value = {...?prefs.getStringList(_hiddenTilesKey)};
+    theme.value = prefs.getString(_themeKey) ?? 'ember';
+    weatherEffects.value = prefs.getBool(_weatherFxKey) ?? true;
     usage.value = decodeUsage(prefs.getString(_usageKey));
   }
 
@@ -623,7 +790,9 @@ class PhoenixHomeManager extends Manager {
     smartHomeOpen.dispose();
     appsOpen.dispose();
     schoolOpen.dispose();
+    teluguOpen.dispose();
     school.dispose();
+    photos.dispose();
     weather.dispose();
     weatherProblem.dispose();
     favorites.dispose();
@@ -631,6 +800,11 @@ class PhoenixHomeManager extends Manager {
     usage.dispose();
     pinnedEntities.dispose();
     kidsApps.dispose();
+    tiles.dispose();
+    hiddenTiles.dispose();
+    theme.dispose();
+    weatherEffects.dispose();
+    editing.dispose();
     entities.dispose();
     entitiesLoading.dispose();
     entitiesError.dispose();

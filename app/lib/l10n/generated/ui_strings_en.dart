@@ -3599,6 +3599,9 @@ class UiStringsEn extends UiStrings {
       'Launcher, weather, Home Assistant';
 
   @override
+  String get screensaverModePhoenixPhotos => 'Phoenix Photo Frame';
+
+  @override
   String get settingPhoenixProfileTitle => 'Profile';
 
   @override

@@ -275,3 +275,24 @@ class _DrawPainter extends CustomPainter {
   @override
   bool shouldRepaint(_DrawPainter old) => old.version != version;
 }
+
+/// The level picker every game shares: Easy / Medium / Hard and the like.
+Widget kidsLevelChips(List<String> labels, int selected, ValueChanged<int> onPick) => Wrap(
+  alignment: WrapAlignment.center,
+  spacing: 10,
+  runSpacing: 10,
+  children: [
+    for (var i = 0; i < labels.length; i++)
+      KidsBounce(
+        onTap: () => onPick(i),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          decoration: BoxDecoration(
+            color: i == selected ? Colors.white : Colors.white.withValues(alpha: 0.18),
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Text(labels[i], style: kidsText(20, color: i == selected ? const Color(0xFF1A1340) : Colors.white)),
+        ),
+      ),
+  ],
+);

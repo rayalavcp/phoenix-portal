@@ -480,6 +480,10 @@ class WordSearchGame extends StatefulWidget {
 
 class _WordSearchGameState extends State<WordSearchGame> with _Stopwatch {
   int _theme = 0;
+
+  /// Easy 8×8 with 4 words, Medium 10×10 with 6, Hard 12×12 with 8.
+  static const _levels = [(8, 4), (10, 6), (12, 8)];
+  int _level = 1;
   WordSearch? _ws;
   final _found = <String>{};
   int? _from;
@@ -489,7 +493,7 @@ class _WordSearchGameState extends State<WordSearchGame> with _Stopwatch {
   void _start() {
     final theme = kidsWordThemes.keys.elementAt(_theme);
     setState(() {
-      _ws = makeWordSearch(kidsWordThemes[theme]!, 10, 6, math.Random());
+      _ws = makeWordSearch(kidsWordThemes[theme]!, _levels[_level].$1, _levels[_level].$2, math.Random());
       _found.clear();
       _done = false;
     });
@@ -540,7 +544,13 @@ class _WordSearchGameState extends State<WordSearchGame> with _Stopwatch {
             pitch: 'Find the hidden words. Drag across the letters.',
             best: KidsScores.best('wordsearch'),
             bestText: (b) => 'Fastest: ${_mmss(b)}',
-            options: _choiceChips(kidsWordThemes.keys.toList(), _theme, (i) => setState(() => _theme = i)),
+            options: Column(
+              children: [
+                _choiceChips(kidsWordThemes.keys.toList(), _theme, (i) => setState(() => _theme = i)),
+                const SizedBox(height: 12),
+                _choiceChips(const ['Easy', 'Medium', 'Hard'], _level, (i) => setState(() => _level = i)),
+              ],
+            ),
             onStart: _start,
           )
         : _done
@@ -651,7 +661,18 @@ class WordGuess extends StatefulWidget {
 }
 
 class _WordGuessState extends State<WordGuess> {
-  static const _lives = 7;
+  /// Easy: short words, 8 balloons. Medium: 7 to 8 letters, 7. Hard: long
+  /// words, 6.
+  int _level = 0;
+  int get _lives => const [8, 7, 6][_level];
+
+  List<String> get _pool {
+    final pool = [
+      for (final w in kidsGuessWords)
+        if (switch (_level) { 0 => w.length <= 6, 1 => w.length >= 7 && w.length <= 8, _ => w.length >= 9 }) w,
+    ];
+    return pool.isEmpty ? kidsGuessWords : pool;
+  }
   final _rng = math.Random();
   late String _word;
   final _guessed = <String>{};
@@ -667,7 +688,7 @@ class _WordGuessState extends State<WordGuess> {
   }
 
   void _next() => setState(() {
-    _word = kidsGuessWords[_rng.nextInt(kidsGuessWords.length)];
+    _word = _pool[_rng.nextInt(_pool.length)];
     _guessed.clear();
     _over = false;
   });
@@ -714,6 +735,11 @@ class _WordGuessState extends State<WordGuess> {
             ],
           ),
           Text('${_lives - _misses} balloons left', style: kidsText(18, color: Colors.white70)),
+          const SizedBox(height: 8),
+          _choiceChips(const ['Easy', 'Medium', 'Hard'], _level, (i) {
+            setState(() => _level = i);
+            _next();
+          }),
           const Spacer(),
           FittedBox(
             fit: BoxFit.scaleDown,

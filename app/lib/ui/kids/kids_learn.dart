@@ -440,3 +440,209 @@ class PatternsGame extends StatelessWidget {
     },
   );
 }
+
+// ── More quizzes, each with three levels ─────────────────────────────────
+
+const _levels = ['Easy', 'Medium', 'Hard'];
+
+QuizItem _bankItem(String prompt, String answer, List<String> wrong, math.Random rng, {double size = 34}) => QuizItem(
+  prompt: Text(prompt, textAlign: TextAlign.center, style: kidsText(size)),
+  choices: ([answer, ...wrong]..shuffle(rng)),
+  answer: answer,
+  explain: 'It is $answer',
+);
+
+class FractionsQuiz extends StatelessWidget {
+  const FractionsQuiz({super.key, required this.onBack});
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) => KidsQuiz(
+    title: 'Fractions',
+    colors: const [Color(0xFF14A06B), Color(0xFFF5A623)],
+    scoreKey: 'fractions',
+    icon: Icons.pie_chart_rounded,
+    pitch: 'How much of the pie is coloured?',
+    modes: _levels,
+    onBack: onBack,
+    next: (mode, _, rng) {
+      final q = fractionQuestion(mode + 1, rng);
+      return QuizItem(
+        prompt: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(width: 260, height: 260, child: CustomPaint(painter: _PiePainter(q.parts, q.shaded))),
+            const SizedBox(height: 12),
+            Text(q.prompt, textAlign: TextAlign.center, style: kidsText(26)),
+          ],
+        ),
+        choices: q.choices,
+        answer: q.answer,
+        explain: '${q.shaded} of ${q.parts} parts is ${q.answer}',
+      );
+    },
+  );
+}
+
+class _PiePainter extends CustomPainter {
+  const _PiePainter(this.parts, this.shaded);
+  final int parts;
+  final int shaded;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final sweep = 2 * math.pi / parts;
+    for (var i = 0; i < parts; i++) {
+      canvas.drawArc(rect.deflate(4), -math.pi / 2 + i * sweep, sweep, true,
+          Paint()..color = i < shaded ? const Color(0xFFFFD27A) : Colors.white);
+      canvas.drawArc(rect.deflate(4), -math.pi / 2 + i * sweep, sweep, true,
+          Paint()
+            ..color = const Color(0xFF1A1340)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 4);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_PiePainter old) => old.parts != parts || old.shaded != shaded;
+}
+
+class MoneyQuiz extends StatelessWidget {
+  const MoneyQuiz({super.key, required this.onBack});
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) => KidsQuiz(
+    title: 'Money',
+    colors: const [Color(0xFF128A5A), Color(0xFF1F8A4C)],
+    scoreKey: 'money',
+    icon: Icons.savings_rounded,
+    pitch: 'Count the coins',
+    modes: _levels,
+    onBack: onBack,
+    next: (mode, _, rng) {
+      final q = moneyQuestion(mode + 1, rng);
+      return QuizItem(
+        prompt: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 10,
+              runSpacing: 10,
+              children: [for (final c in q.coins) _Coin(c)],
+            ),
+            const SizedBox(height: 16),
+            Text(q.prompt, textAlign: TextAlign.center, style: kidsText(26)),
+          ],
+        ),
+        choices: q.choices,
+        answer: q.answer,
+        explain: 'It is ${q.answer}',
+      );
+    },
+  );
+}
+
+/// A coin, sized and coloured like the real one, with its value.
+class _Coin extends StatelessWidget {
+  const _Coin(this.value);
+  final int value;
+
+  @override
+  Widget build(BuildContext context) {
+    final (size, color, label) = switch (value) {
+      1 => (64.0, const Color(0xFFC77B42), '1¢'),
+      5 => (76.0, const Color(0xFFB8BCC4), '5¢'),
+      10 => (60.0, const Color(0xFFD5D8DE), '10¢'),
+      _ => (84.0, const Color(0xFFC9CDD4), '25¢'),
+    };
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
+        border: Border.all(color: Colors.black26, width: 3),
+        boxShadow: const [BoxShadow(blurRadius: 6, color: Colors.black26, offset: Offset(0, 3))],
+      ),
+      child: Text(label, style: kidsText(size * 0.3, color: const Color(0xFF2A2A2A))),
+    );
+  }
+}
+
+class ScienceQuiz extends StatelessWidget {
+  const ScienceQuiz({super.key, required this.onBack});
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) => KidsQuiz(
+    title: 'Science',
+    colors: const [Color(0xFF1C8ED6), Color(0xFF14A06B)],
+    scoreKey: 'science',
+    icon: Icons.science_rounded,
+    pitch: 'Plants, animals, space and more',
+    modes: _levels,
+    onBack: onBack,
+    next: (mode, index, rng) {
+      final bank = kidsScience[mode + 1]!;
+      final (q, a, wrong) = bank[(index + rng.nextInt(bank.length)) % bank.length];
+      return _bankItem(q, a, wrong, rng, size: 32);
+    },
+  );
+}
+
+class SpellingQuiz extends StatelessWidget {
+  const SpellingQuiz({super.key, required this.onBack});
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) => KidsQuiz(
+    title: 'Spelling',
+    colors: const [Color(0xFFE08A00), Color(0xFF8C5BFF)],
+    scoreKey: 'spelling',
+    icon: Icons.spellcheck_rounded,
+    pitch: 'Pick the word spelled right',
+    modes: _levels,
+    onBack: onBack,
+    next: (mode, index, rng) {
+      final bank = kidsSpelling[mode + 1]!;
+      final (word, wrong) = bank[(index + rng.nextInt(bank.length)) % bank.length];
+      return QuizItem(
+        prompt: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.spellcheck_rounded, size: 96, color: Colors.white),
+            Text('Which spelling is right?', style: kidsText(32)),
+          ],
+        ),
+        choices: [word, ...wrong]..shuffle(rng),
+        answer: word,
+        explain: 'It is spelled $word',
+      );
+    },
+  );
+}
+
+class OppositesQuiz extends StatelessWidget {
+  const OppositesQuiz({super.key, required this.onBack});
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) => KidsQuiz(
+    title: 'Opposites',
+    colors: const [Color(0xFFE0446A), Color(0xFF1C8ED6)],
+    scoreKey: 'opposites',
+    icon: Icons.compare_arrows_rounded,
+    pitch: 'Find the word that means the opposite',
+    modes: _levels,
+    onBack: onBack,
+    next: (mode, index, rng) {
+      final bank = kidsOpposites[mode + 1]!;
+      final (word, opposite, wrong) = bank[(index + rng.nextInt(bank.length)) % bank.length];
+      return _bankItem('The opposite of\n"$word" is…', opposite, wrong, rng, size: 40);
+    },
+  );
+}

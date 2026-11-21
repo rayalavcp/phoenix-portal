@@ -206,6 +206,10 @@ class _SnakeGameState extends State<SnakeGame> {
   Timer? _timer;
   bool _playing = false, _over = false, _newBest = false;
 
+  /// Slow, Normal, Fast: milliseconds a step.
+  static const _speeds = [270, 190, 120];
+  int _level = 1;
+
   void _start() {
     _timer?.cancel();
     setState(() {
@@ -216,7 +220,7 @@ class _SnakeGameState extends State<SnakeGame> {
       _playing = true;
       _over = false;
     });
-    _timer = Timer.periodic(const Duration(milliseconds: 190), (_) => _step());
+    _timer = Timer.periodic(Duration(milliseconds: _speeds[_level]), (_) => _step());
   }
 
   void _placeFood() {
@@ -295,6 +299,8 @@ class _SnakeGameState extends State<SnakeGame> {
                   future: KidsScores.best('snake'),
                   builder: (context, snap) => Text(snap.data == null ? 'No best yet' : 'Longest: ${snap.data}', style: kidsText(20, color: Colors.white70)),
                 ),
+                const SizedBox(height: 18),
+                kidsLevelChips(const ['Slow', 'Normal', 'Fast'], _level, (i) => setState(() => _level = i)),
                 const SizedBox(height: 24),
                 KidsButton('Start', icon: Icons.play_arrow_rounded, onTap: _start, size: 32),
               ],
@@ -804,6 +810,250 @@ class _KidsPianoState extends State<KidsPiano> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Whack-a-Mole ──────────────────────────────────────────────────────────
+
+class WhackAMole extends StatefulWidget {
+  const WhackAMole({super.key, required this.onBack});
+  final VoidCallback onBack;
+
+  @override
+  State<WhackAMole> createState() => _WhackAMoleState();
+}
+
+class _WhackAMoleState extends State<WhackAMole> {
+  /// Easy, Medium, Hard: how long a mole stays up, in milliseconds.
+  static const _upFor = [1400, 950, 600];
+  static const _seconds = 30;
+  final _rng = math.Random();
+  int _level = 0, _score = 0, _left = _seconds;
+  int? _mole, _bonked;
+  bool _playing = false, _over = false, _newBest = false;
+  Timer? _clock, _pop;
+
+  void _start() {
+    _clock?.cancel();
+    setState(() {
+      _playing = true;
+      _over = false;
+      _score = 0;
+      _left = _seconds;
+    });
+    _clock = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (_left <= 1) {
+        unawaited(_finish());
+      } else {
+        setState(() => _left--);
+      }
+    });
+    _next();
+  }
+
+  void _next() {
+    _pop?.cancel();
+    if (!_playing) return;
+    setState(() {
+      _bonked = null;
+      _mole = _rng.nextInt(9);
+    });
+    _pop = Timer(Duration(milliseconds: _upFor[_level]), _next);
+  }
+
+  void _whack(int hole) {
+    if (!_playing || hole != _mole) return;
+    setState(() {
+      _score++;
+      _bonked = hole;
+      _mole = null;
+    });
+    _pop?.cancel();
+    _pop = Timer(const Duration(milliseconds: 250), _next);
+  }
+
+  Future<void> _finish() async {
+    _clock?.cancel();
+    _pop?.cancel();
+    final key = 'mole${_level + 1}';
+    final best = await KidsScores.offer(key, _score);
+    await KidsScores.addStars(_score >= 25 ? 3 : (_score >= 15 ? 2 : (_score >= 8 ? 1 : 0)));
+    if (mounted) setState(() { _playing = false; _over = true; _newBest = best; _mole = null; });
+  }
+
+  @override
+  void dispose() {
+    _clock?.cancel();
+    _pop?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => KidsActivityFrame(
+    title: 'Whack-a-Mole',
+    colors: const [Color(0xFF6B4E1F), Color(0xFF1F8A4C)],
+    onBack: widget.onBack,
+    trailing: _playing ? Text('$_left s   Score $_score', style: kidsText(28)) : null,
+    child: _over
+        ? KidsResult(
+            title: 'Bonk-tastic!',
+            detail: 'You whacked $_score moles',
+            stars: _score >= 25 ? 3 : (_score >= 15 ? 2 : (_score >= 8 ? 1 : 0)),
+            newBest: _newBest,
+            onAgain: () => setState(() => _over = false),
+          )
+        : !_playing
+        ? Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.pest_control_rodent_rounded, size: 96, color: Colors.white),
+                Text('Tap the moles before they hide!', style: kidsText(26, weight: FontWeight.w700)),
+                const SizedBox(height: 18),
+                kidsLevelChips(const ['Easy', 'Medium', 'Hard'], _level, (i) => setState(() => _level = i)),
+                const SizedBox(height: 24),
+                KidsButton('Start', icon: Icons.play_arrow_rounded, onTap: _start, size: 32),
+              ],
+            ),
+          )
+        : LayoutBuilder(
+            builder: (context, box) {
+              final side = math.min(box.maxHeight - 24, box.maxWidth * 0.6);
+              return Center(
+                child: SizedBox(
+                  width: side,
+                  height: side,
+                  child: GridView.count(
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 14,
+                    crossAxisSpacing: 14,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      for (var i = 0; i < 9; i++)
+                        GestureDetector(
+                          onTapDown: (_) => _whack(i),
+                          child: Container(
+                            decoration: const BoxDecoration(color: Color(0xFF3E2A12), shape: BoxShape.circle),
+                            alignment: Alignment.center,
+                            child: AnimatedScale(
+                              scale: _mole == i ? 1 : 0,
+                              duration: const Duration(milliseconds: 120),
+                              child: const Icon(Icons.pest_control_rodent_rounded, size: 90, color: Color(0xFFC79A6B)),
+                            ),
+                          ),
+                        ),
+                    ].asMap().entries.map((e) => _bonked == e.key
+                        ? Stack(alignment: Alignment.center, children: [e.value, const Icon(Icons.star_rounded, size: 70, color: Color(0xFFFFD27A))])
+                        : e.value).toList(),
+                  ),
+                ),
+              );
+            },
+          ),
+  );
+}
+
+// ── Lights Out ────────────────────────────────────────────────────────────
+
+class LightsOut extends StatefulWidget {
+  const LightsOut({super.key, required this.onBack});
+  final VoidCallback onBack;
+
+  @override
+  State<LightsOut> createState() => _LightsOutState();
+}
+
+class _LightsOutState extends State<LightsOut> {
+  static const _sizes = [3, 4, 5];
+  final _rng = math.Random();
+  int _level = 0, _moves = 0;
+  List<bool>? _board;
+  bool _won = false, _newBest = false;
+
+  int get _n => _sizes[_level];
+
+  void _start() => setState(() {
+    _board = lightsOutPuzzle(_n, 3 + _level * 3, _rng);
+    _moves = 0;
+    _won = false;
+  });
+
+  Future<void> _press(int i) async {
+    final b = _board;
+    if (b == null || _won) return;
+    setState(() {
+      lightsOutPress(b, _n, i);
+      _moves++;
+    });
+    if (!b.contains(true)) {
+      final best = await KidsScores.offer('lights$_n', _moves, lowerIsBetter: true);
+      await KidsScores.addStars(_level + 1);
+      if (mounted) setState(() { _won = true; _newBest = best; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final b = _board;
+    return KidsActivityFrame(
+      title: 'Lights Out',
+      colors: const [Color(0xFF1A1340), Color(0xFF283066)],
+      onBack: widget.onBack,
+      trailing: b != null && !_won ? Text('Moves $_moves', style: kidsText(28)) : null,
+      child: _won
+          ? KidsResult(
+              title: 'All dark!',
+              detail: 'Solved in $_moves moves',
+              stars: _level + 1,
+              newBest: _newBest,
+              onAgain: () => setState(() => _board = null),
+            )
+          : b == null
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.lightbulb_rounded, size: 96, color: Color(0xFFFFD27A)),
+                  Text('Turn every light off. A tap flips its neighbours too!', textAlign: TextAlign.center, style: kidsText(26, weight: FontWeight.w700)),
+                  const SizedBox(height: 18),
+                  kidsLevelChips(const ['3×3 Easy', '4×4 Medium', '5×5 Hard'], _level, (i) => setState(() => _level = i)),
+                  const SizedBox(height: 24),
+                  KidsButton('Start', icon: Icons.play_arrow_rounded, onTap: _start, size: 32),
+                ],
+              ),
+            )
+          : LayoutBuilder(
+              builder: (context, box) {
+                final side = math.min(box.maxHeight - 24, box.maxWidth * 0.6);
+                return Center(
+                  child: SizedBox(
+                    width: side,
+                    height: side,
+                    child: GridView.count(
+                      crossAxisCount: _n,
+                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 10,
+                      physics: const NeverScrollableScrollPhysics(),
+                      children: [
+                        for (var i = 0; i < _n * _n; i++)
+                          KidsBounce(
+                            onTap: () => unawaited(_press(i)),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 160),
+                              decoration: BoxDecoration(
+                                color: b[i] ? const Color(0xFFFFD27A) : const Color(0xFF2A2F45),
+                                borderRadius: BorderRadius.circular(18),
+                                boxShadow: b[i] ? const [BoxShadow(color: Color(0xAAFFD27A), blurRadius: 18)] : null,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }

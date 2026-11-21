@@ -6424,6 +6424,12 @@ abstract class UiStrings {
   /// **'Launcher, weather, Home Assistant'**
   String get settingsMenuHomeScreenSummary;
 
+  /// Option label.
+  ///
+  /// In en, this message translates to:
+  /// **'Phoenix Photo Frame'**
+  String get screensaverModePhoenixPhotos;
+
   /// Setting label.
   ///
   /// In en, this message translates to:

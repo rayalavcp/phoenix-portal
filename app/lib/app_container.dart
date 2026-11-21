@@ -295,6 +295,7 @@ class AppContainer {
       launcher,
       location,
       homeAssistant,
+      immich,
     );
     store = StoreManager(bus, commands, log);
     musicLibrary = MusicLibraryManager(

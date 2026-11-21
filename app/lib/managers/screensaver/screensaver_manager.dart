@@ -2230,6 +2230,7 @@ class ScreensaverManager extends Manager with WidgetsBindingObserver {
     'gallery',
     'url',
     'immich',
+    'phoenix_photos',
     'weather_mood',
     'celestial',
     'calendar',

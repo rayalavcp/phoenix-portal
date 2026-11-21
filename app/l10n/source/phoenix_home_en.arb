@@ -155,5 +155,18 @@
         "Settings"
       ]
     }
+  },
+  "screensaverModePhoenixPhotos": "Phoenix Photo Frame",
+  "@screensaverModePhoenixPhotos": {
+    "context": "Settings > Screensaver",
+    "description": "Option label.",
+    "x-locations": {
+      "device": [
+        "Settings > Screensaver"
+      ],
+      "remoteAdmin": [
+        "Screensaver"
+      ]
+    }
   }
 }

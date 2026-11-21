@@ -1055,6 +1055,7 @@ export const catalogs = {
     "homeUnitCelsius": "Celsius (°C)",
     "settingsMenuHomeScreen": "Home Screen",
     "settingsMenuHomeScreenSummary": "Launcher, weather, Home Assistant",
+    "screensaverModePhoenixPhotos": "Phoenix Photo Frame",
     "settingPhoenixProfileTitle": "Profile",
     "settingPhoenixProfileDescription": "Family shows the dashboard. Kids keeps the screen on the Kids Portal. Night shows the bedtime screen. Home Assistant can switch it.",
     "settingKidsEnabledTitle": "Kids Portal in the menu",

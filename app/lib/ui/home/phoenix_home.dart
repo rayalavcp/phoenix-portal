@@ -4,15 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../app_container.dart';
-import '../../core/command_registry.dart';
-import '../../managers/home/school_service.dart';
 import '../../managers/launcher/app_launcher_manager.dart';
-import '../../managers/settings/definitions.dart' as defs;
 import '../kit.dart' show PhoenixMark;
 import '../theme.dart';
-import '../toast.dart';
 import 'home_apps.dart';
+import 'home_themes.dart';
+import 'home_tiles.dart';
 import 'school_page.dart';
+import 'telugu_calendar_page.dart';
+import 'weather_backdrop.dart';
 import 'smart_home_page.dart';
 
 /// Phoenix Home: the launcher home screen. The clock, the weather, big
@@ -73,6 +73,7 @@ class _PhoenixHomeState extends State<PhoenixHome> {
         home.smartHomeOpen,
         home.appsOpen,
         home.schoolOpen,
+        home.teluguOpen,
       ]),
       builder: (context, _) {
         // The dashboard is on screen: only a way back home floats over it.
@@ -125,6 +126,11 @@ class _PhoenixHomeState extends State<PhoenixHome> {
                   ? HomeAppDrawer(key: const ValueKey('apps'), container: c)
                   : home.schoolOpen.value
                   ? SchoolPage(key: const ValueKey('school'), container: c)
+                  : home.teluguOpen.value
+                  ? TeluguCalendarPage(
+                      key: const ValueKey('telugu'),
+                      container: c,
+                    )
                   : const SizedBox.shrink(key: ValueKey('none')),
             ),
           ],
@@ -146,53 +152,77 @@ class _HomeScreen extends StatelessWidget {
   final VoidCallback onOpenSettings;
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: const BoxDecoration(
-      gradient: RadialGradient(
-        center: Alignment(-0.6, -1.1),
-        radius: 1.5,
-        colors: [Color(0xFF3A1A0E), Color(0xFF14161C), Color(0xFF0B0D10)],
-        stops: [0, 0.45, 1],
-      ),
-    ),
-    child: SafeArea(
-      child: LayoutBuilder(
-        builder: (context, box) {
-          final compact = box.maxHeight < 560;
-          final pad = box.maxWidth < 700 ? 18.0 : 32.0;
-          return Padding(
-            padding: EdgeInsets.fromLTRB(pad, compact ? 12 : 24, pad, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _Header(
-                  container: container,
-                  compact: compact,
-                  onOpenMenu: onOpenMenu,
-                  onOpenSettings: onOpenSettings,
-                ),
-                SizedBox(height: compact ? 12 : 24),
-                Expanded(
-                  child: ListenableBuilder(
-                    listenable: Listenable.merge([
-                      container.phoenixHome.school.menus,
-                      container.phoenixHome.school.config,
-                      container.phoenixHome.school.events,
-                    ]),
-                    builder: (context, _) => _Shortcuts(
-                      container: container,
-                      onOpenSettings: onOpenSettings,
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: Listenable.merge([
+      container.phoenixHome.theme,
+      container.phoenixHome.editing,
+      container.phoenixHome.weather,
+      container.phoenixHome.weatherEffects,
+    ]),
+    builder: (context, _) {
+      final theme = homeTheme(container.phoenixHome.theme.value);
+      final editing = container.phoenixHome.editing.value;
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            center: const Alignment(-0.6, -1.1),
+            radius: 1.5,
+            colors: theme.background,
+            stops: const [0, 0.45, 1],
+          ),
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (container.phoenixHome.weatherEffects.value &&
+                container.phoenixHome.weather.value != null)
+              WeatherBackdrop(
+                code: container.phoenixHome.weather.value?.code,
+                isDay: container.phoenixHome.weather.value?.isDay ?? true,
+              ),
+            SafeArea(
+              child: LayoutBuilder(
+                builder: (context, box) {
+                  final compact = box.maxHeight < 560;
+                  final pad = box.maxWidth < 700 ? 18.0 : 32.0;
+                  return Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      pad,
+                      compact ? 12 : 24,
+                      pad,
+                      12,
                     ),
-                  ),
-                ),
-                SizedBox(height: compact ? 10 : 18),
-                _Dock(container: container),
-              ],
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _Header(
+                          container: container,
+                          compact: compact,
+                          onOpenMenu: onOpenMenu,
+                          onOpenSettings: onOpenSettings,
+                        ),
+                        SizedBox(height: compact ? 12 : 22),
+                        Expanded(
+                          child: HomeTileGrid(
+                            container: container,
+                            onOpenSettings: onOpenSettings,
+                          ),
+                        ),
+                        SizedBox(height: compact ? 10 : 16),
+                        if (editing)
+                          HomeEditBar(container: container)
+                        else
+                          _Dock(container: container),
+                      ],
+                    ),
+                  );
+                },
+              ),
             ),
-          );
-        },
-      ),
-    ),
+          ],
+        ),
+      );
+    },
   );
 }
 
@@ -234,6 +264,13 @@ class _Header extends StatelessWidget {
             icon: Icons.settings_rounded,
             tooltip: 'Settings',
             onTap: onOpenSettings,
+          ),
+          const SizedBox(height: 8),
+          _RoundButton(
+            icon: Icons.dashboard_customize_rounded,
+            tooltip: 'Edit tiles and theme',
+            onTap: () => container.phoenixHome.editing.value =
+                !container.phoenixHome.editing.value,
           ),
         ],
       ),
@@ -289,7 +326,13 @@ class _ClockState extends State<_Clock> {
   // all day should not repaint for nothing.
   void _schedule() {
     final now = DateTime.now();
-    final next = DateTime(now.year, now.month, now.day, now.hour, now.minute + 1);
+    final next = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      now.hour,
+      now.minute + 1,
+    );
     _timer = Timer(next.difference(now), () {
       if (!mounted) return;
       setState(() => _now = DateTime.now());
@@ -513,185 +556,6 @@ class _WeatherCard extends StatelessWidget {
   }
 }
 
-// ── Shortcuts ─────────────────────────────────────────────────────────────
-
-class _Shortcut {
-  const _Shortcut(this.icon, this.label, this.subtitle, this.colors, this.run);
-
-  final IconData icon;
-  final String label;
-  final String? subtitle;
-  final List<Color> colors;
-  final Future<void> Function(BuildContext context) run;
-}
-
-class _Shortcuts extends StatelessWidget {
-  const _Shortcuts({required this.container, required this.onOpenSettings});
-
-  final AppContainer container;
-  final VoidCallback onOpenSettings;
-
-  Future<void> _command(BuildContext context, String name, String what) async {
-    final overlay = Overlay.maybeOf(context);
-    final CommandResult result = await container.commands.execute(
-      name,
-      const {},
-    );
-    if (!result.ok && overlay != null && overlay.mounted) {
-      showToastIn(
-        overlay,
-        title: "Couldn't open $what",
-        message: result.error,
-        kind: ToastKind.error,
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = container;
-    final home = c.phoenixHome;
-    final ha = home.homeAssistantConfigured;
-    final shortcuts = <_Shortcut>[
-      if (c.settings.get(defs.kidsEnabled))
-        _Shortcut(
-          Icons.child_care_rounded,
-          'Kids Portal',
-          'Games & learning',
-          const [Color(0xFF7B5CFF), Color(0xFFB06BFF)],
-          (ctx) => _command(ctx, 'openKids', 'the Kids Portal'),
-        ),
-      _Shortcut(
-        Icons.apps_rounded,
-        'All apps',
-        '${home.apps.length} apps',
-        const [Color(0xFFD42A1A), Color(0xFFF07A1A)],
-        (_) async => home.appsOpen.value = true,
-      ),
-      _Shortcut(
-        Icons.home_work_rounded,
-        'Smart Home',
-        ha ? 'Lights, scenes, climate' : 'Optional add-on',
-        const [Color(0xFF14A06B), Color(0xFF52D69F)],
-        (_) async => home.openSmartHome(),
-      ),
-      _Shortcut(
-        Icons.school_rounded,
-        'School',
-        _schoolLine(home.school),
-        const [Color(0xFF283066), Color(0xFF5B6CFF)],
-        (_) async => home.openSchool(),
-      ),
-      _Shortcut(
-        Icons.timer_rounded,
-        'Timers',
-        null,
-        const [Color(0xFFE08A00), Color(0xFFF7B733)],
-        (ctx) => _command(ctx, 'openTimers', 'timers'),
-      ),
-      _Shortcut(
-        Icons.alarm_rounded,
-        'Alarms',
-        null,
-        const [Color(0xFF1C8ED6), Color(0xFF63C3FF)],
-        (ctx) => _command(ctx, 'openAlarms', 'alarms'),
-      ),
-      _Shortcut(
-        Icons.storefront_rounded,
-        'App Store',
-        'Free apps for Portal',
-        const [Color(0xFF5B6CFF), Color(0xFF9AA6FF)],
-        (ctx) => _command(ctx, 'openStore', 'the store'),
-      ),
-      _Shortcut(
-        Icons.photo_library_rounded,
-        'Photo frame',
-        null,
-        const [Color(0xFFE0446A), Color(0xFFFF8FA3)],
-        (ctx) => _command(ctx, 'startScreensaver', 'the photo frame'),
-      ),
-      if (c.camera.config.defaultView != null)
-        _Shortcut(
-          Icons.videocam_rounded,
-          'Cameras',
-          null,
-          const [Color(0xFF3E4552), Color(0xFF6B7385)],
-          (_) async {
-            if (c.camera.config.defaultView case final view?) {
-              c.camera.showView(view.id);
-            }
-          },
-        ),
-      if (ha)
-        _Shortcut(
-          Icons.calendar_month_rounded,
-          'Calendar',
-          null,
-          const [Color(0xFF128A5A), Color(0xFF3CCB8C)],
-          (ctx) => _command(ctx, 'openCalendar', 'the calendar'),
-        ),
-      _Shortcut(
-        Icons.settings_rounded,
-        'Settings',
-        null,
-        const [Color(0xFF282D37), Color(0xFF3E4552)],
-        (_) async => onOpenSettings(),
-      ),
-    ];
-    return LayoutBuilder(
-      builder: (context, box) {
-        // Two rows filling the space on a landscape Portal, more rows when
-        // the screen is narrow (portrait).
-        final fit = (box.maxWidth / 180).floor().clamp(2, 6);
-        final targetRows = box.maxHeight > box.maxWidth ? 4 : 2;
-        final columns = (shortcuts.length / targetRows).ceil().clamp(2, fit);
-        final rows = (shortcuts.length / columns).ceil();
-        final tileHeight = ((box.maxHeight - (rows - 1) * 14) / rows).clamp(
-          96.0,
-          220.0,
-        );
-        return GridView.builder(
-          padding: EdgeInsets.zero,
-          physics: const BouncingScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
-            mainAxisSpacing: 14,
-            crossAxisSpacing: 14,
-            mainAxisExtent: tileHeight,
-          ),
-          itemCount: shortcuts.length,
-          itemBuilder: (context, i) {
-            final s = shortcuts[i];
-            return HomeShortcutTile(
-              icon: s.icon,
-              label: s.label,
-              subtitle: s.subtitle,
-              colors: s.colors,
-              onTap: () => unawaited(s.run(context)),
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-/// The School tile's line: today's lunch, else the day's status.
-String _schoolLine(SchoolService school) {
-  final now = DateTime.now();
-  final cfg = school.config.value;
-  if (!cfg.hasMenu && cfg.calendarUrl.isEmpty) return 'Lunch menu, calendar';
-  for (final (slug, _) in cfg.menuTypes) {
-    if (!slug.contains('lunch')) continue;
-    for (final day in school.menus.value[slug] ?? const <MenuDay>[]) {
-      if (day.date.year == now.year && day.date.month == now.month && day.date.day == now.day && !day.isEmpty) {
-        return 'Lunch: ${day.items.first}';
-      }
-    }
-  }
-  return school.status(now);
-}
-
 // ── Dock ──────────────────────────────────────────────────────────────────
 
 class _Dock extends StatelessWidget {
@@ -756,7 +620,9 @@ class _Dock extends StatelessWidget {
                             ),
                           for (final app in dock)
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                              ),
                               child: HomeAppTile(
                                 container: container,
                                 app: app,
@@ -776,6 +642,7 @@ class _Dock extends StatelessWidget {
                     vertical: 18,
                   ),
                   textStyle: const TextStyle(
+                    fontFamily: Ks.displayFont,
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                   ),
@@ -791,4 +658,3 @@ class _Dock extends StatelessWidget {
     );
   }
 }
-
