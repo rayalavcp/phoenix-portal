@@ -13,7 +13,7 @@ import 'toast.dart';
 
 /// Where the custom wake word models are explained.
 const customWakeModelsDocs =
-    'https://github.com/rayalavcp/phx-kiosk-satellite/blob/main/docs/custom-wake-words.md';
+    'https://github.com/rayalavcp/phoenix-portal/blob/main/docs/custom-wake-words.md';
 
 /// The engines as the lists name them.
 const customWakeEngineLabels = {

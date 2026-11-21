@@ -25,7 +25,7 @@ HOME_ALIAS="$PKG/$NS.HomeAlias"           # the HOME entry point, off until enab
 PROVISION_ACTIVITY="$PKG/$NS.ProvisionActivity"
 A11Y_SERVICE="$PKG/$NS.KioskAccessibilityService"
 ADMIN_RECEIVER="$PKG/$NS.KioskAdminReceiver"
-RELEASE_REPO="${RELEASE_REPO:-rayalavcp/phx-kiosk-satellite}"
+RELEASE_REPO="${RELEASE_REPO:-rayalavcp/phoenix-portal}"
 STATE_FILE="/sdcard/phoenix_restore.env"
 
 # Meta Portal components (absent on other devices: their steps are skipped).

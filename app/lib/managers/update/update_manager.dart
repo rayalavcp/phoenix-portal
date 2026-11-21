@@ -105,16 +105,16 @@ class UpdateManager extends Manager {
   /// window is a display cap, not a paging cursor: a device further behind
   /// than this gets the newest releases and a pointer to the history.
   static const _releasesUrl =
-      'https://api.github.com/repos/rayalavcp/phx-kiosk-satellite/'
+      'https://api.github.com/repos/rayalavcp/phoenix-portal/'
       'releases?per_page=30';
 
   /// The page that redirects to the newest stable release, and the folder
   /// the APKs of a release download from. What the check falls back to
   /// when the API refuses the query.
   static const _latestPageUrl =
-      'https://github.com/rayalavcp/phx-kiosk-satellite/releases/latest';
+      'https://github.com/rayalavcp/phoenix-portal/releases/latest';
   static const _downloadsUrl =
-      'https://github.com/rayalavcp/phx-kiosk-satellite/releases/download';
+      'https://github.com/rayalavcp/phoenix-portal/releases/download';
 
   /// The file a custom repository serves in place of the GitHub query:
   /// that query's response, saved as is. Same parser, same ABI selection,
@@ -573,7 +573,7 @@ class UpdateManager extends Manager {
                 notes: _combinedNotes(releases, tagOf),
                 releaseUrl:
                     latest['html_url'] as String? ??
-                    'https://github.com/rayalavcp/phx-kiosk-satellite/releases',
+                    'https://github.com/rayalavcp/phoenix-portal/releases',
                 apkSize: (apk['size'] as num?)?.toInt(),
               )
             : null,
@@ -630,7 +630,7 @@ class UpdateManager extends Manager {
       if (target.host != page.host ||
           segments.length != 5 ||
           segments.sublist(0, 4).join('/') !=
-              'rayalavcp/phx-kiosk-satellite/releases/tag' ||
+              'rayalavcp/phoenix-portal/releases/tag' ||
           !RegExp(r'^v?[0-9][0-9A-Za-z.+-]*$').hasMatch(segments[4])) {
         log.warn(name, 'release check failed: no release tag at $target');
         return null;

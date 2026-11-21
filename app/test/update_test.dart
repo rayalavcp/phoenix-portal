@@ -49,7 +49,7 @@ void main() {
   }) => {
     'tag_name': 'v$tag',
     'html_url':
-        'https://github.com/rayalavcp/phx-kiosk-satellite/'
+        'https://github.com/rayalavcp/phoenix-portal/'
         'releases/tag/v$tag',
     'body': 'Notes for $tag',
     'prerelease': prerelease,
@@ -322,7 +322,7 @@ void main() {
 
   group('GitHub API refusal (#1416)', () {
     const latestPage =
-        'https://github.com/rayalavcp/phx-kiosk-satellite/releases/latest';
+        'https://github.com/rayalavcp/phoenix-portal/releases/latest';
 
     /// GitHub with its API out of requests: the releases query is refused
     /// and the release page redirects to [location].
@@ -355,7 +355,7 @@ void main() {
           asked,
           status: status,
           location:
-              'https://github.com/rayalavcp/phx-kiosk-satellite/'
+              'https://github.com/rayalavcp/phoenix-portal/'
               'releases/tag/1.1.0',
         );
         await update.init();
@@ -368,12 +368,12 @@ void main() {
         expect(info.version, '1.1.0');
         expect(
           info.apkUrl,
-          'https://github.com/rayalavcp/phx-kiosk-satellite/releases/download/'
+          'https://github.com/rayalavcp/phoenix-portal/releases/download/'
           '1.1.0/kiosk-satellite-1.1.0.arm64-v8a.apk',
         );
         expect(
           info.releaseUrl,
-          'https://github.com/rayalavcp/phx-kiosk-satellite/releases/tag/1.1.0',
+          'https://github.com/rayalavcp/phoenix-portal/releases/tag/1.1.0',
         );
         // The page carries neither the notes nor the APK size.
         expect(info.notes, isEmpty);
@@ -384,7 +384,7 @@ void main() {
     test('an unknown architecture gets the universal APK', () async {
       update.clientFactory = () => refused(
         [],
-        location: '/rayalavcp/phx-kiosk-satellite/releases/tag/v1.1.0',
+        location: '/rayalavcp/phoenix-portal/releases/tag/v1.1.0',
       );
       await update.init();
       update.supportedAbis = const ['riscv64'];
@@ -394,7 +394,7 @@ void main() {
       expect(update.available.value?.version, '1.1.0');
       expect(
         update.available.value?.apkUrl,
-        'https://github.com/rayalavcp/phx-kiosk-satellite/releases/download/'
+        'https://github.com/rayalavcp/phoenix-portal/releases/download/'
         'v1.1.0/kiosk-satellite-1.1.0.apk',
       );
     });
@@ -403,7 +403,7 @@ void main() {
       update.clientFactory = () => refused(
         [],
         location:
-            'https://github.com/rayalavcp/phx-kiosk-satellite/releases/tag/1.0.0',
+            'https://github.com/rayalavcp/phoenix-portal/releases/tag/1.0.0',
       );
       await update.init();
 
@@ -414,10 +414,10 @@ void main() {
     test('a release page without a tag leaves the check failed', () async {
       for (final location in [
         null,
-        'https://github.com/rayalavcp/phx-kiosk-satellite/releases',
-        'https://example.invalid/rayalavcp/phx-kiosk-satellite/releases/tag/1.1.0',
+        'https://github.com/rayalavcp/phoenix-portal/releases',
+        'https://example.invalid/rayalavcp/phoenix-portal/releases/tag/1.1.0',
         'https://github.com/someone/else/releases/tag/1.1.0',
-        'https://github.com/rayalavcp/phx-kiosk-satellite/releases/tag/..%2Fx',
+        'https://github.com/rayalavcp/phoenix-portal/releases/tag/..%2Fx',
       ]) {
         update.clientFactory = () => refused([], location: location);
         expect(await update.check(), isFalse, reason: '$location');

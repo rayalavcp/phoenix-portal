@@ -2402,7 +2402,7 @@ class _CategoryContentState extends State<_CategoryContent> {
                   const SizedBox(width: 5),
                   Flexible(
                     child: Text(
-                      'rayalavcp/phx-kiosk-satellite',
+                      'rayalavcp/phoenix-portal',
                       style: Theme.of(context).textTheme.bodyMedium,
                       textAlign: TextAlign.end,
                     ),
@@ -2411,13 +2411,13 @@ class _CategoryContentState extends State<_CategoryContent> {
               ),
             ),
             onTap: () =>
-                _openLink('https://github.com/rayalavcp/phx-kiosk-satellite'),
+                _openLink('https://github.com/rayalavcp/phoenix-portal'),
           ),
           row(
             supportText(context, 'License'),
             'See LICENSE',
             onTap: () => _openLink(
-              'https://github.com/rayalavcp/phx-kiosk-satellite/blob/main/LICENSE',
+              'https://github.com/rayalavcp/phoenix-portal/blob/main/LICENSE',
             ),
           ),
         ],

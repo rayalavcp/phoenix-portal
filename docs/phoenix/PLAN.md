@@ -35,7 +35,7 @@ intercom, RTSP, the fleet agent.
    - The Shizuku grant plan writes fully qualified component names. The old
      `pkg/.Class` form would have resolved to a non-existent class after the rename.
    - Self-update, the release-tag fallback check, About links, the DLNA manufacturer URL and
-     the user agent point at `rayalavcp/phx-kiosk-satellite` / `PhoenixPortal`.
+     the user agent point at `rayalavcp/phoenix-portal` / `PhoenixPortal`.
    - Analytics (basic, usage, diagnostics) **default to off**.
    - The release workflow no longer fails without the Ground Control key (Voice Match sign-in
      is optional).

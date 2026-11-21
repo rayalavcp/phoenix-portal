@@ -64,7 +64,7 @@ String deviceDescription({
     <deviceType>$mediaRendererType</deviceType>
     <friendlyName>${escapeXml(friendlyName)}</friendlyName>
     <manufacturer>Phoenix Portal</manufacturer>
-    <manufacturerURL>https://github.com/rayalavcp/phx-kiosk-satellite</manufacturerURL>
+    <manufacturerURL>https://github.com/rayalavcp/phoenix-portal</manufacturerURL>
     <modelName>Phoenix Portal</modelName>
     <modelDescription>Home Assistant kiosk media renderer</modelDescription>
     <modelNumber>$appVersion</modelNumber>

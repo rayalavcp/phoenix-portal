@@ -11,7 +11,7 @@ export const PROVISION_ACTIVITY = `${PKG}/${NS}.ProvisionActivity`;
 export const A11Y_SERVICE = `${PKG}/${NS}.KioskAccessibilityService`;
 export const ADMIN_RECEIVER = `${PKG}/${NS}.KioskAdminReceiver`;
 export const STATE_FILE = '/sdcard/phoenix_restore.env';
-export const RELEASE_REPO = 'rayalavcp/phx-kiosk-satellite';
+export const RELEASE_REPO = 'rayalavcp/phoenix-portal';
 export const APK_TMP = '/data/local/tmp/phoenix-portal.apk';
 
 export const VERIFIER_PKG = 'com.facebook.appverifier';

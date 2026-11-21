@@ -19,7 +19,7 @@ import android.os.Build
  */
 object AppIdentity {
     private const val PRODUCT = "PhoenixPortal"
-    private const val HOMEPAGE = "https://github.com/rayalavcp/phx-kiosk-satellite"
+    private const val HOMEPAGE = "https://github.com/rayalavcp/phoenix-portal"
 
     @Volatile
     private var cached: String? = null

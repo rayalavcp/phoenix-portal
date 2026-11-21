@@ -13,7 +13,7 @@ class AppIdentity {
   const AppIdentity._();
 
   static const product = 'PhoenixPortal';
-  static const homepage = 'https://github.com/rayalavcp/phx-kiosk-satellite';
+  static const homepage = 'https://github.com/rayalavcp/phoenix-portal';
 
   /// The user agent every outbound request carries. Set once at startup;
   /// until then it is the bare product name, so a request that somehow
