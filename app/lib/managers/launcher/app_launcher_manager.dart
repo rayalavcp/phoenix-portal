@@ -117,8 +117,53 @@ class AppLauncherManager extends Manager with WidgetsBindingObserver {
   String get name => 'launcher';
 
   /// The configured whitelist, decoded fresh so setting changes apply live.
-  List<LauncherApp> get apps =>
-      decodeLauncherApps(_settings.get(defs.launcherApps));
+  /// With nothing picked, every installed app: Phoenix Portal is the home
+  /// screen, so an empty whitelist must not leave the apps unreachable.
+  List<LauncherApp> get apps {
+    final picked = decodeLauncherApps(_settings.get(defs.launcherApps));
+    return picked.isNotEmpty ? picked : _installed;
+  }
+
+  /// Every launchable app but this one, alphabetical: what [apps] falls
+  /// back to while the whitelist is empty. Refreshed at boot, when the
+  /// launcher is switched on and on every open, so new installs show up.
+  List<LauncherApp> _installed = const [];
+
+  /// Bumped whenever [_installed] changes, so an open launcher redraws.
+  final installedRevision = ValueNotifier<int>(0);
+
+  /// This app's own package, never offered in its own launcher.
+  static const _self = 'com.phoenix.portal';
+
+  Future<void> refreshInstalled() async {
+    if (!Platform.isAndroid) return;
+    try {
+      final raw = await _channel.invokeMethod<List<Object?>>('listApps');
+      final next = [
+        for (final item in raw ?? const [])
+          if (item is Map &&
+              '${item['package'] ?? ''}'.isNotEmpty &&
+              item['package'] != _self)
+            LauncherApp(
+              package: '${item['package']}',
+              label: '${item['label'] ?? item['package']}',
+            ),
+      ];
+      final same =
+          next.length == _installed.length &&
+          [
+            for (var i = 0; i < next.length; i++)
+              next[i].package == _installed[i].package,
+          ].every((e) => e);
+      if (same) return;
+      _installed = next;
+      installedRevision.value++;
+    } on MissingPluginException {
+      // Not Android.
+    } on PlatformException catch (e) {
+      log.warn(name, 'could not list installed apps: $e');
+    }
+  }
 
   /// The whitelist's apps a locked kiosk offers (issue #1067), in the
   /// whitelist's order.
@@ -158,6 +203,7 @@ class AppLauncherManager extends Manager with WidgetsBindingObserver {
   void open({bool unlocked = false}) {
     _unlocked = unlocked;
     visible.value = true;
+    unawaited(refreshInstalled());
   }
 
   @override
@@ -316,8 +362,12 @@ class AppLauncherManager extends Manager with WidgetsBindingObserver {
     // shield.
     _settingSub = bus.on<SettingChanged>().listen((e) async {
       // Turning the launcher off closes an overlay already on screen.
-      if (e.key == defs.launcherEnabled.key && e.value != true) {
-        visible.value = false;
+      if (e.key == defs.launcherEnabled.key) {
+        if (e.value == true) {
+          unawaited(refreshInstalled());
+        } else {
+          visible.value = false;
+        }
         return;
       }
       // A changed whitelist warms its icons right away, so the next open
@@ -349,7 +399,10 @@ class AppLauncherManager extends Manager with WidgetsBindingObserver {
 
     // The whitelist is small and icons are immutable: warm them at boot
     // so the launcher's very first open paints complete.
-    if (_settings.get(defs.launcherEnabled)) warmIcons();
+    if (_settings.get(defs.launcherEnabled)) {
+      warmIcons();
+      unawaited(refreshInstalled());
+    }
   }
 
   final _returned = ReturnWatch();
@@ -554,6 +607,7 @@ class AppLauncherManager extends Manager with WidgetsBindingObserver {
     await _saverSub?.cancel();
     _returnTimer?.cancel();
     visible.dispose();
+    installedRevision.dispose();
     compassView.dispose();
   }
 }

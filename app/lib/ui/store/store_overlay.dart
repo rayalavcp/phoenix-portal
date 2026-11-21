@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../app_container.dart';
 import '../../managers/store/store_manager.dart';
+import '../kit.dart' show PhoenixMark;
 import '../theme.dart';
 
 /// Phoenix Portal's app store: a curated, free catalog for Portals,
@@ -80,7 +80,7 @@ class _StorePageState extends State<_StorePage> {
               padding: const EdgeInsets.fromLTRB(28, 20, 16, 4),
               child: Row(
                 children: [
-                  SvgPicture.asset('assets/branding/mark.svg', width: 40, height: 40),
+                  const PhoenixMark(size: 40),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(

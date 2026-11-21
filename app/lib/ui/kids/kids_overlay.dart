@@ -64,7 +64,7 @@ class _KidsGround extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         // Soft color glows, painted once: depth without any animation cost.
-        const _Glow(alignment: Alignment(-0.9, -0.8), color: Color(0x55FF6A3D), size: 520),
+        const _Glow(alignment: Alignment(-0.9, -0.8), color: Color(0x55F26A1B), size: 520),
         const _Glow(alignment: Alignment(1.0, 0.9), color: Color(0x445B6CFF), size: 620),
         const _Glow(alignment: Alignment(0.6, -1.1), color: Color(0x3352D69F), size: 420),
         child,
@@ -113,7 +113,7 @@ class _GameInfo {
 
 final _games = <_GameInfo>[
   _GameInfo(_Game.math, 'Math Blitz', 'Beat the 60-second clock', Icons.calculate_rounded,
-      const [Color(0xFFE0446A), Color(0xFFFF8A3D)], 'math', (b) => 'Best: $b solved'),
+      const [Color(0xFFE0446A), Color(0xFFF28A1E)], 'math', (b) => 'Best: $b solved'),
   _GameInfo(_Game.words, 'Word Scramble', 'Crack the mystery words', Icons.abc_rounded,
       const [Color(0xFF14A06B), Color(0xFF1C8ED6)], 'words', (b) => 'Best: $b pts'),
   _GameInfo(_Game.g2048, '2048', 'Slide, merge, reach 2048', Icons.grid_4x4_rounded,
@@ -123,7 +123,7 @@ final _games = <_GameInfo>[
   _GameInfo(_Game.memory, 'Memory Pro', 'Find all 8 pairs fast', Icons.psychology_rounded,
       const [Color(0xFF5B6CFF), Color(0xFF9A6BFF)], 'memory', (b) => 'Best: ${b}s'),
   const _GameInfo(_Game.draw, 'Draw Studio', 'Paint whatever you like', Icons.brush_rounded,
-      [Color(0xFFFF4D2E), Color(0xFFFF4D8D)], null, null),
+      [Color(0xFFD42A1A), Color(0xFFFF4D8D)], null, null),
 ];
 
 class _KidsHome extends StatefulWidget {
@@ -481,7 +481,7 @@ class _ParentLockState extends State<_ParentLock> with SingleTickerProviderState
             builder: (context, _) => CircularProgressIndicator(
               value: _hold.value,
               strokeWidth: 5,
-              color: const Color(0xFFFFB547),
+              color: const Color(0xFFF5A623),
               backgroundColor: Colors.transparent,
             ),
           ),

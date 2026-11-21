@@ -289,11 +289,13 @@ class AssistSkin {
   SkinPalette palette(bool darkTheme) => darkTheme ? (dark ?? light) : light;
 }
 
+/// The Phoenix Portal voice colours, taken from the flame phoenix logo:
+/// deep red, ember, flame orange and amber.
 const kioskSatelliteColors = [
-  Color(0xFF18BCF2),
-  Color(0xFFF2B705),
-  Color(0xFF3FBF5F),
-  Color(0xFFE8604C),
+  Color(0xFFC41C1C),
+  Color(0xFFE8471A),
+  Color(0xFFF27A1A),
+  Color(0xFFF5A623),
 ];
 
 const _googleColors = [

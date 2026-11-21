@@ -49,8 +49,14 @@ class _AppLauncherOverlayState extends State<AppLauncherOverlay> {
     valueListenable: widget.container.launcher.visible,
     builder: (context, visible, _) {
       if (!visible) return const SizedBox.shrink();
+      // The installed list can land after the open (an empty whitelist
+      // shows every app): redraw when it does.
       return Positioned.fill(
-        child: _LauncherScreen(container: widget.container),
+        child: ValueListenableBuilder<int>(
+          valueListenable: widget.container.launcher.installedRevision,
+          builder: (context, _, _) =>
+              _LauncherScreen(container: widget.container),
+        ),
       );
     },
   );

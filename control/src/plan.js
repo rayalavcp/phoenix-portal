@@ -107,7 +107,7 @@ export function buildSetupPlan(facts, { setHome = true, blockOta = true, apkName
     }
   }
   if (setHome) {
-    add("Turn on the app's Home Launcher setting", `am start -W -n ${PROVISION_ACTIVITY} --es ks.provision ${q('{"home.enabled":true}')}`);
+    add("Turn on the app's Home Launcher setting", `am start -W -n ${PROVISION_ACTIVITY} --es ks.provision ${q('{"home.enabled":true,"launcher.enabled":true}')}`);
     add('Enable the home screen entry point', `pm enable ${HOME_ALIAS}`);
     add(
       'Make Phoenix Portal the home screen',

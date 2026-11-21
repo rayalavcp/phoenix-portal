@@ -3,7 +3,6 @@ import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../app_container.dart';
@@ -18,7 +17,8 @@ import '../managers/wake_word/system_permissions.dart';
 import 'dashboard_view_picker.dart' show DashboardCatalog, DashboardPicker;
 import 'import_options_dialog.dart';
 import 'kiosk_screen.dart';
-import 'kit.dart' show LabeledField, NoticeBanner, NoticeKind, SectionHeading;
+import 'kit.dart'
+    show LabeledField, NoticeBanner, NoticeKind, PhoenixMark, SectionHeading;
 import 'theme.dart';
 import 'toast.dart';
 import 'voice_settings.dart' show showVoiceMigrationWizard;
@@ -582,13 +582,8 @@ class _SetupScreenState extends State<SetupScreen> {
                 padding: const EdgeInsets.fromLTRB(28, 24, 20, 8),
                 child: Row(
                   children: [
-                    // The mark, as vectors, same as the drawer header. Its
-                    // teal keyline is what keeps it readable on both themes.
-                    SvgPicture.asset(
-                      'assets/branding/mark.svg',
-                      width: 40,
-                      height: 40,
-                    ),
+                    // The phoenix mark, same as the drawer header.
+                    const PhoenixMark(size: 40),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Text(
@@ -640,11 +635,7 @@ class _SetupScreenState extends State<SetupScreen> {
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
           child: Column(
             children: [
-              SvgPicture.asset(
-                'assets/branding/mark.svg',
-                width: 44,
-                height: 44,
-              ),
+              const PhoenixMark(size: 44),
               const SizedBox(height: 12),
               // Compact progress dots on narrow screens; the rail is too wide.
               Row(

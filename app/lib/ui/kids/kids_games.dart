@@ -209,7 +209,7 @@ class _MathBlitzState extends State<MathBlitz> {
   @override
   Widget build(BuildContext context) => KidsActivityFrame(
     title: 'Math Blitz',
-    colors: const [Color(0xFFE0446A), Color(0xFFFF8A3D)],
+    colors: const [Color(0xFFE0446A), Color(0xFFF28A1E)],
     onBack: widget.onBack,
     trailing: _phase == _Phase.playing
         ? Row(children: [
@@ -570,12 +570,12 @@ class _Game2048State extends State<Game2048> {
     2: (Color(0xFFFFF4E6), Color(0xFF6B4A2B)),
     4: (Color(0xFFFFE7C2), Color(0xFF6B4A2B)),
     8: (Color(0xFFFFB86B), Colors.white),
-    16: (Color(0xFFFF9A4D), Colors.white),
-    32: (Color(0xFFFF7A3D), Colors.white),
-    64: (Color(0xFFFF4D2E), Colors.white),
+    16: (Color(0xFFF5922A), Colors.white),
+    32: (Color(0xFFF07A1A), Colors.white),
+    64: (Color(0xFFD42A1A), Colors.white),
     128: (Color(0xFFFFD27A), Colors.white),
-    256: (Color(0xFFFFC861), Colors.white),
-    512: (Color(0xFFFFB547), Colors.white),
+    256: (Color(0xFFF7B733), Colors.white),
+    512: (Color(0xFFF5A623), Colors.white),
     1024: (Color(0xFF8C9BFF), Colors.white),
     2048: (Color(0xFF3CCB8C), Colors.white),
   };
@@ -922,7 +922,7 @@ class _MemoryProState extends State<MemoryPro> {
   static const _faces = <(IconData, Color)>[
     (Icons.rocket_launch_rounded, Color(0xFF5B6CFF)),
     (Icons.sports_soccer_rounded, Color(0xFF14A06B)),
-    (Icons.pets_rounded, Color(0xFFFF8A3D)),
+    (Icons.pets_rounded, Color(0xFFF28A1E)),
     (Icons.music_note_rounded, Color(0xFFE04FD8)),
     (Icons.bolt_rounded, Color(0xFFFFB300)),
     (Icons.anchor_rounded, Color(0xFF1C8ED6)),
@@ -930,7 +930,7 @@ class _MemoryProState extends State<MemoryPro> {
     (Icons.cruelty_free_rounded, Color(0xFF8C5BFF)),
     (Icons.sports_esports_rounded, Color(0xFFFF4D6D)),
     (Icons.public_rounded, Color(0xFF2E7D32)),
-    (Icons.local_fire_department_rounded, Color(0xFFFF4D2E)),
+    (Icons.local_fire_department_rounded, Color(0xFFD42A1A)),
     (Icons.headphones_rounded, Color(0xFF455A64)),
   ];
   final _rng = math.Random();

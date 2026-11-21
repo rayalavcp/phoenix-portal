@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../l10n/messages.dart';
 import 'theme.dart';
@@ -12,6 +11,25 @@ import 'toast.dart';
 /// (Settings, Camera, Gestures, Setup) composes these instead of carrying its
 /// own copies, so headings, cards, notes and dialogs match everywhere. All
 /// insets come from [Ks]; nothing in here hardcodes a spacing value.
+
+/// The Phoenix Portal logo: the flame phoenix (assets/branding/mark.png),
+/// transparent so it sits on ink and paper alike. One widget so every
+/// header, the setup wizard, the drawer and the store draw the same art.
+class PhoenixMark extends StatelessWidget {
+  const PhoenixMark({super.key, required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Image.asset(
+    'assets/branding/mark.png',
+    width: size,
+    height: size,
+    fit: BoxFit.contain,
+    filterQuality: FilterQuality.medium,
+    semanticLabel: 'Phoenix Portal',
+  );
+}
 
 /// A line between rows, and never after the last one. Inset from the card
 /// edges, One UI style, so the line reads as part of the card rather than a
@@ -1240,7 +1258,7 @@ class KsEyebrow extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        SvgPicture.asset('assets/branding/mark.svg', width: size, height: size),
+        PhoenixMark(size: size),
         SizedBox(width: 10 * scale),
         Padding(
           padding: EdgeInsets.only(top: 3 * scale),

@@ -1,8 +1,8 @@
 :root {
   --bg: #0f1115; --surface: #181b21; --surface-2: #20242c; --line: #262b34;
-  --text: #eceef2; --muted: #a3a9b6; --ember: #ff6a3d; --gold: #ffb547;
-  --ok: #3ccb8c; --warn: #ffb547; --err: #ff6b6b;
-  --flame: linear-gradient(45deg, #ff4d2e, #ff7a3d 55%, #ffb547);
+  --text: #eceef2; --muted: #a3a9b6; --ember: #f26a1b; --gold: #f5a623;
+  --ok: #3ccb8c; --warn: #f5a623; --err: #ff6b6b;
+  --flame: linear-gradient(45deg, #d42a1a, #f07a1a 55%, #f5a623);
   --radius: 22px;
   color-scheme: dark;
 }

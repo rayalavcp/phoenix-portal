@@ -137,7 +137,7 @@ class _KidsDrawState extends State<KidsDraw> {
   @override
   Widget build(BuildContext context) => KidsActivityFrame(
     title: 'Draw Studio',
-    colors: const [Color(0xFFFF6A3D), Color(0xFFFF4D8D)],
+    colors: const [Color(0xFFF26A1B), Color(0xFFFF4D8D)],
     onBack: widget.onBack,
     trailing: Row(
       children: [

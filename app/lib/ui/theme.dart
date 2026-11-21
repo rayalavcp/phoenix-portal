@@ -4,8 +4,8 @@ import 'package:flutter/services.dart';
 /// Phoenix Portal visual identity: ember and gold on deep ink, light + dark.
 /// The remote admin UI's CSS carries the same values (remote-ui/static/app.css).
 ///
-///   ember       #FF6A3D  primary (the mark's flame core)
-///   gold        #FFB547  secondary accent (the flame tip)
+///   ember       #F26A1B  primary (the mark's flame core)
+///   gold        #F5A623  secondary accent (the flame tip)
 ///   iris        #8C9BFF  tertiary, a cool counterweight to the warm brand
 ///   mint        #3CCB8C  success
 ///   rose        #FF6B6B  error / danger
@@ -15,14 +15,14 @@ import 'package:flutter/services.dart';
 /// Dark is the kiosk's home: exact palette values sit on it with comfortable
 /// contrast. On the light background each accent is deepened just enough to
 /// stay legible as text: same hue, deeper tone.
-const _ember = Color(0xFFFF6A3D);
-const _emberOnLight = Color(0xFFD4471A);
+const _ember = Color(0xFFF26A1B);
+const _emberOnLight = Color(0xFFC4410F);
 
 /// Brand constants other screens reach for directly.
 abstract final class Phx {
   static const ember = _ember;
   static const emberOnLight = _emberOnLight;
-  static const gold = Color(0xFFFFB547);
+  static const gold = Color(0xFFF5A623);
   static const iris = Color(0xFF8C9BFF);
   static const mint = Color(0xFF3CCB8C);
   static const rose = Color(0xFFFF6B6B);
@@ -32,15 +32,15 @@ abstract final class Phx {
   static const flame = LinearGradient(
     begin: Alignment.bottomLeft,
     end: Alignment.topRight,
-    colors: [Color(0xFFFF4D2E), Color(0xFFFF7A3D), Color(0xFFFFB547)],
+    colors: [Color(0xFFD42A1A), Color(0xFFF07A1A), Color(0xFFF5A623)],
     stops: [0, 0.55, 1],
   );
 
   /// Category badge gradients for the settings rail and tiles, in rail
   /// order. Each pair runs deep to bright so a white glyph reads on both ends.
   static const badges = <List<Color>>[
-    [Color(0xFFFF4D2E), Color(0xFFFF9A4D)], // ember
-    [Color(0xFFE08A00), Color(0xFFFFC15A)], // gold
+    [Color(0xFFD42A1A), Color(0xFFF5922A)], // ember
+    [Color(0xFFE08A00), Color(0xFFF7B733)], // gold
     [Color(0xFF5B6CFF), Color(0xFF9AA6FF)], // iris
     [Color(0xFF14A06B), Color(0xFF52D69F)], // mint
     [Color(0xFFE0446A), Color(0xFFFF8FA3)], // rose

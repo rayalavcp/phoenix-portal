@@ -179,13 +179,8 @@ class KioskDrawer extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
                 child: Row(
                   children: [
-                    // The mark, as vectors. Its teal keyline is what keeps
-                    // the white house readable on the light theme.
-                    SvgPicture.asset(
-                      'assets/branding/mark.svg',
-                      width: 48,
-                      height: 48,
-                    ),
+                    // The phoenix mark.
+                    const PhoenixMark(size: 48),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
@@ -1223,11 +1218,7 @@ extension _MenuView on KioskDrawer {
             final title = Row(
               spacing: compact ? 12 : 16,
               children: [
-                SvgPicture.asset(
-                  'assets/branding/mark.svg',
-                  width: compact ? 40 : 52,
-                  height: compact ? 40 : 52,
-                ),
+                PhoenixMark(size: compact ? 40 : 52),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

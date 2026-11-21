@@ -193,7 +193,7 @@ build_setup_plan() {
   if $SET_HOME; then
     # The app's own Home Launcher setting first, so the app agrees it is the
     # home screen; then the HOME alias on, and HOME pointed at it.
-    plan "Turn on the app's Home Launcher setting" "shell \"am start -W -n $PROVISION_ACTIVITY --es ks.provision '{\\\"home.enabled\\\":true}'\""
+    plan "Turn on the app's Home Launcher setting" "shell \"am start -W -n $PROVISION_ACTIVITY --es ks.provision '{\\\"home.enabled\\\":true,\\\"launcher.enabled\\\":true}'\""
     plan "Enable the home screen entry point" "shell pm enable $HOME_ALIAS"
     if [ "${SDK:-0}" -ge 29 ]; then
       plan "Make Phoenix Portal the home screen" "shell cmd role add-role-holder android.app.role.HOME $PKG"
