@@ -221,7 +221,12 @@ void main() {
 
     test('falls back to the kept copy and says why', () async {
       await directory().read();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      // The copy is written in the background: wait for it (a fixed pause
+      // lost the race on a busy machine running the whole suite).
+      final kept = File('${temp.path}/plugin_directory.json');
+      for (var i = 0; i < 100 && !kept.existsSync(); i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+      }
       status = 0;
       final data = await directory().read();
       expect((data['plugins'] as List).length, 1);

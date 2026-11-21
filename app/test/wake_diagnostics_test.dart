@@ -408,8 +408,20 @@ void main() {
       for (var i = 0; i < 20; i++) {
         await Future<void>.delayed(Duration.zero);
       }
-      // The save runs file IO on the real event loop.
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      // The save runs file IO on the real event loop: wait until what it
+      // saved stops changing (a fixed pause lost the race on a busy
+      // machine running the whole suite), up to three seconds.
+      int count() =>
+          wakeWord.diagnostics.activations.length +
+          wakeWord.diagnostics.nearMisses.length;
+      var last = -1;
+      var stable = 0;
+      for (var i = 0; i < 100 && stable < 4; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+        final now = count();
+        stable = now == last ? stable + 1 : 0;
+        last = now;
+      }
     }
 
     test('off by default: no audio kept, nothing saved', () async {
