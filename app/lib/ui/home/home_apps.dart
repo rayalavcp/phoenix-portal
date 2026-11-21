@@ -386,37 +386,45 @@ class HomeShortcutTile extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Icon(icon, color: Colors.white, size: 34),
-          Column(
+      // Short tiles (a small screen, many shortcuts) drop the subtitle
+      // and shrink the icon rather than overflow.
+      child: LayoutBuilder(
+        builder: (context, box) {
+          final roomy = box.maxHeight >= 92;
+          return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              if (subtitle != null)
-                Text(
-                  subtitle!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.85),
-                    fontSize: 13,
+              Icon(icon, color: Colors.white, size: roomy ? 34 : 26),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
+                  if (subtitle != null && roomy)
+                    Text(
+                      subtitle!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontSize: 13,
+                      ),
+                    ),
+                ],
+              ),
             ],
-          ),
-        ],
+          );
+        },
       ),
     ),
   );
@@ -567,7 +575,10 @@ class _HomeAppDrawerState extends State<HomeAppDrawer> {
                           ),
                           segments: const [
                             ButtonSegment(value: false, label: Text('A–Z')),
-                            ButtonSegment(value: true, label: Text('Most used')),
+                            ButtonSegment(
+                              value: true,
+                              label: Text('Most used'),
+                            ),
                           ],
                           selected: {_byUse},
                           onSelectionChanged: (v) =>

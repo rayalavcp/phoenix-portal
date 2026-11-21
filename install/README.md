@@ -1,7 +1,7 @@
 # Phoenix Portal test build 2026.11.25 (368)
 
 - `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 95323322 bytes.
-  SHA-256 `49f74954edda97a8cd5cb2323b21958ec63c47efe49ff7fb54e214984d6da5eb`.
+  SHA-256 `f6d0590a7098b6598aa0ad5944566efa17e2297c2c6f768ec4b7e9bbf840664f`.
 - New: Phoenix Home launcher (Home Assistant optional), School menus and
   calendar, 13 more Kids Portal activities and a daily challenge.
 - Signed with the same **debug key** as the 2026.11.24 test build, so it
