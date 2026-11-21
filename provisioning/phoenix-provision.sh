@@ -139,6 +139,11 @@ current_home() {
 }
 
 build_setup_plan() {
+  # Meta's verifier rejects installs it doesn't allowlist, so it goes first.
+  if has_pkg "$VERIFIER_PKG"; then
+    plan "Disable Meta's install verifier (it blocks installs it doesn't know)" "shell pm disable-user --user 0 $VERIFIER_PKG"
+  fi
+  plan "Turn off package verification" "shell settings put global package_verifier_enable 0"
   plan "Install Phoenix Portal ($(basename "$APK"))" "install -r -g \"$APK\""
   # The runtime grants from docs/portal.md (-g covers most at install; these
   # make them explicit and cover the ones install -g skips).
@@ -172,10 +177,6 @@ build_setup_plan() {
   plan "Skip Android's full-screen hint bubble" "shell settings put secure immersive_mode_confirmations confirmed"
 
   # Meta Portal fixes.
-  if has_pkg "$VERIFIER_PKG"; then
-    plan "Disable Meta's install verifier (in-app updates and the app store)" "shell pm disable-user --user 0 $VERIFIER_PKG"
-  fi
-  plan "Turn off package verification" "shell settings put global package_verifier_enable 0"
   if [ "${SDK:-99}" -lt 29 ]; then
     local ov
     for ov in $INSTALLER_OVERLAY_PKGS; do

@@ -63,6 +63,11 @@ const hasOverlay = (facts, pkg) => facts.overlays.includes(pkg);
 export function buildSetupPlan(facts, { setHome = true, blockOta = true, apkName = 'Phoenix Portal' } = {}) {
   const plan = [];
   const add = (desc, cmd, extra = {}) => plan.push({ desc, cmd, ...extra });
+  // Meta's verifier rejects installs it doesn't allowlist, so it goes first.
+  if (facts.packages.has(VERIFIER_PKG)) {
+    add("Disable Meta's install verifier (it blocks installs it doesn't know)", `pm disable-user --user 0 ${VERIFIER_PKG}`);
+  }
+  add('Turn off package verification', 'settings put global package_verifier_enable 0');
   add(`Install ${apkName}`, `pm install -r -g ${APK_TMP}`, { install: true });
   for (const g of GRANTS) add(`Grant ${g}`, `pm grant ${PKG} android.permission.${g}`);
   if (facts.sdk >= 33) add('Grant POST_NOTIFICATIONS', `pm grant ${PKG} android.permission.POST_NOTIFICATIONS`);
@@ -91,10 +96,6 @@ export function buildSetupPlan(facts, { setHome = true, blockOta = true, apkName
   add('Accessibility on', 'settings put secure accessibility_enabled 1');
   add("Skip Android's full-screen hint bubble", 'settings put secure immersive_mode_confirmations confirmed');
 
-  if (facts.packages.has(VERIFIER_PKG)) {
-    add("Disable Meta's install verifier (in-app updates and the app store)", `pm disable-user --user 0 ${VERIFIER_PKG}`);
-  }
-  add('Turn off package verification', 'settings put global package_verifier_enable 0');
   if (facts.sdk < 29) {
     for (const ov of INSTALLER_OVERLAY_PKGS) {
       if (hasOverlay(facts, ov)) add(`Fix the Gen-1 white-on-white installer dialog (${ov})`, `cmd overlay disable --user 0 ${ov}`);

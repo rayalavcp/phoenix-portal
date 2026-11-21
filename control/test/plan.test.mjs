@@ -33,7 +33,10 @@ test('parseFacts reads a Gen-1 Portal', () => {
 test('setup on a Gen-1 Portal fixes the overlay, the verifier and OTA, keeps Meta accessibility', () => {
   const plan = buildSetupPlan(portalGen1);
   const cmds = plan.map((p) => p.cmd);
-  assert.equal(plan[0].install, true);
+  const install = plan.findIndex((p) => p.install);
+  const verifier = cmds.indexOf('pm disable-user --user 0 com.facebook.appverifier');
+  assert.ok(verifier >= 0 && verifier < install, 'the verifier is off before the install');
+  assert.ok(cmds.indexOf('settings put global package_verifier_enable 0') < install);
   assert.ok(cmds.includes('cmd overlay disable --user 0 com.facebook.aloha.rro.niu.android'));
   assert.ok(!cmds.some((c) => c.includes('rro.niu.settings')), 'only overlays present on the device');
   assert.ok(cmds.includes('pm disable-user --user 0 com.facebook.appverifier'));
