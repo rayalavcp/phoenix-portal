@@ -34,7 +34,7 @@ void main() {
     gc.people = const [
       {
         'id': 'x1',
-        'name': 'Xavier',
+        'name': 'Krishna',
         'things': {'person': 'person.xavier'},
       },
       {'id': 'a1', 'name': 'Ana', 'things': <String, String>{}},
@@ -47,7 +47,7 @@ void main() {
 
   test('a recognized voice, with its Home Assistant person', () async {
     bus.publish(
-      const VoiceSpeakerChanged('Xavier', id: 'x1', by: 'voice', score: 0.71),
+      const VoiceSpeakerChanged('Krishna', id: 'x1', by: 'voice', score: 0.71),
     );
     bus.publish(const VoiceSpeakerChanged('Ana', id: 'a1', by: 'only_person'));
     await pumpEventQueue();
@@ -57,7 +57,7 @@ void main() {
     );
     expect(fired[0].data, {
       'event_type': 'recognized',
-      'name': 'Xavier',
+      'name': 'Krishna',
       'person': 'person.xavier',
       'score': 0.71,
       'by': 'voice',

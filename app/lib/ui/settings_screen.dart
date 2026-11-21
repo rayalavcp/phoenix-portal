@@ -2381,13 +2381,15 @@ class _CategoryContentState extends State<_CategoryContent> {
         children: [
           row(
             supportText(context, 'Author'),
-            'Xavier Larrea',
-            onTap: () => _openLink('https://github.com/jxlarrea'),
+            'krayala',
+            onTap: () => _openLink('https://github.com/rayalavcp'),
           ),
+          // Phoenix Portal is built on Kiosk Satellite; its licence
+          // (CC BY-NC-ND 4.0) asks for the original author's credit.
           row(
-            supportText(context, 'Website'),
-            'kiosksatellite.com',
-            onTap: () => _openLink('https://kiosksatellite.com'),
+            supportText(context, 'Based on'),
+            'Kiosk Satellite by Xavier Larrea',
+            onTap: () => _openLink('https://github.com/jxlarrea/kiosk-satellite'),
           ),
           ListTile(
             title: Text(supportText(context, 'Source code')),
@@ -9710,18 +9712,12 @@ class _MadeByFooter extends StatelessWidget {
                     '{author}' => InkWell(
                       borderRadius: BorderRadius.circular(6),
                       onTap: () =>
-                          _open(context, 'https://github.com/jxlarrea'),
-                      child: Text('Xavier Larrea', style: link),
+                          _open(context, 'https://github.com/rayalavcp'),
+                      child: Text('krayala', style: link),
                     ),
                     _ => Text(part, style: muted),
                   },
                 ),
-            Text(' \u00b7 \u2615 ', style: muted),
-            InkWell(
-              borderRadius: BorderRadius.circular(6),
-              onTap: () => _open(context, 'https://buymeacoffee.com/jxlarrea'),
-              child: Text(l10n(context).settingsBuyCoffee, style: link),
-            ),
           ],
         ),
       ),

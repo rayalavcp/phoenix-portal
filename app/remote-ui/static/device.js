@@ -889,13 +889,14 @@ export async function loadAboutInfo() {
       upd ? aboutStatus('drawerUpdateCurrent') : or(null)]]);
   }
 
-  const repo = link('jxlarrea/kiosk-satellite',
-    'https://github.com/jxlarrea/kiosk-satellite');
+  const repo = link('rayalavcp/phoenix-portal',
+    'https://github.com/rayalavcp/phoenix-portal');
   repo.insertAdjacentHTML('afterbegin', githubMark);
 
   card('Attribution', [
-    ['Author', link('Xavier Larrea', 'https://github.com/jxlarrea')],
-    ['Website', link('kiosksatellite.com', 'https://kiosksatellite.com')],
+    ['Author', link('krayala', 'https://github.com/rayalavcp')],
+    // Built on Kiosk Satellite; its licence asks for the original credit.
+    ['Based on', link('Kiosk Satellite by Xavier Larrea', 'https://github.com/jxlarrea/kiosk-satellite')],
     ['Source code', repo],
     ['License', link('CC BY-NC-ND 4.0',
       'https://github.com/jxlarrea/kiosk-satellite/blob/main/LICENSE')],

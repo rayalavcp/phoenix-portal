@@ -140,15 +140,10 @@ void main() {
         }
         expect(find.text(credit), findsNWidgets(2));
         expect(find.byIcon(Icons.favorite), findsOneWidget);
-        expect(
-          find.text(lookupUiStrings(Locale(tag)).settingsBuyCoffee),
-          findsOneWidget,
-        );
         expect(tester.takeException(), isNull);
         language.value = const Locale('en');
         await tester.pumpAndSettle();
         expect(find.text('Localization Credits'), findsOneWidget);
-        expect(find.text('Buy me a coffee'), findsOneWidget);
         expect(find.text(credit), findsNWidgets(2));
         language.value = Locale(tag);
         await tester.pumpAndSettle();
@@ -176,27 +171,21 @@ void main() {
     await tester.pumpWidget(app(page('About')));
     await tester.pumpAndSettle();
     expect(find.text('Créditos'), findsOneWidget);
-    expect(find.text('Xavier Larrea'), findsNWidgets(2));
+    // The author row and the made-by line both name krayala.
+    expect(find.text('krayala'), findsNWidgets(2));
     expect(find.text('See LICENSE'), findsOneWidget);
-    final author = find.text('Xavier Larrea').last;
+    final author = find.text('krayala').last;
     final heart = find.byIcon(Icons.favorite);
     await tester.ensureVisible(author);
     expect(tester.getTopLeft(author).dx, lessThan(tester.getTopLeft(heart).dx));
-    expect(find.text('Invítame a un café'), findsOneWidget);
     await tester.tap(author);
-    expect(container.browser.overlayUrl.value, 'https://github.com/jxlarrea');
-    await tester.tap(find.text('Invítame a un café'));
-    expect(
-      container.browser.overlayUrl.value,
-      'https://buymeacoffee.com/jxlarrea',
-    );
+    expect(container.browser.overlayUrl.value, 'https://github.com/rayalavcp');
     expect(container.browser.overlayDismissible.value, isTrue);
     language.value = const Locale('en');
     await tester.pumpAndSettle();
     expect(find.text('Attribution'), findsOneWidget);
-    expect(find.text('Buy me a coffee'), findsOneWidget);
     expect(tester.getTopLeft(heart).dx, lessThan(tester.getTopLeft(author).dx));
-    expect(find.text('Xavier Larrea'), findsNWidgets(2));
+    expect(find.text('krayala'), findsNWidgets(2));
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
