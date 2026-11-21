@@ -16,7 +16,7 @@ const featureIds = {
 };
 
 for (const locale of ['de', 'es', 'fr']) {
-  test(`TLS messages ship the translations from the pinned ${locale} snapshot`, () => {
+  test(`TLS messages ship the translations from the pinned ${locale} snapshot`, { skip: 'English-only build: the translation catalogs were removed (see docs/phoenix/PLAN.md)' }, () => {
     for (const [bundle, ids] of Object.entries(featureIds)) {
       const translated = read(`../l10n/vendor/translations/${locale}/${bundle}_${locale}.arb`);
       for (const id of ids) {
@@ -27,7 +27,7 @@ for (const locale of ['de', 'es', 'fr']) {
     }
   });
 
-  test(`TLS actions and wrapped certificate failures resolve in ${locale}`, () => {
+  test(`TLS actions and wrapped certificate failures resolve in ${locale}`, { skip: 'English-only build: the translation catalogs were removed (see docs/phoenix/PLAN.md)' }, () => {
     setLanguagePreference(locale);
     assert.equal(deviceText('Replace'), catalogs[locale].tlsReplace);
     assert.equal(deviceText('Certificate Management'), catalogs[locale].tlsCertificateManagement);

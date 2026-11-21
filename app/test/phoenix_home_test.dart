@@ -126,6 +126,57 @@ void main() {
     });
   });
 
+  group('remote admin', () {
+    late AppContainer c;
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      c = AppContainer();
+      await c.settings.init();
+    });
+    tearDown(() async {
+      await c.settings.dispose();
+      await c.bus.dispose();
+      await c.log.dispose();
+    });
+
+    test('applies tiles, theme, apps and school, and reads them back', () async {
+      final home = c.phoenixHome;
+      await home.applyRemote({
+        'tiles': [
+          {'id': 'school', 'w': 3, 'h': 2},
+          {'id': 'nope', 'w': 1, 'h': 1},
+        ],
+        'hiddenTiles': ['store'],
+        'theme': 'ocean',
+        'weatherEffects': false,
+        'favorites': ['com.a', 'com.b'],
+        'kidsApps': ['com.kids'],
+        'hiddenApps': ['com.hidden'],
+        'school': {'schoolName': 'Miller Elementary', 'start': '7:45'},
+        'photos': {'source': 'folder', 'folder': 'http://tower/photos/', 'seconds': 20},
+      });
+      final state = home.remoteState();
+      final tiles = state['tiles'] as List;
+      expect((tiles.first as Map)['id'], 'school');
+      expect((tiles.first as Map)['w'], 3);
+      expect(tiles.length, defaultHomeTiles.length);
+      expect(tiles.any((t) => (t as Map)['id'] == 'store' && t['hidden'] == true), isTrue);
+      expect(state['theme'], 'ocean');
+      expect(state['weatherEffects'], false);
+      expect(state['favorites'], ['com.a', 'com.b']);
+      expect(state['kidsApps'], ['com.kids']);
+      expect(state['hiddenApps'], ['com.hidden']);
+      expect((state['school'] as Map)['start'], '7:45');
+      expect((state['photos'] as Map)['seconds'], 20);
+      expect(home.photos.configured, isTrue);
+    });
+
+    test('ignores an unknown theme', () async {
+      await c.phoenixHome.applyRemote({'theme': 'neon'});
+      expect(c.phoenixHome.theme.value, 'ember');
+    });
+  });
+
   group('home screen', () {
     late AppContainer c;
     setUp(() async {
@@ -157,7 +208,7 @@ void main() {
       await tester.pump();
     }
 
-    for (final size in const [Size(1280, 800), Size(800, 1280), Size(1024, 600)]) {
+    for (final size in const [Size(1280, 800), Size(800, 1280), Size(1024, 600), Size(800, 600)]) {
       testWidgets('lays out without Home Assistant at $size', (tester) async {
         await pump(tester, size);
         expect(tester.takeException(), isNull);

@@ -2215,3 +2215,11 @@
   .compass-map { grid-template-columns: repeat(5, minmax(0, 1fr)); --gap: 6px; --tile-h: clamp(52px, 14cqi, 64px); }
   .compass-tile { font-size: 10.5px; border-radius: 9px; }
 }
+
+  /* Phoenix Home page (phoenix_home.js). */
+  .phx-tile-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .phx-tile-controls select { width: auto; }
+  .phx-actions { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px 0 4px; }
+  .phx-inline { display: flex; gap: 10px; align-items: center; }
+  .phx-inline .field { margin-bottom: 0; }
+  .phx-chip { display: inline-flex; align-items: center; gap: 6px; margin-right: 14px; }

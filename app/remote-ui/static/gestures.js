@@ -943,6 +943,7 @@ export const CATEGORY_TABS = [
   ['tab-alarms', ['Alarms']],
   ['tab-calendar', ['Calendar']],
   ['tab-timers', ['Timers']],
+  ['tab-phoenix', ['Home Screen']],
   ['tab-kids', ['Kids Portal']],
   ['tab-esphome', ['ESPHome']],
   ['tab-leds', ['LED Control']],

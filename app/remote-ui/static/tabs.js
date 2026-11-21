@@ -10,6 +10,7 @@ import { intercomShown } from './intercom.js';
 import { alarmsShown } from './alarms.js';
 import { calendarShown } from './calendar.js';
 import { timersShown } from './timers.js';
+import { phoenixShown } from './phoenix_home.js';
 import { loadGestures } from './gestures.js';
 import { subpageIcon } from './icons.js';
 import { loadLogs } from './logs.js';
@@ -27,7 +28,7 @@ import { clearSearchReturnTab, searchReturnTab } from './search.js';
 // and #settings can be bookmarked or handed to someone. Everything is served
 // from one root, so without this a reload always dumped you on the dashboard.
 export const TABS = ['dashboard', 'navigation', 'groundcontrol', 'homeassistant', 'esphome', 'voicesatellite', 'browser', 'kiosk', 'lockdown', 'home', 'launcher', 'screenaudio', 'screensaver',
-  'camera', 'sendspin', 'cameras', 'dlna', 'intercom', 'alarms', 'calendar', 'timers', 'files', 'gestures', 'leds', 'device', 'fleet', 'plugins', 'about', 'logs'];
+  'camera', 'sendspin', 'cameras', 'dlna', 'intercom', 'alarms', 'calendar', 'timers', 'phoenix', 'kids', 'files', 'gestures', 'leds', 'device', 'fleet', 'plugins', 'about', 'logs'];
 // A page's title, by what is left on it on a device without a screen.
 export function tabTitle(tab) {
   return isHeadless() && tab === 'screenaudio' ? 'Audio' : TAB_TITLES[tab];
@@ -44,6 +45,7 @@ export const TAB_TITLES = {
   cameras: 'Camera Streams',
   sendspin: 'Media Player',
   dlna: 'DLNA Renderer', intercom: 'Intercom', alarms: 'Alarms', calendar: 'Calendar', timers: 'Timers', esphome: 'ESPHome',
+  phoenix: 'Phoenix Home', kids: 'Kids Portal',
   files: 'File Manager', gestures: 'Gestures', leds: 'LED Control',
   device: 'Device', fleet: 'Fleet Management', plugins: 'Plugin Manager', about: 'About', logs: 'Logs',
 };
@@ -217,6 +219,7 @@ export function showTab(name, { push = true, refresh = true } = {}) {
   if (tab === 'alarms') alarmsShown();
   if (tab === 'calendar') calendarShown();
   if (tab === 'timers') timersShown();
+  if (tab === 'phoenix') phoenixShown();
   if (tab === 'plugins' && refresh && !sameTab) loadPlugins();
 
   if (tab === 'about') loadAboutInfo();

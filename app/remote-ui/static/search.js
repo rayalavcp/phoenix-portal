@@ -17,7 +17,7 @@ export const SEARCH_CATEGORY_TABS = {
   'Launcher': 'launcher', 'Home': 'home', 'Screen & Audio': 'screenaudio',
   'Screensaver': 'screensaver', 'Camera': 'camera',
   'Home Assistant': 'homeassistant', 'Voice Satellite': 'voicesatellite',
-  'Sendspin': 'sendspin', 'DLNA': 'dlna', 'Intercom': 'intercom', 'Alarms': 'alarms', 'Calendar': 'calendar', 'Timers': 'timers', 'Kids Portal': 'kids',
+  'Sendspin': 'sendspin', 'DLNA': 'dlna', 'Intercom': 'intercom', 'Alarms': 'alarms', 'Calendar': 'calendar', 'Timers': 'timers', 'Kids Portal': 'kids', 'Home Screen': 'phoenix',
   'ESPHome': 'esphome',
   'Device': 'device', 'Cameras': 'cameras', 'Gestures': 'gestures',
   'Fleet': 'fleet', 'Plugins': 'plugins', 'LED Control': 'leds',

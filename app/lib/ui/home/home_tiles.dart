@@ -525,7 +525,14 @@ class _Chip extends StatelessWidget {
       children: [
         Icon(icon, size: 16, color: const Color(0xFFFFD27A)),
         const SizedBox(width: 4),
-        Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+        Flexible(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+          ),
+        ),
       ],
     ),
   );

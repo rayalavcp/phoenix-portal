@@ -437,6 +437,53 @@ class PhoenixHomeManager extends Manager {
       )
       ..register(
         Command(
+          name: 'phoenixHomeGet',
+          description:
+              'Phoenix Home as the remote admin edits it: tiles, theme, '
+              'weather effects, dock, hidden and Kids Portal apps, every '
+              'installed app, the school and the photos.',
+          handler: (_) async => CommandResult.ok(remoteState()),
+        ),
+      )
+      ..register(
+        Command(
+          name: 'phoenixHomeSet',
+          description:
+              'Change Phoenix Home: any of tiles [{id, w, h}], hiddenTiles, '
+              'theme, weatherEffects, favorites, hiddenApps, kidsApps, '
+              'school {district, school, schoolName, menus, calendar, start, '
+              'end} and photos {source, folder, seconds}.',
+          handler: (p) async {
+            await applyRemote(p);
+            return CommandResult.ok(remoteState());
+          },
+        ),
+      )
+      ..register(
+        Command(
+          name: 'phoenixSchoolList',
+          description: "A district's schools and their menus, from Nutrislice.",
+          params: const {'district': 'the menu site name, e.g. friscoisd'},
+          handler: (p) async {
+            final district = '${p['district'] ?? school.config.value.district}'.trim().toLowerCase();
+            try {
+              final list = await school.schools(district);
+              return CommandResult.ok([
+                for (final s in list)
+                  {
+                    'slug': s.slug,
+                    'name': s.name,
+                    'menus': [for (final (slug, name) in s.menuTypes) {'slug': slug, 'name': name}],
+                  },
+              ]);
+            } catch (e) {
+              return CommandResult.fail("couldn't load $district's schools: $e");
+            }
+          },
+        ),
+      )
+      ..register(
+        Command(
           name: 'openAllApps',
           description: 'Open the full app drawer of Phoenix Home.',
           handler: (_) async {
@@ -445,6 +492,80 @@ class PhoenixHomeManager extends Manager {
           },
         ),
       );
+  }
+
+  // ── Remote admin ────────────────────────────────────────────────────────
+
+  static const themeIds = ['ember', 'ocean', 'forest', 'midnight', 'sunset', 'graphite'];
+
+  /// Everything the remote admin's Phoenix Home page shows.
+  Map<String, Object?> remoteState() => {
+    'tiles': [
+      for (final t in tiles.value) {'id': t.id, 'w': t.w, 'h': t.h, 'hidden': hiddenTiles.value.contains(t.id)},
+    ],
+    'theme': theme.value,
+    'themes': themeIds,
+    'weatherEffects': weatherEffects.value,
+    'favorites': favorites.value,
+    'hiddenApps': hidden.value.toList(),
+    'kidsApps': kidsApps.value,
+    'apps': [for (final a in _launcher.installed) {'package': a.package, 'label': a.label}],
+    'school': school.config.value.toJson(),
+    'photos': {...photos.settings.value.toJson(), 'immichConfigured': _immich.configured},
+  };
+
+  List<String> _strings(Object? v) => [
+    if (v is List)
+      for (final s in v)
+        if ('$s'.trim().isNotEmpty) '$s'.trim(),
+  ];
+
+  /// Apply what the remote admin sent; unknown or malformed parts are
+  /// skipped.
+  Future<void> applyRemote(Map<String, Object?> p) async {
+    final prefs = await _prefs();
+    if (p['tiles'] is List) {
+      final known = {for (final t in defaultHomeTiles) t.id};
+      final next = <HomeTileSpec>[
+        for (final t in p['tiles'] as List)
+          if (t is Map && known.contains(t['id']))
+            HomeTileSpec('${t['id']}', 1, 1).sized(
+              t['w'] is num ? (t['w'] as num).toInt() : 1,
+              t['h'] is num ? (t['h'] as num).toInt() : 1,
+            ),
+      ];
+      // Tiles the admin left out keep their place at the end.
+      for (final t in tiles.value) {
+        if (!next.any((n) => n.id == t.id)) next.add(t);
+      }
+      await setTiles(next);
+    }
+    if (p['hiddenTiles'] is List) {
+      hiddenTiles.value = _strings(p['hiddenTiles']).toSet();
+      await prefs.setStringList(_hiddenTilesKey, hiddenTiles.value.toList());
+    }
+    if (p['theme'] is String && themeIds.contains(p['theme'])) await setTheme(p['theme'] as String);
+    if (p['weatherEffects'] is bool) await setWeatherEffects(p['weatherEffects'] as bool);
+    if (p['favorites'] is List) {
+      favorites.value = _strings(p['favorites']);
+      await prefs.setStringList(_favoritesKey, favorites.value);
+    }
+    if (p['hiddenApps'] is List) {
+      hidden.value = _strings(p['hiddenApps']).toSet();
+      await prefs.setStringList(_hiddenKey, hidden.value.toList());
+    }
+    if (p['kidsApps'] is List) {
+      kidsApps.value = _strings(p['kidsApps']);
+      await prefs.setStringList(_kidsAppsKey, kidsApps.value);
+    }
+    if (p['school'] is Map) {
+      final merged = {...school.config.value.toJson(), ...(p['school'] as Map).cast<String, Object?>()};
+      await school.save(SchoolConfig.fromJson(merged));
+    }
+    if (p['photos'] is Map) {
+      final merged = {...photos.settings.value.toJson(), ...(p['photos'] as Map).cast<String, Object?>()};
+      await photos.save(PhotoSettings.fromJson(merged));
+    }
   }
 
   void goHome() {

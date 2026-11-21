@@ -20,7 +20,7 @@ test('browser English catalog matches the current source', () => {
   assert.deepEqual(catalogs.en, source);
 });
 
-test('English is the default and replaces the old automatic choice', () => {
+test('English is the default and replaces the old automatic choice', { skip: 'English-only build: the translation catalogs were removed (see docs/phoenix/PLAN.md)' }, () => {
   assert.equal(t('commonNext'), 'Next');
   setLanguagePreference('es');
   assert.equal(t('commonNext'), 'Siguiente');
@@ -47,7 +47,7 @@ test('setting localization preserves keys and values without changing the input'
   assert.deepEqual(localizeSetting(localized), localized);
 });
 
-test('explicit kiosk language overrides the browser while keeping native names', () => {
+test('explicit kiosk language overrides the browser while keeping native names', { skip: 'English-only build: the translation catalogs were removed (see docs/phoenix/PLAN.md)' }, () => {
   setLanguagePreference('es');
   const setting = { key: 'ui.language', value: 'es', title: 'Language',
     options: ['en', 'es'], optionLabels: { en: 'English', es: 'Español' } };
@@ -62,7 +62,7 @@ test('explicit kiosk language overrides the browser while keeping native names',
   assert.equal(t('commonNext'), 'Next');
 });
 
-test('changing language translates cached settings again without losing English aliases', () => {
+test('changing language translates cached settings again without losing English aliases', { skip: 'English-only build: the translation catalogs were removed (see docs/phoenix/PLAN.md)' }, () => {
   const original = { title: 'Device name', titleMessageId: 'settingDeviceNameTitle', value: 'Kitchen' };
   setLanguagePreference('es');
   const spanish = localizeSetting(original);
@@ -74,7 +74,7 @@ test('changing language translates cached settings again without losing English 
   assert.equal(english.value, 'Kitchen');
 });
 
-test('translated option labels and placeholders keep their stored values', () => {
+test('translated option labels and placeholders keep their stored values', { skip: 'English-only build: the translation catalogs were removed (see docs/phoenix/PLAN.md)' }, () => {
   const original = { key: 'ui.theme', options: ['dark', 'light', 'system'], value: 'system',
     optionLabels: { dark: 'Dark', light: 'Light', system: 'System' },
     optionMessageIds: { dark: 'drawerThemeDark', light: 'drawerThemeLight' },
