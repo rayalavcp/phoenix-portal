@@ -82,6 +82,19 @@ void main() {
     expect(kids.profile, 'family');
   });
 
+  test('Home closes a portal opened from the menu, never a locked one', () async {
+    now = DateTime(2026, 11, 21, 15, 0);
+    await build({});
+    expect(kids.closeIfFree(), isFalse); // nothing open
+    await commands.execute('openKids', const {});
+    expect(kids.closeIfFree(), isTrue);
+    expect(kids.screen.value, KidsScreen.hidden);
+    await commands.execute('setProfile', {'profile': 'kids'});
+    expect(kids.closeIfFree(), isFalse);
+    expect(kids.screen.value, KidsScreen.play);
+    expect(kids.profile, 'kids');
+  });
+
   test('the Kids profile locks the portal; leaving returns to Family', () async {
     now = DateTime(2026, 11, 21, 15, 0);
     await build({});

@@ -1,7 +1,7 @@
 # Phoenix Portal test build 2026.11.26 (369)
 
 - `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 95639665 bytes.
-  SHA-256 `12653852cc98f8528e7d9f07cb67c03546beef8242e6fb9462ed2f7d063c95b9`.
+  SHA-256 `4dc841acc35c5cbecfa5f2a18727ef71c4fb393868c5e66f04bfe9df7ba5ae2b`.
 - New: Phoenix Home launcher with live, resizable tiles and themes, weather
   in the background, the Telugu calendar, the School page (Miller
   Elementary, Frisco ISD menus and calendar), photos from Immich or a

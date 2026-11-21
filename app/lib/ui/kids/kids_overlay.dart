@@ -61,16 +61,16 @@ class _KidsGround extends StatelessWidget {
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: colors ?? const [Color(0xFF2B1B6B), Color(0xFF1A1340), Color(0xFF0F1115)],
+        colors: colors ?? const [Color(0xFF1E2140), Color(0xFF161933), Color(0xFF101220)],
       ),
     ),
     child: Stack(
       fit: StackFit.expand,
       children: [
         // Soft color glows, painted once: depth without any animation cost.
-        const _Glow(alignment: Alignment(-0.9, -0.8), color: Color(0x55F26A1B), size: 520),
-        const _Glow(alignment: Alignment(1.0, 0.9), color: Color(0x445B6CFF), size: 620),
-        const _Glow(alignment: Alignment(0.6, -1.1), color: Color(0x3352D69F), size: 420),
+        const _Glow(alignment: Alignment(-0.9, -0.8), color: Color(0x22F26A1B), size: 520),
+        const _Glow(alignment: Alignment(1.0, 0.9), color: Color(0x225B6CFF), size: 620),
+        const _Glow(alignment: Alignment(0.6, -1.1), color: Color(0x1552D69F), size: 420),
         child,
       ],
     ),
@@ -255,96 +255,130 @@ class _KidsHomeState extends State<_KidsHome> {
     ];
   }
 
+  /// The shelf on screen: one at a time keeps the hub calm.
+  String _shelf = 'Learn';
+
   Widget _home(BuildContext context) {
     final name = kids.childName;
     final apps = _apps;
     final challenge = dailyChallenge(DateTime.now());
+    final shelves = [..._shelves, if (apps.isNotEmpty) 'My apps'];
+    final shelf = shelves.contains(_shelf) ? _shelf : shelves.first;
+    final games = _games.where((g) => g.shelf == shelf).toList();
     return _KidsGround(
       key: const ValueKey('home'),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(28, 18, 0, 12),
+          padding: const EdgeInsets.fromLTRB(32, 22, 72, 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(right: 28),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            name.isEmpty ? 'Game time!' : 'Hey $name!',
-                            style: kidsText(40),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text('Pick a game. Earn stars. Beat your best.',
-                              style: kidsText(20, color: Colors.white70, weight: FontWeight.w700)),
-                        ],
+              // Home and the parent lock sit on the left: the right edge can
+              // be under the Portal's own floating menu.
+              Row(
+                children: [
+                  if (!kids.locked) ...[
+                    KidsBounce(
+                      onTap: () => kids.closeIfFree(),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.home_rounded, color: Colors.white, size: 26),
+                            const SizedBox(width: 6),
+                            Text('Home', style: kidsText(18)),
+                          ],
+                        ),
                       ),
                     ),
-                    const _StarsPill(),
-                    const SizedBox(width: 12),
-                    _TimeLeftPill(kids: kids),
-                    const SizedBox(width: 12),
-                    _ParentLock(container: widget.container),
+                    const SizedBox(width: 10),
                   ],
-                ),
+                  _ParentLock(container: widget.container),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      name.isEmpty ? 'Hi there!' : 'Hi $name!',
+                      style: kidsText(34),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const _StarsPill(),
+                  const SizedBox(width: 10),
+                  _TimeLeftPill(kids: kids),
+                ],
               ),
               const SizedBox(height: 14),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.only(right: 28, bottom: 12),
-                  children: [
-                    _ChallengeCard(
-                      challenge: challenge,
-                      onPlay: () {
-                        for (final g in _games) {
-                          if (g.bestKey == challenge.game) {
-                            setState(() => _game = g.game);
-                            return;
-                          }
-                        }
-                      },
+              _ChallengeCard(
+                challenge: challenge,
+                onPlay: () {
+                  for (final g in _games) {
+                    if (g.bestKey == challenge.game) {
+                      setState(() => _game = g.game);
+                      return;
+                    }
+                  }
+                },
+              ),
+              const SizedBox(height: 18),
+              // The shelves as quiet tabs.
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  for (final s in shelves)
+                    KidsBounce(
+                      onTap: () => setState(() => _shelf = s),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: s == shelf ? Colors.white : Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                        child: Text(
+                          s,
+                          style: kidsText(19, color: s == shelf ? const Color(0xFF1E2140) : Colors.white70),
+                        ),
+                      ),
                     ),
-                    if (apps.isNotEmpty) ...[
-                      const SizedBox(height: 18),
-                      Text('My apps', style: kidsText(26, weight: FontWeight.w800)),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        height: 128,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  child: shelf == 'My apps'
+                      ? GridView.builder(
+                          key: const ValueKey('My apps'),
+                          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 150,
+                            mainAxisExtent: 140,
+                            mainAxisSpacing: 14,
+                            crossAxisSpacing: 14,
+                          ),
                           itemCount: apps.length,
-                          separatorBuilder: (_, _) => const SizedBox(width: 14),
                           itemBuilder: (context, i) => _AppTile(container: widget.container, app: apps[i]),
+                        )
+                      : GridView.builder(
+                          key: ValueKey(shelf),
+                          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 260,
+                            mainAxisExtent: 150,
+                            mainAxisSpacing: 14,
+                            crossAxisSpacing: 14,
+                          ),
+                          itemCount: games.length,
+                          itemBuilder: (context, i) => _GameCard(
+                            info: games[i],
+                            onTap: () => setState(() => _game = games[i].game),
+                          ),
                         ),
-                      ),
-                    ],
-                    for (final shelf in _shelves) ...[
-                      const SizedBox(height: 18),
-                      Text(shelf, style: kidsText(26, weight: FontWeight.w800)),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        height: 210,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _games.where((g) => g.shelf == shelf).length,
-                          separatorBuilder: (_, _) => const SizedBox(width: 16),
-                          itemBuilder: (context, i) {
-                            final g = _games.where((g) => g.shelf == shelf).elementAt(i);
-                            return SizedBox(
-                              width: 280,
-                              child: _GameCard(info: g, onTap: () => setState(() => _game = g.game)),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ],
                 ),
               ),
             ],
@@ -356,6 +390,7 @@ class _KidsHomeState extends State<_KidsHome> {
 }
 
 /// Today's challenge: one game, one target, three bonus stars once won.
+/// A quiet line, not a banner.
 class _ChallengeCard extends StatelessWidget {
   const _ChallengeCard({required this.challenge, required this.onPlay});
   final DailyChallenge challenge;
@@ -371,37 +406,26 @@ class _ChallengeCard extends StatelessWidget {
         return KidsBounce(
           onTap: done ? null : onPlay,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(28),
-              gradient: LinearGradient(
-                colors: done
-                    ? const [Color(0xFF14A06B), Color(0xFF52D69F)]
-                    : const [Color(0xFFF5A623), Color(0xFFD42A1A)],
-              ),
+              color: Colors.white.withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
             ),
             child: Row(
               children: [
-                Icon(done ? Icons.emoji_events_rounded : Icons.bolt_rounded, color: Colors.white, size: 52),
-                const SizedBox(width: 16),
+                Icon(done ? Icons.emoji_events_rounded : Icons.wb_sunny_rounded,
+                    color: const Color(0xFFFFD27A), size: 28),
+                const SizedBox(width: 12),
+                Text(done ? 'Challenge done: ' : "Today's challenge: ",
+                    style: kidsText(18, color: Colors.white60, weight: FontWeight.w700)),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(done ? 'Challenge complete!' : "Today's challenge", style: kidsText(18, color: Colors.white70)),
-                      Text(challenge.text, style: kidsText(28)),
-                    ],
-                  ),
+                  child: Text(challenge.text, maxLines: 1, overflow: TextOverflow.ellipsis, style: kidsText(18)),
                 ),
-                Row(
-                  children: [
-                    for (var i = 0; i < 3; i++)
-                      Icon(Icons.star_rounded, color: done ? const Color(0xFFFFD27A) : Colors.white54, size: 34),
-                  ],
-                ),
+                Text(done ? '+3 stars' : '3 stars', style: kidsText(16, color: const Color(0xFFFFD27A))),
                 if (!done) ...[
-                  const SizedBox(width: 12),
-                  KidsButton('Play', icon: Icons.play_arrow_rounded, onTap: onPlay, size: 22),
+                  const SizedBox(width: 10),
+                  const Icon(Icons.chevron_right_rounded, color: Colors.white60),
                 ],
               ],
             ),
@@ -418,66 +442,48 @@ class _GameCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => KidsBounce(
-    onTap: onTap,
-    child: Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
-        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: info.colors),
-        boxShadow: [BoxShadow(color: info.colors.last.withValues(alpha: 0.35), blurRadius: 22, offset: const Offset(0, 10))],
-      ),
-      child: Stack(
-        children: [
-          // A big faint glyph in the corner gives each card its own art.
-          Positioned(
-            right: -18,
-            bottom: -18,
-            child: Icon(info.icon, size: 170, color: Colors.white.withValues(alpha: 0.12)),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(22, 20, 20, 18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.22),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 2),
+  Widget build(BuildContext context) {
+    // The game's colour as a soft tint on the dark ground: calm, but each
+    // game still has its own hue.
+    final tint = Color.lerp(info.colors.first, const Color(0xFF1E2140), 0.62)!;
+    final accent = Color.lerp(info.colors.first, Colors.white, 0.35)!;
+    return KidsBounce(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(18, 16, 16, 14),
+        decoration: BoxDecoration(
+          color: tint,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(info.icon, color: accent, size: 34),
+            const Spacer(),
+            Text(info.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: kidsText(22)),
+            const SizedBox(height: 2),
+            if (info.bestKey != null)
+              ValueListenableBuilder<int>(
+                valueListenable: KidsScores.changes,
+                builder: (context, _, _) => FutureBuilder<int?>(
+                  future: KidsScores.best(info.bestKey!),
+                  builder: (context, snap) => Text(
+                    snap.data == null ? info.pitch : info.bestText!(snap.data!),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: kidsText(15, color: Colors.white60, weight: FontWeight.w700),
                   ),
-                  child: Icon(info.icon, color: Colors.white, size: 40),
                 ),
-                const Spacer(),
-                FittedBox(fit: BoxFit.scaleDown, child: Text(info.title, style: kidsText(32))),
-                Text(info.pitch, maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: kidsText(17, color: Colors.white.withValues(alpha: 0.85), weight: FontWeight.w700)),
-                const SizedBox(height: 10),
-                if (info.bestKey != null)
-                  ValueListenableBuilder<int>(
-                    valueListenable: KidsScores.changes,
-                    builder: (context, _, _) => FutureBuilder<int?>(
-                      future: KidsScores.best(info.bestKey!),
-                      builder: (context, snap) => Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                        decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.22), borderRadius: BorderRadius.circular(14)),
-                        child: Text(
-                          snap.data == null ? 'New!' : info.bestText!(snap.data!),
-                          style: kidsText(15, weight: FontWeight.w800),
-                        ),
-                      ),
-                    ),
-                  )
-                else
-                  const SizedBox(height: 26),
-              ],
-            ),
-          ),
-        ],
+              )
+            else
+              Text(info.pitch, maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: kidsText(15, color: Colors.white60, weight: FontWeight.w700)),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _StarsPill extends StatelessWidget {

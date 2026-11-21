@@ -186,6 +186,16 @@ class KidsManager extends Manager {
   }
 
   /// Leave the portal: a locked profile goes back to Family.
+  /// Home and Back close a Kids Portal that was opened from the menu. A
+  /// locked one (the Kids or Night profile) stays: leaving it takes the
+  /// parent lock.
+  bool closeIfFree() {
+    if (locked || screen.value == KidsScreen.hidden) return false;
+    _openedByMenu = false;
+    _evaluate();
+    return true;
+  }
+
   Future<void> leave() async {
     _openedByMenu = false;
     if (locked) {

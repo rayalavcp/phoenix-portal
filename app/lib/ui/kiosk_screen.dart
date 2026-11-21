@@ -295,6 +295,9 @@ class _KioskScreenState extends State<KioskScreen>
     // so back first takes it out, as Back does in a browser. Anything else
     // would act on what cannot be seen (issue #1461).
     if (c.browser.exitPageFullscreen('back')) return;
+    // An open (unlocked) Kids Portal closes first; a locked one keeps back
+    // to itself.
+    if (_drawer.value == 0 && c.kids.closeIfFree()) return;
     // The views layer draws over every page and view, so one of its
     // overlays closes before the page under it.
     final overViews = _navView.viewsLayerHidden.value || c.kiosk.lockdownActive
@@ -1027,6 +1030,7 @@ class _KioskScreenState extends State<KioskScreen>
       if (!mounted) return;
       if (_drawer.value > 0) _closeDrawer();
       c.phoenixHome.goHome();
+      c.kids.closeIfFree();
       if (_settingsOpen) Navigator.of(context).popUntil((r) => r.isFirst);
       c.launcher.visible.value = false;
       c.intercom.rosterVisible.value = false;
