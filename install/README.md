@@ -1,13 +1,22 @@
-# Phoenix Portal test build 2026.11.26 (369)
+# Phoenix Portal test build 2026.11.27 (370)
 
-- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 95639665 bytes.
-  SHA-256 `4dc841acc35c5cbecfa5f2a18727ef71c4fb393868c5e66f04bfe9df7ba5ae2b`.
-- New: Phoenix Home launcher with live, resizable tiles and themes, weather
-  in the background, the Telugu calendar, the School page (Miller
-  Elementary, Frisco ISD menus and calendar), photos from Immich or a
-  network folder with the photo frame screensaver, more Kids Portal
-  activities with levels, and a Phoenix Home page in the remote admin.
-- Signed with the same **debug key** as the 2026.11.24 and 2026.11.25 test
+- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 95771677 bytes.
+  SHA-256 `5b0a66d341bb336dca634953d6f15b7907781dca0ca30b8b61869248944eca3d`.
+- New in this build:
+  - **Today home screen** (the new default): a greeting, the next festival
+    and the moon phase up top; glass cards over the daily landscape photo
+    with weather effects (clock and 5-day forecast, photos, Up next,
+    front door camera or favourite apps, school, Telugu word of the day);
+    one row of big buttons along the bottom. The old tile grid is still
+    there: Customize (the sliders button) > Layout > Tiles.
+  - **School menus from SchoolCafe** (where Frisco ISD posts them). Set the
+    SchoolCafe school ID once: School > the gear, or the remote admin's
+    Phoenix Home > School. The school calendar can be a Home Assistant
+    calendar (for example `calendar.frisco_isd`) or an iCal link.
+  - **No more Home Assistant after a reboot**: the installer turns on
+    Start on boot and offers to stop other apps (such as Portal HA Bridge)
+    from opening themselves at boot. Those apps stay installed.
+- Signed with the same **debug key** as the 2026.11.24 to 2026.11.26 test
   builds, so it installs over them with `adb install -r` and keeps the
   settings. Over the original release-signed build it needs
   `adb uninstall com.phoenix.portal` first (that resets the app's
