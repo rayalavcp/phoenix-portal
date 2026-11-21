@@ -1,11 +1,13 @@
-# Phoenix Portal test build 2026.11.24 (367)
+# Phoenix Portal test build 2026.11.25 (368)
 
-- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 94909618 bytes.
-  SHA-256 `76c8d7ea51b8b4e72b2ff23e6ae289af34d9c47c7b5790a2fed27d028aa1fd4c`.
-- Signed with a **debug key**, not the Phoenix release key. Installing it over
-  the earlier release-signed test build needs `adb uninstall com.phoenix.portal`
-  first (that resets the app's settings).
-- Setup script: `provisioning/phoenix-provision.sh` on this branch (it now
-  also turns on the App Launcher).
+- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 95323322 bytes.
+  SHA-256 `49f74954edda97a8cd5cb2323b21958ec63c47efe49ff7fb54e214984d6da5eb`.
+- New: Phoenix Home launcher (Home Assistant optional), School menus and
+  calendar, 13 more Kids Portal activities and a daily challenge.
+- Signed with the same **debug key** as the 2026.11.24 test build, so it
+  installs over that one with `adb install -r`. Over the earlier
+  release-signed build it needs `adb uninstall com.phoenix.portal` first
+  (that resets the app's settings).
+- Setup script: `provisioning/phoenix-provision.sh` on this branch.
 
 Remove this folder before merging the branch.
