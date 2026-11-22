@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 import '../../app_container.dart';
@@ -13,7 +11,9 @@ import '../../managers/home/school_service.dart';
 import '../../managers/home/telugu_words.dart';
 import '../theme.dart';
 import '../toast.dart';
+import '../settings_screen.dart' show pickDrawerMenuItems;
 import 'home_glass.dart';
+import 'live_cameras.dart';
 import 'home_themes.dart';
 import 'phoenix_home.dart' show weatherIcon, weatherWords;
 import 'photo_frame.dart';
@@ -87,7 +87,7 @@ class _TodayHomeState extends State<TodayHome> {
   Widget build(BuildContext context) {
     final home = c.phoenixHome;
     return ListenableBuilder(
-      listenable: Listenable.merge([home.weather, home.weatherEffects, home.weatherDemo, home.cameraEntity, home.glassOpacity]),
+      listenable: Listenable.merge([home.weather, home.weatherEffects, home.weatherDemo, home.cameraEntities, home.glassOpacity]),
       builder: (context, _) {
         final w = home.weather.value;
         final demo = home.weatherDemo.value;
@@ -183,10 +183,10 @@ class _TodayHomeState extends State<TodayHome> {
                               children: [
                                 _Hero(container: c, now: _now, big: false),
                                 const SizedBox(height: 18),
-                                if (home.cameraEntity.value.isNotEmpty && home.homeAssistantConfigured) ...[
+                                if (home.cameraEntities.value.isNotEmpty && home.homeAssistantConfigured) ...[
                                   SizedBox(
                                     height: 220,
-                                    child: _CameraCard(key: ValueKey(home.cameraEntity.value), container: c, entity: home.cameraEntity.value),
+                                    child: LiveCamerasCard(key: ValueKey(home.cameraEntities.value.join(',')), container: c, entities: home.cameraEntities.value),
                                   ),
                                   const SizedBox(height: 12),
                                 ],
@@ -504,7 +504,7 @@ class _GlanceColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final home = container.phoenixHome;
-    final camera = home.cameraEntity.value.isNotEmpty && home.homeAssistantConfigured;
+    final camera = home.cameraEntities.value.isNotEmpty && home.homeAssistantConfigured;
     const gap = SizedBox(height: 12);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -512,7 +512,7 @@ class _GlanceColumn extends StatelessWidget {
         if (camera) ...[
           Expanded(
             flex: 4,
-            child: _CameraCard(key: ValueKey(home.cameraEntity.value), container: container, entity: home.cameraEntity.value),
+            child: LiveCamerasCard(key: ValueKey(home.cameraEntities.value.join(',')), container: container, entities: home.cameraEntities.value),
           ),
           gap,
         ],
@@ -668,118 +668,6 @@ class _UpNextCardState extends State<_UpNextCard> {
 }
 
 // Camera -----------------------------------------------------------------
-
-class _CameraCard extends StatefulWidget {
-  const _CameraCard({super.key, required this.container, required this.entity});
-
-  final AppContainer container;
-  final String entity;
-
-  @override
-  State<_CameraCard> createState() => _CameraCardState();
-}
-
-class _CameraCardState extends State<_CameraCard> {
-  Uint8List? _frame;
-  DateTime? _at;
-  bool _failed = false;
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    unawaited(_grab());
-    _timer = Timer.periodic(const Duration(seconds: 10), (_) => unawaited(_grab()));
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  Future<void> _grab() async {
-    final auth = widget.container.phoenixHome.homeAssistantAuth;
-    final base = auth.base.trim().replaceFirst(RegExp(r'/+$'), '');
-    if (base.isEmpty || auth.token.isEmpty) return;
-    try {
-      final res = await http
-          .get(Uri.parse('$base/api/camera_proxy/${widget.entity}'), headers: {'Authorization': 'Bearer ${auth.token}'})
-          .timeout(const Duration(seconds: 8));
-      if (!mounted) return;
-      if (res.statusCode == 200 && res.bodyBytes.isNotEmpty) {
-        setState(() {
-          _frame = res.bodyBytes;
-          _at = DateTime.now();
-          _failed = false;
-        });
-      } else {
-        setState(() => _failed = true);
-      }
-    } catch (_) {
-      if (mounted) setState(() => _failed = true);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final name = widget.entity.split('.').last.replaceAll('_', ' ');
-    final label = name.isEmpty ? 'Camera' : name[0].toUpperCase() + name.substring(1);
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: GestureDetector(
-        onTap: () {
-          final cam = widget.container.camera;
-          if (cam.config.defaultView case final view?) {
-            cam.showView(view.id);
-          } else {
-            unawaited(_grab());
-          }
-        },
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            const ColoredBox(color: Color(0x66000000)),
-            if (_frame != null) Image.memory(_frame!, fit: BoxFit.cover, gaplessPlayback: true, errorBuilder: (_, _, _) => const SizedBox.shrink()),
-            if (_frame == null) Center(child: Icon(_failed ? Icons.videocam_off_rounded : Icons.videocam_rounded, color: Colors.white38, size: 40)),
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0x88000000), Colors.transparent],
-                  stops: [0, 0.45],
-                ),
-              ),
-            ),
-            Positioned(
-              left: 14,
-              top: 10,
-              right: 14,
-              child: Row(
-                children: [
-                  Container(
-                    width: 9,
-                    height: 9,
-                    decoration: BoxDecoration(color: _failed ? Colors.white38 : Colors.redAccent, shape: BoxShape.circle),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      label,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14.5),
-                    ),
-                  ),
-                  if (_at != null) Text(DateFormat.jms().format(_at!), style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 // School -----------------------------------------------------------------
 
@@ -1100,7 +988,8 @@ class _Dock extends StatelessWidget {
 /// colours and the camera.
 Future<void> showTodaySetup(BuildContext context, AppContainer c) {
   final home = c.phoenixHome;
-  final camera = TextEditingController(text: home.cameraEntity.value);
+  final camera = TextEditingController(text: home.cameraEntities.value.join(', '));
+  final trigger = TextEditingController(text: home.doorbellTrigger.value);
   final link = TextEditingController(text: home.wallpaperUrl.value);
   final haPage = TextEditingController(text: home.smartHomePage);
   Widget heading(String text) => Padding(
@@ -1208,10 +1097,61 @@ Future<void> showTodaySetup(BuildContext context, AppContainer c) {
                       helperText: 'Your dashboard or your own HTML page in Home Assistant.',
                     ),
                   ),
-                heading('Front door camera (optional)'),
+                heading('Cameras (live, from Home Assistant)'),
                 TextField(
                   controller: camera,
-                  decoration: const InputDecoration(hintText: 'camera.front_door', helperText: 'A Home Assistant camera, shown on the right.'),
+                  decoration: const InputDecoration(
+                    hintText: 'camera.front_door, camera.driveway',
+                    helperText: 'In order, doorbell first. Swipe across the camera card to go between them.',
+                    helperMaxLines: 2,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                _FindCameras(container: c, onPicked: (list) => camera.text = list.join(', ')),
+                heading('Doorbell'),
+                TextField(
+                  controller: trigger,
+                  decoration: const InputDecoration(
+                    labelText: 'When this Home Assistant entity rings',
+                    hintText: 'binary_sensor.front_door_ding or event.front_door_ding',
+                    helperText: 'The screen wakes and shows the first camera live, full screen.',
+                    helperMaxLines: 2,
+                  ),
+                ),
+                ValueListenableBuilder<int>(
+                  valueListenable: home.doorbellSeconds,
+                  builder: (context, secs, _) => Row(
+                    children: [
+                      Text('Show for $secs s'),
+                      Expanded(
+                        child: Slider(
+                          value: secs.toDouble(),
+                          min: 10,
+                          max: 120,
+                          divisions: 11,
+                          label: '$secs s',
+                          onChanged: (v) => home.doorbellSeconds.value = v.round(),
+                          onChangeEnd: (v) => unawaited(home.setDoorbell(seconds: v.round())),
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () async {
+                          await home.setCameraEntity(camera.text);
+                          await home.setDoorbell(trigger: trigger.text);
+                          if (dialog.mounted) Navigator.pop(dialog);
+                          await home.ringDoorbell();
+                        },
+                        icon: const Icon(Icons.doorbell_rounded),
+                        label: const Text('Test'),
+                      ),
+                    ],
+                  ),
+                ),
+                heading('Menu'),
+                OutlinedButton.icon(
+                  onPressed: () => unawaited(pickDrawerMenuItems(dialog, c)),
+                  icon: const Icon(Icons.checklist_rounded),
+                  label: const Text('Choose the menu items (swipe in from the left)'),
                 ),
                 heading('Layout'),
                 SegmentedButton<String>(
@@ -1239,6 +1179,7 @@ Future<void> showTodaySetup(BuildContext context, AppContainer c) {
           FilledButton(
             onPressed: () {
               unawaited(home.setCameraEntity(camera.text));
+              unawaited(home.setDoorbell(trigger: trigger.text));
               if (home.smartHomeTarget.value == 'ha') unawaited(home.setSmartHomeTarget('ha', page: haPage.text));
               Navigator.pop(dialog);
             },
@@ -1249,6 +1190,7 @@ Future<void> showTodaySetup(BuildContext context, AppContainer c) {
     ),
   ).whenComplete(() {
     camera.dispose();
+    trigger.dispose();
     link.dispose();
     haPage.dispose();
   });
@@ -1398,6 +1340,73 @@ class _WallpaperPickerState extends State<WallpaperPicker> {
           ],
         );
       },
+    );
+  }
+}
+
+
+/// "Find my cameras": imports the Home Assistant cameras into the app's
+/// camera setup and lets the parent tick which go on the card.
+class _FindCameras extends StatefulWidget {
+  const _FindCameras({required this.container, required this.onPicked});
+  final AppContainer container;
+  final ValueChanged<List<String>> onPicked;
+
+  @override
+  State<_FindCameras> createState() => _FindCamerasState();
+}
+
+class _FindCamerasState extends State<_FindCameras> {
+  List<(String, String)>? _found;
+  final _picked = <String>[];
+  bool _busy = false;
+  String? _problem;
+
+  Future<void> _find() async {
+    setState(() {
+      _busy = true;
+      _problem = null;
+    });
+    try {
+      final found = await homeAssistantCameras(widget.container);
+      _picked
+        ..clear()
+        ..addAll(widget.container.phoenixHome.cameraEntities.value.where((e) => found.any((f) => f.$1 == e)));
+      setState(() => _found = found);
+      if (found.isEmpty) setState(() => _problem = 'No cameras found in Home Assistant');
+    } catch (e) {
+      setState(() => _problem = "Couldn't read Home Assistant: $e");
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final found = _found;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        OutlinedButton.icon(
+          onPressed: _busy ? null : () => unawaited(_find()),
+          icon: const Icon(Icons.videocam_rounded),
+          label: Text(_busy ? 'Looking…' : 'Find my Home Assistant cameras'),
+        ),
+        if (_problem != null) Padding(padding: const EdgeInsets.only(top: 6), child: Text(_problem!)),
+        if (found != null)
+          for (final (entity, name) in found)
+            CheckboxListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              value: _picked.contains(entity),
+              title: Text(name.isEmpty ? cameraLabel(entity) : name),
+              subtitle: Text(_picked.contains(entity) ? '$entity · #${_picked.indexOf(entity) + 1}' : entity),
+              onChanged: (on) {
+                setState(() => on == true ? _picked.add(entity) : _picked.remove(entity));
+                widget.onPicked(List.of(_picked));
+              },
+            ),
+      ],
     );
   }
 }

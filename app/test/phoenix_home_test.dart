@@ -180,6 +180,34 @@ void main() {
       expect(home.layout.value, 'today');
     });
 
+    test('cameras, doorbell and menu items from the admin portal', () async {
+      final home = c.phoenixHome;
+      await home.applyRemote({
+        'cameras': ['camera.front_door', ' camera.driveway ', 'not_a_camera', 'camera.front_door'],
+        'doorbell': {'trigger': 'binary_sensor.front_door_ding', 'seconds': 45},
+      });
+      final state = home.remoteState();
+      expect(state['cameras'], ['camera.front_door', 'camera.driveway']);
+      expect(state['camera'], 'camera.front_door');
+      expect((state['doorbell'] as Map)['trigger'], 'binary_sensor.front_door_ding');
+      expect((state['doorbell'] as Map)['seconds'], 45);
+      expect(state.containsKey('menuItems'), isTrue);
+      // The old single camera still works.
+      await home.applyRemote({'camera': 'camera.porch'});
+      expect(home.cameraEntities.value, ['camera.porch']);
+      // No camera set up in this test: the ring says so instead of failing loud.
+      await home.applyRemote({'cameras': <String>[]});
+      expect((await home.ringDoorbell()).ok, isFalse);
+    });
+
+    test('what counts as a doorbell ring', () {
+      expect(isDoorbellRing('binary_sensor.front_door_ding', 'on'), isTrue);
+      expect(isDoorbellRing('binary_sensor.front_door_ding', 'off'), isFalse);
+      expect(isDoorbellRing('event.front_door_ding', '2026-11-22T10:00:00.000+00:00'), isTrue);
+      expect(isDoorbellRing('event.front_door_ding', 'unavailable'), isFalse);
+      expect(isDoorbellRing('button.doorbell', 'unknown'), isFalse);
+    });
+
     test('Kids Portal settings from the admin portal', () async {
       final home = c.phoenixHome;
       SharedPreferences.setMockInitialValues({'phx.kids.best.math': 12, 'phx.kids.stars': '2026-11-22:5', 'other': 1});

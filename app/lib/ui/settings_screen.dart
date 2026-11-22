@@ -14004,3 +14004,28 @@ class _WakeToScreensaverRow extends StatelessWidget {
     );
   }
 }
+
+
+/// The drawer menu's items picker (Settings > Device > Drawer menu items),
+/// for other screens: what the menu shows when it slides in from the left,
+/// and in what order.
+Future<void> pickDrawerMenuItems(BuildContext context, AppContainer c) async {
+  final spec = drawerItemSpec(context, c);
+  final items = DrawerItems.decode(c.settings.get(uiDrawerItems));
+  final all = [
+    for (final action in drawerPluginActions(c)) drawerPluginItem('${action['pluginId']}', '${action['command']}'),
+    ...drawerItemOrder,
+  ];
+  final ids = await showItemMultiPicker(context, title: uiDrawerItems.localizedTitle(context), spec: spec, selected: items.arrange(all));
+  if (ids == null) return;
+  await c.settings.setFromJson(
+    uiDrawerItems.key,
+    DrawerItems(
+      shown: ids,
+      hidden: {
+        for (final id in all)
+          if (!ids.contains(id)) id,
+      },
+    ).encode(),
+  );
+}

@@ -377,8 +377,27 @@ class PhoenixHomeManager extends Manager {
   /// resizable tile grid.
   final layout = ValueNotifier<String>('today');
 
-  /// The home camera (a Home Assistant camera entity) for the Today screen.
+  /// The home camera (a Home Assistant camera entity) for the Today screen:
+  /// the first of [cameraEntities].
   final cameraEntity = ValueNotifier<String>('');
+
+  /// The Home Assistant cameras on the Today screen's camera card, in order
+  /// (the doorbell first); swipe across the card to go between them.
+  final cameraEntities = ValueNotifier<List<String>>(const []);
+
+  Future<void> setCameraEntities(List<String> entities) async {
+    final clean = <String>[
+      for (final e in entities)
+        if (e.trim().startsWith('camera.')) e.trim(),
+    ];
+    final seen = <String>{};
+    clean.retainWhere(seen.add);
+    cameraEntities.value = List.unmodifiable(clean);
+    cameraEntity.value = clean.firstOrNull ?? '';
+    final prefs = await _prefs();
+    await prefs.setStringList(_camerasKey, clean);
+    await prefs.setString(_cameraKey, cameraEntity.value);
+  }
 
   /// The wallpaper behind the Today screen, already downloaded.
   final backdrop = ValueNotifier<Uint8List?>(null);
@@ -426,10 +445,126 @@ class PhoenixHomeManager extends Manager {
     await (await _prefs()).setString(_layoutKey, layout.value);
   }
 
-  Future<void> setCameraEntity(String entity) async {
-    cameraEntity.value = entity.trim();
-    await (await _prefs()).setString(_cameraKey, cameraEntity.value);
+  /// The Home Assistant entity that changes when someone rings the doorbell
+  /// (a ding binary sensor, an event entity or a button); empty for none.
+  final doorbellTrigger = ValueNotifier<String>('');
+
+  /// The camera shown when it rings; empty means the first of
+  /// [cameraEntities].
+  final doorbellCamera = ValueNotifier<String>('');
+
+  /// How long the live doorbell feed stays on screen.
+  final doorbellSeconds = ValueNotifier<int>(30);
+
+  GlanceSubscription? _doorbellSub;
+  Timer? _doorbellRetry;
+  Timer? _doorbellHide;
+  String? _doorbellLast;
+
+  Future<void> setDoorbell({String? trigger, String? camera, int? seconds}) async {
+    final prefs = await _prefs();
+    if (trigger != null) {
+      doorbellTrigger.value = trigger.trim();
+      await prefs.setString(_doorbellTriggerKey, doorbellTrigger.value);
+    }
+    if (camera != null) {
+      doorbellCamera.value = camera.trim();
+      await prefs.setString(_doorbellCameraKey, doorbellCamera.value);
+    }
+    if (seconds != null) {
+      doorbellSeconds.value = seconds.clamp(10, 300);
+      await prefs.setInt(_doorbellSecondsKey, doorbellSeconds.value);
+    }
+    unawaited(_watchDoorbell());
   }
+
+  /// Follows the doorbell entity over Home Assistant's websocket, and
+  /// reconnects a minute after the connection drops.
+  Future<void> _watchDoorbell() async {
+    _doorbellRetry?.cancel();
+    final old = _doorbellSub;
+    _doorbellSub = null;
+    await old?.close();
+    _doorbellLast = null;
+    final trigger = doorbellTrigger.value;
+    if (trigger.isEmpty || !_homeAssistant.configured) return;
+    final sub = await _homeAssistant.subscribeEntities([trigger], (id, state) {
+      final value = '${state['state'] ?? ''}';
+      final seen = _doorbellLast;
+      _doorbellLast = value;
+      // The first report is how things stand, not a ring.
+      if (seen == null || value == seen) return;
+      if (isDoorbellRing(trigger, value)) unawaited(ringDoorbell());
+    });
+    if (sub == null) {
+      _doorbellRetry = Timer(const Duration(minutes: 1), () => unawaited(_watchDoorbell()));
+      return;
+    }
+    _doorbellSub = sub;
+    sub.onClosed = () {
+      if (identical(_doorbellSub, sub)) {
+        _doorbellRetry = Timer(const Duration(seconds: 30), () => unawaited(_watchDoorbell()));
+      }
+    };
+  }
+
+  /// Someone rang: wake the screen and show the doorbell camera live, full
+  /// screen, then close it after [doorbellSeconds].
+  Future<CommandResult> ringDoorbell() async {
+    final entity = doorbellCamera.value.isNotEmpty ? doorbellCamera.value : cameraEntities.value.firstOrNull;
+    if (entity == null || entity.isEmpty) return const CommandResult.fail('no doorbell camera chosen');
+    final viewId = await _liveViewFor(entity);
+    if (viewId == null) return const CommandResult.fail('could not set up the camera');
+    await commands.execute('screenOn', const {});
+    await commands.execute('bringToFront', const {});
+    final shown = await commands.execute('showCameraView', {'viewId': viewId});
+    if (!shown.ok) return shown;
+    _doorbellHide?.cancel();
+    _doorbellHide = Timer(Duration(seconds: doorbellSeconds.value), () {
+      unawaited(commands.execute('hideCameraView', const {}));
+    });
+    return const CommandResult.ok();
+  }
+
+  /// A one-camera view of [entity] in the app's camera setup (importing the
+  /// Home Assistant cameras first when needed): its id.
+  Future<String?> _liveViewFor(String entity) async {
+    Future<Map?> config() async {
+      final r = await commands.execute('cameraGetConfig', const {});
+      return r.ok && r.data is Map ? r.data as Map : null;
+    }
+
+    String? sourceId(Map? cfg) {
+      for (final cam in (cfg?['cameras'] as List?) ?? const []) {
+        if (cam is Map && cam['kind'] == 'ha' && cam['entityId'] == entity) return '${cam['id']}';
+      }
+      return null;
+    }
+
+    var cfg = await config();
+    var source = sourceId(cfg);
+    if (source == null) {
+      await commands.execute('cameraImportHomeAssistant', const {});
+      cfg = await config();
+      source = sourceId(cfg);
+    }
+    if (source == null) return null;
+    for (final v in (cfg?['views'] as List?) ?? const []) {
+      if (v is Map && v['cameraIds'] is List && (v['cameraIds'] as List).length == 1 && (v['cameraIds'] as List).first == source) {
+        return '${v['id']}';
+      }
+    }
+    final made = await commands.execute('cameraPutView', {
+      'id': '',
+      'name': '${entity.split('.').last.replaceAll('_', ' ')} (live)',
+      'cameraIds': [source],
+      'showCameraNames': false,
+    });
+    return made.ok && made.data is Map ? '${(made.data as Map)['id']}' : null;
+  }
+
+  Future<void> setCameraEntity(String entity) =>
+      setCameraEntities(entity.split(RegExp(r'[,\s]+')));
 
   /// Home Assistant's address and token, for camera snapshots.
   ({String base, String token}) get homeAssistantAuth =>
@@ -648,6 +783,10 @@ class PhoenixHomeManager extends Manager {
   static const _weatherFxKey = 'phx.home.weather_fx';
   static const _layoutKey = 'phx.home.layout';
   static const _cameraKey = 'phx.home.camera';
+  static const _camerasKey = 'phx.home.cameras';
+  static const _doorbellTriggerKey = 'phx.home.doorbell_trigger';
+  static const _doorbellCameraKey = 'phx.home.doorbell_camera';
+  static const _doorbellSecondsKey = 'phx.home.doorbell_seconds';
   static const _wallpaperKey = 'phx.home.wallpaper';
   static const _smartTargetKey = 'phx.home.smart_target';
   static const _glassKey = 'phx.home.glass';
@@ -666,6 +805,7 @@ class PhoenixHomeManager extends Manager {
     await _load();
     await school.init();
     await photos.init();
+    unawaited(_watchDoorbell());
     unawaited(school.refresh());
     _settingSub = bus.on<SettingChanged>().listen((e) {
       if (e.key == defs.homeWeatherCity.key ||
@@ -691,6 +831,16 @@ class PhoenixHomeManager extends Manager {
     });
     unawaited(_launcher.refreshInstalled());
     commands
+      ..register(
+        Command(
+          name: 'phoenixDoorbell',
+          description:
+              'Someone rang: wake the screen and show the doorbell camera live '
+              'for a while (Phoenix Home > Doorbell). For a Home Assistant '
+              'automation when the doorbell has no entity to watch.',
+          handler: (_) => ringDoorbell(),
+        ),
+      )
       ..register(
         Command(
           name: 'openHome',
@@ -814,6 +964,9 @@ class PhoenixHomeManager extends Manager {
     'weatherEffects': weatherEffects.value,
     'layout': layout.value,
     'camera': cameraEntity.value,
+    'cameras': cameraEntities.value,
+    'doorbell': {'trigger': doorbellTrigger.value, 'camera': doorbellCamera.value, 'seconds': doorbellSeconds.value},
+    'menuItems': _settings.get(defs.uiDrawerItems),
     'wallpaper': wallpaper.value,
     'smartHome': smartHomeTarget.value,
     'glass': glassOpacity.value,
@@ -871,7 +1024,19 @@ class PhoenixHomeManager extends Manager {
     if (p['theme'] is String && themeIds.contains(p['theme'])) await setTheme(p['theme'] as String);
     if (p['weatherEffects'] is bool) await setWeatherEffects(p['weatherEffects'] as bool);
     if (p['layout'] is String) await setLayout(p['layout'] as String);
-    if (p['camera'] is String) await setCameraEntity(p['camera'] as String);
+    if (p['doorbell'] is Map) {
+      final d = (p['doorbell'] as Map).cast<String, Object?>();
+      await setDoorbell(
+        trigger: d['trigger'] is String ? d['trigger'] as String : null,
+        camera: d['camera'] is String ? d['camera'] as String : null,
+        seconds: d['seconds'] is num ? (d['seconds'] as num).toInt() : null,
+      );
+    }
+    if (p['cameras'] is List) {
+      await setCameraEntities([for (final e in p['cameras'] as List) '$e']);
+    } else if (p['camera'] is String) {
+      await setCameraEntity(p['camera'] as String);
+    }
     if (p['glass'] is num) await setGlassOpacity((p['glass'] as num).toDouble());
     if (p['smartHome'] is String || p['smartHomePage'] is String) {
       await setSmartHomeTarget(
@@ -1276,6 +1441,12 @@ class PhoenixHomeManager extends Manager {
     weatherEffects.value = prefs.getBool(_weatherFxKey) ?? true;
     layout.value = prefs.getString(_layoutKey) == 'tiles' ? 'tiles' : 'today';
     cameraEntity.value = prefs.getString(_cameraKey) ?? '';
+    doorbellTrigger.value = prefs.getString(_doorbellTriggerKey) ?? '';
+    doorbellCamera.value = prefs.getString(_doorbellCameraKey) ?? '';
+    doorbellSeconds.value = (prefs.getInt(_doorbellSecondsKey) ?? 30).clamp(10, 300);
+    cameraEntities.value = List.unmodifiable(
+      prefs.getStringList(_camerasKey) ?? [if (cameraEntity.value.isNotEmpty) cameraEntity.value],
+    );
     final savedWall = prefs.getString(_wallpaperKey) ?? '';
     wallpaper.value = _validWallpaper(savedWall) ? savedWall : 'builtin';
     glassOpacity.value = (prefs.getDouble(_glassKey) ?? 0.35).clamp(0.0, 1.0);
@@ -1311,6 +1482,13 @@ class PhoenixHomeManager extends Manager {
     weatherEffects.dispose();
     layout.dispose();
     cameraEntity.dispose();
+    cameraEntities.dispose();
+    _doorbellRetry?.cancel();
+    _doorbellHide?.cancel();
+    unawaited(_doorbellSub?.close());
+    doorbellTrigger.dispose();
+    doorbellCamera.dispose();
+    doorbellSeconds.dispose();
     backdrop.dispose();
     wallpaper.dispose();
     smartHomeTarget.dispose();
@@ -1426,4 +1604,16 @@ HomeWeather? parseOpenMeteo(
     days: days,
     fahrenheit: fahrenheit,
   );
+}
+
+/// Whether [state] of the doorbell entity [trigger] means a ring: a binary
+/// sensor or input boolean turning on, an event or button entity firing (its
+/// state is the time it fired), anything else changing to something real.
+bool isDoorbellRing(String trigger, String state) {
+  final domain = trigger.split('.').first;
+  if (state == 'unavailable' || state == 'unknown' || state.isEmpty) return false;
+  return switch (domain) {
+    'binary_sensor' || 'input_boolean' || 'switch' => state == 'on',
+    _ => true,
+  };
 }

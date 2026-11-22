@@ -4,6 +4,7 @@
 // own rows (home screen, weather location, temperature unit) render above.
 import { api, cmd } from './core.js';
 import { showToast } from './widgets.js';
+import { openDrawerItemsPicker } from './drawer_items.js';
 
 const TILE_NAMES = {
   telugu: 'Telugu calendar', kids: 'Kids Portal', photos: 'Photos', school: 'School', apps: 'All apps',
@@ -103,7 +104,10 @@ function tilesSection() {
 }
 
 function lookSection() {
-  const camera = el('input', { type: 'text', class: 'field', value: model.camera || '', placeholder: 'camera.front_door' });
+  const camera = el('input', { type: 'text', class: 'field', value: (model.cameras || (model.camera ? [model.camera] : [])).join(', '), placeholder: 'camera.front_door, camera.driveway' });
+  const bell = model.doorbell || {};
+  const trigger = el('input', { type: 'text', class: 'field', value: bell.trigger || '', placeholder: 'binary_sensor.front_door_ding' });
+  const bellSecs = el('input', { type: 'number', class: 'field', min: '10', max: '300', value: String(bell.seconds || 30) });
   const wallLink = el('input', { type: 'url', class: 'field', value: (model.wallpaperUrl || '').startsWith('/th?') ? '' : (model.wallpaperUrl || ''), placeholder: 'http://tower/wallpapers/lake.jpg' });
   const haPage = el('input', { type: 'url', class: 'field', value: model.smartHomePage || '', placeholder: 'http://homeassistant.local:8123/lovelace/home' });
   const glass = el('input', { type: 'range', min: '0', max: '100', step: '5', value: String(Math.round((model.glass ?? 0.35) * 100)) });
@@ -124,9 +128,24 @@ function lookSection() {
     row('Home Assistant page', 'The page the Smart Home button opens (your dashboard or HTML page)',
       el('div', { class: 'phx-inline' }, haPage,
         el('button', { class: 'btn-ghost', type: 'button', text: 'Save', onclick: () => save({ smartHomePage: haPage.value.trim() }, 'Home Assistant page') }))),
-    row('Front door camera', 'A Home Assistant camera on the Today screen; empty shows favourite apps instead',
+    row('Cameras', 'Home Assistant cameras on the Today screen, live, in order (doorbell first). Swipe across the card to switch.',
       el('div', { class: 'phx-inline' }, camera,
-        el('button', { class: 'btn-ghost', type: 'button', text: 'Save', onclick: () => save({ camera: camera.value.trim() }, 'Camera') }))),
+        el('button', { class: 'btn-ghost', type: 'button', text: 'Save', onclick: () => save({ cameras: camera.value.split(/[\s,]+/).filter(Boolean) }, 'Cameras') }))),
+    row('Doorbell', 'When this Home Assistant entity rings, the screen wakes and shows the first camera live',
+      el('div', { class: 'phx-inline' }, trigger, bellSecs, el('span', { class: 'desc', text: 'seconds' }),
+        el('button', { class: 'btn-ghost', type: 'button', text: 'Save', onclick: () => save({ doorbell: { trigger: trigger.value.trim(), seconds: Number(bellSecs.value) || 30 } }, 'Doorbell') }),
+        el('button', { class: 'btn-ghost', type: 'button', text: 'Test', onclick: async () => {
+          const r = await cmd('phoenixDoorbell', {}).catch(() => null);
+          showToast(r?.ok ? { title: 'Doorbell shown on the Portal', kind: 'success' } : { title: "Couldn't show the doorbell", message: r?.error || '', kind: 'error' });
+        } }))),
+    row('Menu items', 'What the menu shows when it slides in from the left, and in what order',
+      el('button', { class: 'btn-ghost', type: 'button', text: 'Choose menu items…', onclick: async () => {
+        const picked = await openDrawerItemsPicker(model.menuItems || '', true);
+        if (picked == null) return;
+        const r = await api('/api/settings', { method: 'PATCH', body: JSON.stringify({ 'ui.drawer_items': picked }) }).catch(() => null);
+        if (r?.ok) { model.menuItems = picked; showToast({ title: 'Menu items saved', kind: 'success' }); }
+        else showToast({ title: "Couldn't save the menu items", kind: 'error' });
+      } })),
     row('Theme', 'Colours of the background and the tiles',
       select(model.themes.map((id) => [id, THEME_NAMES[id] || id]), model.theme, (v) => save({ theme: v }, 'Theme'))),
     row('Weather in the background', 'Rain, snow, clouds, sun or stars from the current weather',
