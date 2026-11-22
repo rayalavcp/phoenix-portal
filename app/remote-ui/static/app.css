@@ -2223,5 +2223,19 @@
   .phx-inline { display: flex; gap: 10px; align-items: center; }
   .phx-inline.phx-wrap { flex-wrap: wrap; row-gap: 6px; }
   .phx-kids-shelf { margin-bottom: 8px; }
+  /* Phoenix Home rows: the name and description keep a readable width and
+     the control takes the rest, so a slider or a long list can never squeeze
+     the text into a column of single letters. Narrow screens stack them. */
+  #tab-phoenix .row { gap: 16px; flex-wrap: wrap; }
+  #tab-phoenix .row > .info { flex: 1 1 260px; min-width: 220px; }
+  #tab-phoenix .row > :not(.info) { flex: 0 1 auto; max-width: min(62%, 640px); min-width: 0; }
+  #tab-phoenix .row > input[type=range] { flex: 0 1 280px; width: 280px; }
+  #tab-phoenix .row > .phx-tile-controls { max-width: none; flex: 1 1 420px; justify-content: flex-end; flex-wrap: nowrap; }
+  #tab-phoenix .row > .phx-tile-controls .btn-ghost, #tab-phoenix .row > .phx-tile-controls button { flex: none; }
+  #tab-phoenix .row > .phx-inline { flex-wrap: wrap; justify-content: flex-end; }
+  #tab-phoenix .row > .phx-inline .field { min-width: 180px; flex: 1 1 220px; }
+  @media (max-width: 760px) {
+    #tab-phoenix .row > :not(.info), #tab-phoenix .row > input[type=range] { max-width: 100%; flex-basis: 100%; }
+  }
   .phx-inline .field { margin-bottom: 0; }
   .phx-chip { display: inline-flex; align-items: center; gap: 6px; margin-right: 14px; }
