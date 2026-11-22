@@ -9,6 +9,7 @@ import '../../managers/kids/kids_manager.dart';
 import '../../managers/launcher/app_launcher_manager.dart';
 import 'kids_activities.dart';
 import 'kids_arcade.dart';
+import 'kids_arcade2.dart';
 import 'kids_games.dart';
 import 'kids_learn.dart';
 import 'kids_logic.dart';
@@ -107,7 +108,7 @@ enum _Game {
   ttt, snake, simon, pixel, piano,
   fractions, money, science, spelling, opposites, mole, lights,
   bubbles, catcher, fingermath, blaster,
-  munch, bricks,
+  munch, bricks, hop, sky, run,
 }
 
 /// The hub's cards: title, pitch, icon, colours, shelf and how the best
@@ -192,6 +193,12 @@ final _games = <_GameInfo>[
       const [Color(0xFF1A1340), Color(0xFF3B5BFF)], 'munch1', (b) => 'High score: $b', shelf: 'Arcade'),
   _GameInfo(_Game.bricks, 'Brick Bash', 'Bounce the ball, smash bricks', Icons.view_module_rounded,
       const [Color(0xFF8A1E5A), Color(0xFFFF9F1C)], 'bricks1', (b) => 'High score: $b', shelf: 'Arcade'),
+  _GameInfo(_Game.hop, 'Hop Across', 'Cross the road and the river', Icons.directions_walk_rounded,
+      const [Color(0xFF12324A), Color(0xFF2F7B4A)], 'hop1', (b) => 'High score: $b', shelf: 'Arcade'),
+  _GameInfo(_Game.sky, 'Sky Glide', 'Fly through the gaps', Icons.air_rounded,
+      const [Color(0xFF2F7BD6), Color(0xFFFF8AD8)], 'sky1', (b) => 'High score: $b', shelf: 'Arcade'),
+  _GameInfo(_Game.run, 'Fox Run', 'Jump, run, grab coins', Icons.directions_run_rounded,
+      const [Color(0xFFB0581E), Color(0xFFFFB627)], 'run1', (b) => 'High score: $b', shelf: 'Arcade'),
   // Create
   const _GameInfo(_Game.draw, 'Draw Studio', 'Paint whatever you like', Icons.brush_rounded,
       [Color(0xFFD42A1A), Color(0xFFFF4D8D)], null, null, shelf: 'Create'),
@@ -276,6 +283,9 @@ class _KidsHomeState extends State<_KidsHome> {
       _Game.fingermath => FingerMath(key: const ValueKey('fingermath'), container: widget.container, onBack: _back),
       _Game.munch => MunchMaze(key: const ValueKey('munch'), onBack: _back),
       _Game.bricks => BrickBash(key: const ValueKey('bricks'), container: widget.container, onBack: _back),
+      _Game.hop => HopAcross(key: const ValueKey('hop'), onBack: _back),
+      _Game.sky => SkyGlide(key: const ValueKey('sky'), container: widget.container, onBack: _back),
+      _Game.run => FoxRun(key: const ValueKey('run'), container: widget.container, onBack: _back),
       null => ListenableBuilder(
         key: const ValueKey('home'),
         listenable: widget.container.phoenixHome.kidsHiddenGames,

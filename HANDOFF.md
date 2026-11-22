@@ -61,7 +61,7 @@ remote administration. Home Assistant is optional.
 | Telugu calendar (panchangam), word of the day | `managers/home/panchang.dart`, `managers/home/telugu_words.dart`, `ui/home/telugu_calendar_page.dart` |
 | Photos (Immich / folder), photo frame | `managers/home/photo_service.dart`, `ui/home/photo_frame.dart` |
 | Kids Portal hub and frame | `ui/kids/kids_overlay.dart`, `ui/kids/kids_activities.dart` |
-| Kids games | `kids_learn.dart` (quizzes), `kids_games.dart`, `kids_puzzles.dart`, `kids_play.dart` (incl. piano), `kids_motion.dart` (camera games), `kids_arcade.dart` (Munch Maze, Brick Bash) |
+| Kids games | `kids_learn.dart` (quizzes), `kids_games.dart`, `kids_puzzles.dart`, `kids_play.dart` (incl. piano), `kids_motion.dart` (camera games), `kids_arcade.dart` (Munch Maze, Brick Bash), `kids_arcade2.dart` (Hop Across, Sky Glide, Fox Run) |
 | Hand/head tracking for games | native `HandTracker.kt`, `FaceDetector.kt`, `CameraMotion.kt`; Dart `managers/motion/motion_manager.dart` (`startHandTest`, `startHeadTracking`) |
 | Updates from GitHub | `managers/update/update_manager.dart` (`_releasesUrl` = this repo's `install/releases.json`) |
 | Admin Phoenix Home page | `remote-ui/static/phoenix_home.js` (+ CSS in `app.css`, `#tab-phoenix`) |
@@ -78,7 +78,8 @@ cd app && flutter build apk --release --split-per-abi --target-platform android-
 
 The APK is debug-signed with the same key every time (certificate SHA-256
 starts `47fff989d4`), so builds install over each other and keep settings.
-Keep the APK under 100 MB (GitHub's file limit): large assets go in
+Keep the APK under 100 MB (GitHub's file limit, 104,857,600 bytes; 2026.12.7 is
+99,952,024, so about 4.9 MB of room is left): large assets go in
 `wallpapers/` and download at run time.
 
 Before shipping, run the analyzer and the tests that cover what changed:
@@ -95,7 +96,7 @@ pre-existing problem); it passes on its own.
 ## Shipping a build
 
 1. Give it a **new version name** in `app/pubspec.yaml` (e.g.
-   `2026.12.7+382`). The Portal's update check compares names.
+   `2026.12.8+383`). The Portal's update check compares names.
 2. Build, then check: version, signing key, size under 100 MB.
 3. Copy to `install/phoenix-portal.apk`.
 4. `python3 install/make_releases.py <version> "notes"` writes

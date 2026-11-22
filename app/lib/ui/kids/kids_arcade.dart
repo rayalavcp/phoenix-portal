@@ -24,29 +24,108 @@ TextStyle arcadeText(double size, [Color color = Colors.white]) => TextStyle(
 
 // ── Munch Maze: the rules ─────────────────────────────────────────────────
 
-/// The maze, row by row: '#' wall, '.' seed, 'o' power berry, ' ' open,
+/// The mazes, row by row: '#' wall, '.' seed, 'o' power berry, ' ' open,
 /// 'P' where Munchie starts, 'R' where the robots start, '-' the robots'
 /// door (robots only). Open ends on a row wrap around.
-const munchMaze = [
-  '###################',
-  '#o.......#.......o#',
-  '#.##.###.#.###.##.#',
-  '#.................#',
-  '#.##.#.#####.#.##.#',
-  '#....#...#...#....#',
-  '####.###.#.###.####',
-  '   #.#.......#.#   ',
-  '####.#.##-##.#.####',
-  '    ...#RRR#...    ',
-  '####.#.#####.#.####',
-  '#........P........#',
-  '#.##.###.#.###.##.#',
-  '#o.#...........#.o#',
-  '##.#.#.#####.#.#.##',
-  '#....#...#...#....#',
-  '#.######.#.######.#',
-  '#.................#',
-  '###################',
+const munchMazes = [
+  [
+    '###################',
+    '#o.......#.......o#',
+    '#.##.###.#.###.##.#',
+    '#.................#',
+    '#.##.#.#####.#.##.#',
+    '#....#...#...#....#',
+    '####.###.#.###.####',
+    '   #.#.......#.#   ',
+    '####.#.##-##.#.####',
+    '    ...#RRR#...    ',
+    '####.#.#####.#.####',
+    '#........P........#',
+    '#.##.###.#.###.##.#',
+    '#o.#...........#.o#',
+    '##.#.#.#####.#.#.##',
+    '#....#...#...#....#',
+    '#.######.#.######.#',
+    '#.................#',
+    '###################',
+  ],
+  // The Garden.
+  [
+    '###################',
+    '#o..#.........#..o#',
+    '#.#.#.###.###.#.#.#',
+    '#.................#',
+    '#.##.#.##.##.#.##.#',
+    '#.#..#.#...#.#..#.#',
+    '####.###.#.###.####',
+    '   #.#.......#.#   ',
+    '####.#.##-##.#.####',
+    '    ...#RRR#...    ',
+    '####.#.#####.#.####',
+    '#........P........#',
+    '#.##.#.#####.#.##.#',
+    '#o.#.#...#...#.#.o#',
+    '##.#.###.#.###.#.##',
+    '#.....#.....#.....#',
+    '#.###.#.###.#.###.#',
+    '#.................#',
+    '###################',
+  ],
+  // The Zigzag.
+  [
+    '###################',
+    '#.o.....#.#.....o.#',
+    '#.###.#.#.#.#.###.#',
+    '#.....#.....#.....#',
+    '###.#.###.###.#.###',
+    '#.................#',
+    '####.###.#.###.####',
+    '   #.#.......#.#   ',
+    '####.#.##-##.#.####',
+    '    ...#RRR#...    ',
+    '####.#.#####.#.####',
+    '#........P........#',
+    '#.#.###.#.#.###.#.#',
+    '#o#...#.....#...#o#',
+    '#.#.#.#.###.#.#.#.#',
+    '#...#...#.#...#...#',
+    '#.#####.#.#.#####.#',
+    '#.................#',
+    '###################',
+  ],
+  // The Rooms.
+  [
+    '###################',
+    '#o...............o#',
+    '#.##.##.###.##.##.#',
+    '#.#...#.....#...#.#',
+    '#.#.#.#.###.#.#.#.#',
+    '#...#.........#...#',
+    '####.###.#.###.####',
+    '   #.#.......#.#   ',
+    '####.#.##-##.#.####',
+    '    ...#RRR#...    ',
+    '####.#.#####.#.####',
+    '#........P........#',
+    '#.###.##.#.##.###.#',
+    '#...#o.......o#...#',
+    '###.#.##.#.##.#.###',
+    '#.....#..#..#.....#',
+    '#.###...###...###.#',
+    '#.................#',
+    '###################',
+  ],
+];
+
+/// The first maze (kept for the tests and as the classic layout).
+List<String> get munchMaze => munchMazes.first;
+
+/// Each maze's wall colours: fill and edge.
+const munchWallColors = [
+  (Color(0xFF1E3FA8), Color(0xFF5B8CFF)),
+  (Color(0xFF1B7A43), Color(0xFF6BE39A)),
+  (Color(0xFF7A1E8A), Color(0xFFE07BFF)),
+  (Color(0xFF8A4B12), Color(0xFFFFB45B)),
 ];
 
 enum Dir { up, down, left, right, none }
@@ -189,8 +268,10 @@ class _MunchMazeState extends State<MunchMaze> with SingleTickerProviderStateMix
   Dir _wanted = Dir.none;
   Duration _last = Duration.zero;
   double _time = 0, _scared = 0, _hurt = 0;
-  int _level = 0, _stage = 1, _score = 0, _lives = 3, _combo = 0;
+  int _level = 0, _stage = 1, _score = 0, _lives = 3, _combo = 0, _firstMaze = 0;
   bool _playing = false, _over = false, _newBest = false;
+
+  int get _mazeIndex => (_firstMaze + _stage - 1) % munchMazes.length;
 
   static const _robotColors = [Color(0xFFFF4D6D), Color(0xFF39D0FF), Color(0xFFFFB627)];
 
@@ -201,7 +282,7 @@ class _MunchMazeState extends State<MunchMaze> with SingleTickerProviderStateMix
   }
 
   void _newBoard() {
-    _board = MunchBoard(munchMaze);
+    _board = MunchBoard(munchMazes[_mazeIndex]);
     _resetPositions();
   }
 
@@ -416,7 +497,15 @@ class _MunchMazeState extends State<MunchMaze> with SingleTickerProviderStateMix
             icon: Icons.grid_on_rounded,
             pitch: 'Help Munchie eat every seed! Dodge the robots, or grab a power berry and catch them.',
             best: KidsScores.best('munch${_level + 1}').then((b) => b == null ? null : 'High score: $b'),
-            options: kidsLevelChips(const ['Easy', 'Medium', 'Hard'], _level, (i) => setState(() => _level = i)),
+            options: Column(
+              children: [
+                kidsLevelChips(const ['Easy', 'Medium', 'Hard'], _level, (i) => setState(() => _level = i)),
+                const SizedBox(height: 14),
+                Text('Start in', style: kidsText(18, weight: FontWeight.w700)),
+                const SizedBox(height: 8),
+                kidsLevelChips(const ['Classic', 'Garden', 'Zigzag', 'Rooms'], _firstMaze, (i) => setState(() => _firstMaze = i)),
+              ],
+            ),
             onStart: _start,
           )
         : LayoutBuilder(
@@ -470,9 +559,10 @@ class _MazePainter extends CustomPainter {
     final b = g._board;
     final cell = size.width / b.width;
     canvas.drawRRect(RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(12)), Paint()..color = const Color(0xFF070418));
-    final wall = Paint()..color = const Color(0xFF1E3FA8);
+    final (wallFill, wallLine) = munchWallColors[g._mazeIndex % munchWallColors.length];
+    final wall = Paint()..color = wallFill;
     final wallEdge = Paint()
-      ..color = const Color(0xFF5B8CFF)
+      ..color = wallLine
       ..style = PaintingStyle.stroke
       ..strokeWidth = cell * 0.12;
     final seed = Paint()..color = const Color(0xFFFFE8B0);
@@ -576,13 +666,24 @@ class _Drop {
 }
 
 /// The brick layouts, a row of letters per row: '.' none, '1' one hit,
-/// '2' two hits.
+/// '2' two hits, '3' three hits (steel).
 const brickLevels = [
   ['..........', '1111111111', '1111111111', '1111111111', '..........'],
   ['1.1.1.1.1.', '.1.1.1.1.1', '2222222222', '1.1.1.1.1.', '.1.1.1.1.1'],
   ['....22....', '...2112...', '..211112..', '.21111112.', '2111111112'],
   ['2.2.2.2.2.', '1111111111', '.2.2.2.2.2', '1111111111', '2222222222'],
+  ['.22....22.', '2112..2112', '2111111112', '.21111112.', '..211112..', '...2112...', '....22....'],
+  ['3333333333', '..........', '2222222222', '..........', '1111111111', '1111111111'],
+  ['1.1.1.1.1.', '.2.2.2.2.2', '1.1.1.1.1.', '.2.2.2.2.2', '1.1.1.1.1.', '.3.3.3.3.3'],
+  ['3.3.33.3.3', '3333333333', '2222222222', '2..2222..2', '2..2..2..2'],
+  ['....33....', '...3223...', '..321123..', '.32111123.', '..321123..', '...3223...', '....33....'],
+  ['..222222..', '.21111112.', '2131111312', '2111111112', '2131111312', '.21333312.', '..222222..'],
+  ['3333333333', '3333333333', '2222222222', '1111111111', '1111111111'],
+  ['...2222...', '..211112..', '.21.33.12.', '21.3..3.12', '2.3....3.2'],
 ];
+
+/// Where Brick Bash can start: its first level and every fourth after.
+const brickStarts = [1, 5, 9];
 
 List<_Brick> _bricksFor(int stage) {
   final layout = brickLevels[(stage - 1) % brickLevels.length];
@@ -593,7 +694,7 @@ List<_Brick> _bricksFor(int stage) {
     for (var c = 0; c < 10; c++) {
       final k = layout[r][c];
       if (k == '.') continue;
-      out.add(_Brick(Rect.fromLTWH(c * w + 0.4, 8 + r * (h + 0.8), w - 0.8, h), k == '2' ? 2 : 1, colors[r % colors.length]));
+      out.add(_Brick(Rect.fromLTWH(c * w + 0.4, 8 + r * (h + 0.8), w - 0.8, h), int.parse(k), colors[r % colors.length]));
     }
   }
   return out;
@@ -628,7 +729,7 @@ class _BrickBashState extends State<BrickBash> with SingleTickerProviderStateMix
   Duration _last = Duration.zero;
   double _wide = 0, _serve = 0;
   double _paddleX = _fieldW / 2;
-  int _level = 0, _stage = 1, _score = 0, _lives = 3;
+  int _level = 0, _stage = 1, _score = 0, _lives = 3, _firstStage = 0;
   bool _playing = false, _over = false, _newBest = false;
 
   double get _paddleW => _wide > 0 ? 24 : 15;
@@ -646,8 +747,8 @@ class _BrickBashState extends State<BrickBash> with SingleTickerProviderStateMix
     setState(() {
       _score = 0;
       _lives = 3;
-      _stage = 1;
-      _bricks = _bricksFor(1);
+      _stage = brickStarts[_firstStage];
+      _bricks = _bricksFor(_stage);
       _playing = true;
       _over = false;
       _last = Duration.zero;
@@ -691,7 +792,7 @@ class _BrickBashState extends State<BrickBash> with SingleTickerProviderStateMix
     _paddleX = _paddleX.clamp(_paddleW / 2, _fieldW - _paddleW / 2);
     const paddleY = _fieldH - 5;
     const radius = 1.3;
-    final speed = (48 + _level * 10 + _stage * 3).toDouble();
+    final speed = (48 + _level * 10 + math.min(_stage, 8) * 3).toDouble();
 
     if (_serve > 0) {
       _serve -= dt;
@@ -832,6 +933,10 @@ class _BrickBashState extends State<BrickBash> with SingleTickerProviderStateMix
                 Text('Move the paddle with', style: kidsText(18, weight: FontWeight.w700)),
                 const SizedBox(height: 8),
                 kidsLevelChips(const ['My finger', 'My hand', 'My head'], _steer, (i) => setState(() => _steer = i)),
+                const SizedBox(height: 14),
+                Text('Start at', style: kidsText(18, weight: FontWeight.w700)),
+                const SizedBox(height: 8),
+                kidsLevelChips([for (final l in brickStarts) 'Level $l'], _firstStage, (i) => setState(() => _firstStage = i)),
               ],
             ),
             onStart: _start,
@@ -876,10 +981,15 @@ class _BricksPainter extends CustomPainter {
     }
     for (final b in g._bricks) {
       final r = s(b.rect);
-      final c = b.hp >= 2 ? Color.lerp(b.color, Colors.white, 0.35)! : b.color;
+      final c = b.hp >= 3 ? const Color(0xFFB8C4D6) : (b.hp == 2 ? Color.lerp(b.color, Colors.white, 0.35)! : b.color);
       canvas.drawRect(r, Paint()..color = c);
       canvas.drawRect(Rect.fromLTWH(r.left, r.top, r.width, r.height * 0.25), Paint()..color = Colors.white.withValues(alpha: 0.35));
       canvas.drawRect(Rect.fromLTWH(r.left, r.bottom - r.height * 0.2, r.width, r.height * 0.2), Paint()..color = Colors.black.withValues(alpha: 0.25));
+      if (b.hp >= 3) {
+        for (final x in [r.left + r.height * 0.4, r.right - r.height * 0.4]) {
+          canvas.drawCircle(Offset(x, r.center.dy), r.height * 0.14, Paint()..color = const Color(0xFF5A6478));
+        }
+      }
       if (b.hp >= 2) {
         canvas.drawRect(r.deflate(k * 0.6), Paint()
           ..color = Colors.white.withValues(alpha: 0.6)

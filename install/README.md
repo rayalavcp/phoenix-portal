@@ -1,8 +1,16 @@
-# Phoenix Portal test build 2026.12.6 (381)
+# Phoenix Portal test build 2026.12.7 (382)
 
-- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 99837016 bytes.
-  SHA-256 `628b5a076a0abc9b81c0853a17992fd03e527f5f8a3eb2e9ebc075dbb2bd7434`.
+- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 99952024 bytes.
+  SHA-256 `1e5a9acbafb2c1bda9861e9c4c99630f1de796ab4354bf1fea676e4236d0ac48`.
 - New in this build:
+  - **Three more Arcade games**: **Hop Across** (hop a chick over the road
+    and across the river on logs to fill five nests), **Sky Glide** (fly Pip
+    between crystal spires through day, sunset, night and space; tap, or
+    steer with the head) and **Fox Run** (jump over rocks and logs through
+    meadow, desert, snow and night; tap, or jump with the head).
+  - **More levels**: Munch Maze has four mazes (Classic, Garden, Zigzag,
+    Rooms), Brick Bash has 12 levels with three-hit steel bricks; pick
+    where to start on each game's start screen.
   - **Arcade** shelf in the Kids Portal, original retro games: **Munch
     Maze** (eat the seeds, dodge the robots, power berries) and **Brick
     Bash** (paddle and bricks; the paddle follows a finger, a hand or the
