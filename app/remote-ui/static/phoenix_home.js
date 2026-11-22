@@ -271,7 +271,7 @@ const KIDS_GAMES = [
   ['Puzzles', [['sudoku', 'Sudoku'], ['maze', 'Maze'], ['wordsearch', 'Word Search'], ['guess', 'Word Guess'], ['memory', 'Memory Pro'], ['g2048', '2048'], ['lights', 'Lights Out']]],
   ['Play', [['snake', 'Snake'], ['mole', 'Whack-a-Mole'], ['simon', 'Simon Says'], ['ttt', 'Tic-Tac-Toe'], ['connect4', 'Connect Four']]],
   ['Arcade', [['munch', 'Munch Maze'], ['bricks', 'Brick Bash'], ['hop', 'Hop Across'], ['sky', 'Sky Glide'], ['run', 'Fox Run']]],
-  ['Move (camera)', [['blaster', 'Space Blaster'], ['bubbles', 'Bubble Pop'], ['catcher', 'Fruit Catcher'], ['fingermath', 'Finger Math']]],
+  ['Move (camera)', [['blaster', 'Space Blaster'], ['bubbles', 'Bubble Pop'], ['catcher', 'Fruit Catcher'], ['fingermath', 'Finger Math'], ['walls', 'Wall Dodge'], ['trace', 'Air Trace'], ['dance', 'Freeze Dance']]],
   ['Create', [['draw', 'Draw Studio'], ['pixel', 'Pixel Paint'], ['piano', 'Piano']]],
 ];
 

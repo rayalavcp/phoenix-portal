@@ -8,7 +8,7 @@ import '../../app_container.dart';
 import 'kids_activities.dart';
 import 'kids_games.dart';
 import 'kids_logic.dart';
-import 'kids_motion.dart' show KidsHands;
+import 'kids_motion.dart' show KidsHands, KidsMotionPanel, kidsPlayWithChips, kidsTrackerFor, steerFrom;
 
 /// The Kids Portal's Arcade shelf: original retro games. Munch Maze (a maze
 /// chase) and Brick Bash (a paddle and bricks). Their own characters, mazes
@@ -238,8 +238,11 @@ Dir chooseDir(MunchBoard b, Walker w, (double, double) target, {bool flee = fals
 // ── Munch Maze: the game ──────────────────────────────────────────────────
 
 class MunchMaze extends StatefulWidget {
-  const MunchMaze({super.key, required this.onBack});
+  const MunchMaze({super.key, required this.onBack, this.container});
   final VoidCallback onBack;
+
+  /// For steering by hand or head (none: buttons and swipes only).
+  final AppContainer? container;
 
   @override
   State<MunchMaze> createState() => _MunchMazeState();
@@ -272,12 +275,15 @@ class _MunchMazeState extends State<MunchMaze> with SingleTickerProviderStateMix
   bool _playing = false, _over = false, _newBest = false;
 
   int get _mazeIndex => (_firstMaze + _stage - 1) % munchMazes.length;
+  KidsHands? _tracker;
+  int _playWith = 0; // buttons, hand, head
 
   static const _robotColors = [Color(0xFFFF4D6D), Color(0xFF39D0FF), Color(0xFFFFB627)];
 
   @override
   void dispose() {
     _ticker.dispose();
+    _tracker?.dispose();
     super.dispose();
   }
 
@@ -301,6 +307,8 @@ class _MunchMazeState extends State<MunchMaze> with SingleTickerProviderStateMix
   }
 
   void _start() {
+    _tracker?.dispose();
+    _tracker = kidsTrackerFor(widget.container, _playWith);
     setState(() {
       _score = 0;
       _lives = 3;
@@ -362,6 +370,15 @@ class _MunchMazeState extends State<MunchMaze> with SingleTickerProviderStateMix
     final dt = math.min(0.05, _last == Duration.zero ? 0.016 : (now - _last).inMicroseconds / 1e6);
     _last = now;
     _time += dt;
+    final tracker = _tracker;
+    if (tracker != null) {
+      tracker.step(dt);
+      final s = steerFrom(tracker.point.value);
+      if (s != null) {
+        final d = switch (s) { (1, _) => Dir.right, (-1, _) => Dir.left, (_, 1) => Dir.down, _ => Dir.up };
+        if (d != _wanted) _steer(d);
+      }
+    }
     if (_hurt > 0) {
       _hurt -= dt;
       setState(() {});
@@ -504,6 +521,10 @@ class _MunchMazeState extends State<MunchMaze> with SingleTickerProviderStateMix
                 Text('Start in', style: kidsText(18, weight: FontWeight.w700)),
                 const SizedBox(height: 8),
                 kidsLevelChips(const ['Classic', 'Garden', 'Zigzag', 'Rooms'], _firstMaze, (i) => setState(() => _firstMaze = i)),
+                if (widget.container != null) ...[
+                  const SizedBox(height: 14),
+                  kidsPlayWithChips(_playWith, (i) => setState(() => _playWith = i)),
+                ],
               ],
             ),
             onStart: _start,
@@ -525,7 +546,8 @@ class _MunchMazeState extends State<MunchMaze> with SingleTickerProviderStateMix
                   ),
                 ),
               );
-              final pad = Column(
+              final tracker = _tracker;
+              final pad = tracker != null ? KidsMotionPanel(hands: tracker) : Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _pad(Icons.arrow_upward_rounded, Dir.up),

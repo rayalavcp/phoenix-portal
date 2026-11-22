@@ -9,7 +9,7 @@ import 'kids_activities.dart';
 import 'kids_arcade.dart' show Dir, DirMove, arcadeText;
 import 'kids_games.dart';
 import 'kids_logic.dart' show KidsScores;
-import 'kids_motion.dart' show KidsHands;
+import 'kids_motion.dart' show KidsHands, KidsMotionPanel, StepTrigger, kidsPlayWithChips, kidsTrackerFor;
 
 /// More of the Kids Portal's Arcade shelf: Hop Across (cross the road and
 /// the river), Sky Glide (fly between the pillars) and Fox Run (jump over
@@ -255,8 +255,11 @@ List<HopLane?> hopLanes(int stage, int difficulty) {
 
 /// Help the chick across the road and the river to the nests.
 class HopAcross extends StatefulWidget {
-  const HopAcross({super.key, required this.onBack});
+  const HopAcross({super.key, required this.onBack, this.container});
   final VoidCallback onBack;
+
+  /// For hopping by hand or head (none: buttons and swipes only).
+  final AppContainer? container;
 
   @override
   State<HopAcross> createState() => _HopAcrossState();
@@ -268,6 +271,15 @@ class _HopAcrossState extends _ArcadeGame<HopAcross> {
   double _px = 5, _hopAnim = 0, _hurt = 0, _banner = 0;
   int _py = hopRows - 1, _bestRow = hopRows - 1;
   Dir _facing = Dir.up;
+  KidsHands? _tracker;
+  int _playWith = 0; // buttons, hand, head
+  final _trigger = StepTrigger();
+
+  @override
+  void dispose() {
+    _tracker?.dispose();
+    super.dispose();
+  }
 
   @override
   String get scoreKey => 'hop${level + 1}';
@@ -278,6 +290,8 @@ class _HopAcrossState extends _ArcadeGame<HopAcross> {
 
   @override
   void reset() {
+    _tracker?.dispose();
+    _tracker = kidsTrackerFor(widget.container, _playWith);
     _lanes = hopLanes(stage, level);
     _nests.fillRange(0, _nests.length, false);
     _respawn();
@@ -329,6 +343,12 @@ class _HopAcrossState extends _ArcadeGame<HopAcross> {
 
   @override
   void step(double dt) {
+    final tracker = _tracker;
+    if (tracker != null) {
+      tracker.step(dt);
+      final s = _trigger.update(tracker.point.value);
+      if (s != null) _hop(switch (s) { (1, _) => Dir.right, (-1, _) => Dir.left, (_, 1) => Dir.down, _ => Dir.up });
+    }
     _hopAnim = math.max(0, _hopAnim - dt);
     _banner = math.max(0, _banner - dt);
     if (_hurt > 0) {
@@ -346,6 +366,12 @@ class _HopAcrossState extends _ArcadeGame<HopAcross> {
     if (dead) _hurt = 0.9;
   }
 
+  Widget _controls() {
+    final t = _tracker;
+    if (t == null) return arcadePad(_hop);
+    return KidsMotionPanel(hands: t, hint: t.head ? 'Nod or lean to hop, then back to the middle' : 'Push your hand to hop, then back to the middle');
+  }
+
   @override
   Widget build(BuildContext context) => arcadeFrame(
     title: 'Hop Across',
@@ -356,7 +382,15 @@ class _HopAcrossState extends _ArcadeGame<HopAcross> {
     overDetail: 'Score $score · reached stage $stage',
     icon: Icons.directions_walk_rounded,
     pitch: 'Hop the chick over the road and across the river on the logs. Fill all five nests!',
-    options: kidsLevelChips(const ['Easy', 'Medium', 'Hard'], level, (i) => setState(() => level = i)),
+    options: Column(
+      children: [
+        kidsLevelChips(const ['Easy', 'Medium', 'Hard'], level, (i) => setState(() => level = i)),
+        if (widget.container != null) ...[
+          const SizedBox(height: 14),
+          kidsPlayWithChips(_playWith, (i) => setState(() => _playWith = i)),
+        ],
+      ],
+    ),
     game: (context) => LayoutBuilder(
       builder: (context, box) {
         final wide = box.maxWidth > box.maxHeight;
@@ -375,8 +409,8 @@ class _HopAcrossState extends _ArcadeGame<HopAcross> {
         return Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           child: wide
-              ? Row(children: [Expanded(child: board), const SizedBox(width: 16), arcadePad(_hop)])
-              : Column(children: [Expanded(child: board), const SizedBox(height: 12), arcadePad(_hop)]),
+              ? Row(children: [Expanded(child: board), const SizedBox(width: 16), _controls()])
+              : Column(children: [Expanded(child: board), const SizedBox(height: 12), _controls()]),
         );
       },
     ),
@@ -566,7 +600,7 @@ class _SkyGlideState extends _ArcadeGame<SkyGlide> {
   final _rng = math.Random();
   final _pillars = <_Pillar>[];
   KidsHands? _tracker;
-  int _steer = 0; // 0 tap, 1 head
+  int _steer = 0; // 0 tap, 1 head, 2 hand
   double _y = _skyH / 2, _vy = 0, _safe = 0, _ready = 0, _banner = 0;
   int _passed = 0;
 
@@ -586,7 +620,7 @@ class _SkyGlideState extends _ArcadeGame<SkyGlide> {
   @override
   void reset() {
     _tracker?.dispose();
-    _tracker = _steer == 1 ? KidsHands(widget.container.motion, head: true) : null;
+    _tracker = _steer == 0 ? null : KidsHands(widget.container.motion, head: _steer == 1);
     _pillars.clear();
     _y = _skyH / 2;
     _vy = 0;
@@ -684,7 +718,7 @@ class _SkyGlideState extends _ArcadeGame<SkyGlide> {
         const SizedBox(height: 14),
         Text('Fly with', style: kidsText(18, weight: FontWeight.w700)),
         const SizedBox(height: 8),
-        kidsLevelChips(const ['Taps', 'My head'], _steer, (i) => setState(() => _steer = i)),
+        kidsLevelChips(const ['Taps', 'My head', 'My hand'], _steer, (i) => setState(() => _steer = i)),
       ],
     ),
     game: (context) => Padding(
@@ -863,7 +897,7 @@ class _FoxRunState extends _ArcadeGame<FoxRun> {
   final _obstacles = <_Obstacle>[];
   final _coins = <_Coin>[];
   KidsHands? _tracker;
-  int _steer = 0; // 0 tap, 1 head
+  int _steer = 0; // 0 tap, 1 head, 2 hand
   double _y = _ground, _vy = 0, _safe = 0, _run = 0, _next = 60, _banner = 0;
   double? _headRest;
   int _jumps = 0, _coinCount = 0;
@@ -886,7 +920,7 @@ class _FoxRunState extends _ArcadeGame<FoxRun> {
   @override
   void reset() {
     _tracker?.dispose();
-    _tracker = _steer == 1 ? KidsHands(widget.container.motion, head: true) : null;
+    _tracker = _steer == 0 ? null : KidsHands(widget.container.motion, head: _steer == 1);
     _headRest = null;
     _obstacles.clear();
     _coins.clear();
@@ -1001,7 +1035,7 @@ class _FoxRunState extends _ArcadeGame<FoxRun> {
         const SizedBox(height: 14),
         Text('Jump with', style: kidsText(18, weight: FontWeight.w700)),
         const SizedBox(height: 8),
-        kidsLevelChips(const ['Taps', 'My head'], _steer, (i) => setState(() => _steer = i)),
+        kidsLevelChips(const ['Taps', 'My head', 'My hand'], _steer, (i) => setState(() => _steer = i)),
       ],
     ),
     game: (context) => Padding(

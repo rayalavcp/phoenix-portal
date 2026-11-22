@@ -15,6 +15,7 @@ import 'kids_learn.dart';
 import 'kids_logic.dart';
 import 'kids_more_logic.dart';
 import 'kids_motion.dart';
+import 'kids_motion2.dart';
 import 'kids_play.dart';
 import 'kids_puzzles.dart';
 
@@ -109,6 +110,7 @@ enum _Game {
   fractions, money, science, spelling, opposites, mole, lights,
   bubbles, catcher, fingermath, blaster,
   munch, bricks, hop, sky, run,
+  walls, trace, dance,
 }
 
 /// The hub's cards: title, pitch, icon, colours, shelf and how the best
@@ -188,6 +190,12 @@ final _games = <_GameInfo>[
       const [Color(0xFF13B88A), Color(0xFF2F7BD6)], null, null, shelf: 'Move'),
   _GameInfo(_Game.fingermath, 'Finger Math', 'Answer with your fingers', Icons.front_hand_rounded,
       const [Color(0xFFFF7A3D), Color(0xFFB04BFF)], null, null, shelf: 'Move'),
+  _GameInfo(_Game.walls, 'Wall Dodge', 'Lean through the hole', Icons.door_sliding_rounded,
+      const [Color(0xFF2A1F6B), Color(0xFF7A5CFF)], 'walls1', (b) => 'High score: $b', shelf: 'Move'),
+  _GameInfo(_Game.trace, 'Air Trace', 'Draw shapes in the air', Icons.gesture_rounded,
+      const [Color(0xFF14365A), Color(0xFF2FB8A8)], 'trace1', (b) => 'Best: $b pictures', shelf: 'Move'),
+  _GameInfo(_Game.dance, 'Freeze Dance', 'Dance, then freeze!', Icons.music_note_rounded,
+      const [Color(0xFF5A1F6B), Color(0xFFFF6B9A)], 'freeze1', (b) => 'High score: $b', shelf: 'Move'),
   // Arcade: original retro games.
   _GameInfo(_Game.munch, 'Munch Maze', 'Eat the seeds, dodge the robots', Icons.grid_on_rounded,
       const [Color(0xFF1A1340), Color(0xFF3B5BFF)], 'munch1', (b) => 'High score: $b', shelf: 'Arcade'),
@@ -266,7 +274,7 @@ class _KidsHomeState extends State<_KidsHome> {
       _Game.wordsearch => WordSearchGame(key: const ValueKey('wordsearch'), onBack: _back),
       _Game.guess => WordGuess(key: const ValueKey('guess'), onBack: _back),
       _Game.ttt => TicTacToe(key: const ValueKey('ttt'), onBack: _back),
-      _Game.snake => SnakeGame(key: const ValueKey('snake'), onBack: _back),
+      _Game.snake => SnakeGame(key: const ValueKey('snake'), container: widget.container, onBack: _back),
       _Game.simon => SimonSays(key: const ValueKey('simon'), onBack: _back, tones: _tones),
       _Game.pixel => PixelPaint(key: const ValueKey('pixel'), onBack: _back),
       _Game.piano => KidsPiano(key: const ValueKey('piano'), onBack: _back, tones: _tones),
@@ -281,9 +289,12 @@ class _KidsHomeState extends State<_KidsHome> {
       _Game.bubbles => BubblePop(key: const ValueKey('bubbles'), container: widget.container, onBack: _back),
       _Game.catcher => FruitCatcher(key: const ValueKey('catcher'), container: widget.container, onBack: _back),
       _Game.fingermath => FingerMath(key: const ValueKey('fingermath'), container: widget.container, onBack: _back),
-      _Game.munch => MunchMaze(key: const ValueKey('munch'), onBack: _back),
+      _Game.munch => MunchMaze(key: const ValueKey('munch'), container: widget.container, onBack: _back),
       _Game.bricks => BrickBash(key: const ValueKey('bricks'), container: widget.container, onBack: _back),
-      _Game.hop => HopAcross(key: const ValueKey('hop'), onBack: _back),
+      _Game.hop => HopAcross(key: const ValueKey('hop'), container: widget.container, onBack: _back),
+      _Game.walls => WallDodge(key: const ValueKey('walls'), container: widget.container, onBack: _back),
+      _Game.trace => AirTrace(key: const ValueKey('trace'), container: widget.container, onBack: _back),
+      _Game.dance => FreezeDance(key: const ValueKey('dance'), container: widget.container, onBack: _back, tones: _tones),
       _Game.sky => SkyGlide(key: const ValueKey('sky'), container: widget.container, onBack: _back),
       _Game.run => FoxRun(key: const ValueKey('run'), container: widget.container, onBack: _back),
       null => ListenableBuilder(

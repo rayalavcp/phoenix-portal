@@ -109,8 +109,8 @@ class KidsHands {
 }
 
 /// The hint along the bottom: show your hand, or play by touch.
-class _HandHint extends StatelessWidget {
-  const _HandHint({required this.hands, required this.visible});
+class KidsHandHint extends StatelessWidget {
+  const KidsHandHint({super.key, required this.hands, required this.visible});
   final KidsHands hands;
   final bool visible;
 
@@ -208,6 +208,7 @@ class _BubblePopState extends State<BubblePop> with SingleTickerProviderStateMix
     super.initState();
     _ticker = createTicker(_tick);
   }
+
   final _rng = math.Random();
   final _bubbles = <_Bubble>[];
   Duration _last = Duration.zero;
@@ -315,7 +316,7 @@ class _BubblePopState extends State<BubblePop> with SingleTickerProviderStateMix
             options: kidsLevelChips(const ['Easy', 'Medium', 'Hard'], _level, (i) => setState(() => _level = i)),
             onStart: _start,
           )
-        : _MotionArena(hands: _hands, onSize: (s) => _size = s, painter: _BubblesPainter(_bubbles)),
+        : KidsMotionArena(hands: _hands, onSize: (s) => _size = s, painter: _BubblesPainter(_bubbles)),
   );
 }
 
@@ -362,66 +363,70 @@ class _BubblesPainter extends CustomPainter {
 
 /// The play area: the game's picture, the hand cursor, touch steering and
 /// the "show your hand" hint.
-class _MotionArena extends StatelessWidget {
-  const _MotionArena({required this.hands, required this.onSize, required this.painter, this.cursorIcon = Icons.back_hand_rounded});
+class KidsMotionArena extends StatelessWidget {
+  const KidsMotionArena({super.key, required this.hands, required this.onSize, required this.painter, this.cursorIcon = Icons.back_hand_rounded});
   final KidsHands hands;
   final ValueChanged<Size> onSize;
   final CustomPainter painter;
   final IconData cursorIcon;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(28),
-      child: LayoutBuilder(
-        builder: (context, box) {
-          final size = Size(box.maxWidth, box.maxHeight);
-          onSize(size);
-          Offset frac(Offset local) => Offset((local.dx / size.width).clamp(0.0, 1.0), (local.dy / size.height).clamp(0.0, 1.0));
-          return GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onPanDown: (d) => hands.touch(frac(d.localPosition)),
-            onPanUpdate: (d) => hands.touch(frac(d.localPosition)),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF101828).withValues(alpha: 0.25),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 2),
-                      borderRadius: BorderRadius.circular(28),
+  // Fills the space it is given: its Stack holds only positioned layers,
+  // so without this it shrinks to nothing (a blank play area).
+  Widget build(BuildContext context) => SizedBox.expand(
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: LayoutBuilder(
+          builder: (context, box) {
+            final size = Size(box.maxWidth, box.maxHeight);
+            onSize(size);
+            Offset frac(Offset local) => Offset((local.dx / size.width).clamp(0.0, 1.0), (local.dy / size.height).clamp(0.0, 1.0));
+            return GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onPanDown: (d) => hands.touch(frac(d.localPosition)),
+              onPanUpdate: (d) => hands.touch(frac(d.localPosition)),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF101828).withValues(alpha: 0.25),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 2),
+                        borderRadius: BorderRadius.circular(28),
+                      ),
                     ),
                   ),
-                ),
-                Positioned.fill(child: CustomPaint(painter: painter)),
-                ValueListenableBuilder<Offset?>(
-                  valueListenable: hands.point,
-                  builder: (context, p, _) => p == null
-                      ? const SizedBox.shrink()
-                      : _Cursor(at: Offset(p.dx * size.width, p.dy * size.height), size: math.min(size.width, size.height) * 0.14, icon: cursorIcon),
-                ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 14,
-                  child: _HandHint(hands: hands, visible: !hands.handInView),
-                ),
-                if (hands.camera)
+                  Positioned.fill(child: CustomPaint(painter: painter)),
+                  ValueListenableBuilder<Offset?>(
+                    valueListenable: hands.point,
+                    builder: (context, p, _) => p == null
+                        ? const SizedBox.shrink()
+                        : _Cursor(at: Offset(p.dx * size.width, p.dy * size.height), size: math.min(size.width, size.height) * 0.14, icon: cursorIcon),
+                  ),
                   Positioned(
-                    right: 10,
-                    top: 10,
-                    child: IconButton(
-                      tooltip: 'Swap left and right',
-                      color: Colors.white70,
-                      icon: const Icon(Icons.swap_horiz_rounded),
-                      onPressed: () => hands.flip = !hands.flip,
-                    ),
+                    left: 0,
+                    right: 0,
+                    bottom: 14,
+                    child: KidsHandHint(hands: hands, visible: !hands.handInView),
                   ),
-              ],
-            ),
-          );
-        },
+                  if (hands.camera)
+                    Positioned(
+                      right: 10,
+                      top: 10,
+                      child: IconButton(
+                        tooltip: 'Swap left and right',
+                        color: Colors.white70,
+                        icon: const Icon(Icons.swap_horiz_rounded),
+                        onPressed: () => hands.flip = !hands.flip,
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     ),
   );
@@ -462,6 +467,7 @@ class _FruitCatcherState extends State<FruitCatcher> with SingleTickerProviderSt
     super.initState();
     _ticker = createTicker(_tick);
   }
+
   final _rng = math.Random();
   final _fruit = <_Fruit>[];
   Duration _last = Duration.zero;
@@ -585,7 +591,7 @@ class _FruitCatcherState extends State<FruitCatcher> with SingleTickerProviderSt
             ),
             onStart: _start,
           )
-        : _MotionArena(hands: _hands, onSize: (_) {}, cursorIcon: Icons.back_hand_rounded, painter: _FruitPainter(_fruit, _basketX)),
+        : KidsMotionArena(hands: _hands, onSize: (_) {}, cursorIcon: Icons.back_hand_rounded, painter: _FruitPainter(_fruit, _basketX)),
   );
 }
 
@@ -863,15 +869,7 @@ class _FingerMathState extends State<FingerMath> {
 
 /// Pixel art: each string is a row, '.' empty, letters pick a colour.
 const _shipArt = ['....W....', '...WCW...', '...WCW...', '..WWCWW..', '.RWWWWWR.', 'RWWBWBWWR', 'RW.WWW.WR', 'R..O.O..R'];
-const _droneArt = [
-  '....CCC....',
-  '...CWWWC...',
-  '..GGGGGGG..',
-  '.GGGGGGGGG.',
-  'GOGGOGGOGGO',
-  '.GGGGGGGGG.',
-  '...G...G...',
-];
+const _droneArt = ['....CCC....', '...CWWWC...', '..GGGGGGG..', '.GGGGGGGGG.', 'GOGGOGGOGGO', '.GGGGGGGGG.', '...G...G...'];
 const _rockArt = ['..SSSS..', '.SSDSSS.', 'SSSSSDSS', 'SDSSSSSS', 'SSSSDSSS', '.SSSSSD.', '..SSSS..'];
 const _pixelColors = {
   'W': Color(0xFFE8F1FF),
@@ -950,6 +948,7 @@ class _SpaceBlasterState extends State<SpaceBlaster> with SingleTickerProviderSt
     super.initState();
     _ticker = createTicker(_tick);
   }
+
   final _rng = math.Random();
   final _foes = <_Foe>[];
   final _shots = <_Shot>[];
@@ -1201,7 +1200,7 @@ class _SpaceBlasterState extends State<SpaceBlaster> with SingleTickerProviderSt
                   left: 0,
                   right: 0,
                   bottom: 14,
-                  child: _HandHint(hands: _hands, visible: !_hands.handInView),
+                  child: KidsHandHint(hands: _hands, visible: !_hands.handInView),
                 ),
                 if (_hands.camera)
                   Positioned(
@@ -1319,4 +1318,163 @@ class _SpacePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_SpacePainter old) => true;
+}
+
+// ── Steering by hand or head ──────────────────────────────────────────────
+
+/// Which way a tracked point is pushed from the middle: (dx, dy) of the
+/// stronger way, or null while it rests in the middle ([dead] each way).
+(int, int)? steerFrom(Offset? p, {double dead = 0.14}) {
+  if (p == null) return null;
+  final dx = p.dx - 0.5, dy = p.dy - 0.5;
+  if (dx.abs() < dead && dy.abs() < dead) return null;
+  return dx.abs() >= dy.abs() ? (dx > 0 ? 1 : -1, 0) : (0, dy > 0 ? 1 : -1);
+}
+
+/// Turns a hand or head into steps: one step each time it leaves the
+/// middle, then it must come back before the next (for hopping games).
+class StepTrigger {
+  bool _armed = true;
+
+  /// The step to take now, if any.
+  (int, int)? update(Offset? p, {double dead = 0.16}) {
+    final s = steerFrom(p, dead: dead);
+    if (s == null) {
+      // Back in the middle (a little inside, so wobbles don't re-fire).
+      if (steerFrom(p, dead: dead * 0.6) == null) _armed = true;
+      return null;
+    }
+    if (!_armed) return null;
+    _armed = false;
+    return s;
+  }
+}
+
+/// A little round pad showing where the hand or head is pushing: the dot
+/// follows it, the ring lights the way it steers.
+class KidsMotionStick extends StatelessWidget {
+  const KidsMotionStick({super.key, required this.hands, this.size = 150});
+  final KidsHands hands;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<Offset?>(
+    valueListenable: hands.point,
+    builder: (context, p, _) => SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(painter: _StickPainter(p, hands.handInView, hands.head)),
+    ),
+  );
+}
+
+class _StickPainter extends CustomPainter {
+  _StickPainter(this.p, this.live, this.head);
+  final Offset? p;
+  final bool live, head;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final r = size.shortestSide / 2;
+    canvas.drawCircle(c, r, Paint()..color = Colors.white.withValues(alpha: 0.12));
+    canvas.drawCircle(
+      c,
+      r - 1.5,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3
+        ..color = const Color(0xFF39D0FF).withValues(alpha: live ? 0.9 : 0.35),
+    );
+    canvas.drawCircle(c, r * 0.28, Paint()..color = Colors.white.withValues(alpha: 0.1));
+    final s = steerFrom(p);
+    for (final (dx, dy) in const [(1, 0), (-1, 0), (0, 1), (0, -1)]) {
+      final on = s == (dx, dy);
+      final tip = c + Offset(dx * r * 0.82, dy * r * 0.82);
+      final side = Offset(-dy * r * 0.14, dx * r * 0.14);
+      final back = c + Offset(dx * r * 0.6, dy * r * 0.6);
+      canvas.drawPath(
+        Path()
+          ..moveTo(tip.dx, tip.dy)
+          ..lineTo(back.dx + side.dx, back.dy + side.dy)
+          ..lineTo(back.dx - side.dx, back.dy - side.dy)
+          ..close(),
+        Paint()..color = on ? const Color(0xFFFFE066) : Colors.white24,
+      );
+    }
+    final q = p;
+    if (q != null) {
+      final dot = c + Offset((q.dx - 0.5) * 2 * r * 0.8, (q.dy - 0.5) * 2 * r * 0.8);
+      canvas.drawCircle(dot, r * 0.17, Paint()..color = live ? const Color(0xFFFFE066) : Colors.white38);
+    }
+    final icon = head ? Icons.face_rounded : Icons.back_hand_rounded;
+    final tp = TextPainter(
+      text: TextSpan(
+        text: String.fromCharCode(icon.codePoint),
+        style: TextStyle(fontFamily: icon.fontFamily, package: icon.fontPackage, fontSize: r * 0.3, color: Colors.white54),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, c - Offset(tp.width / 2, tp.height / 2));
+  }
+
+  @override
+  bool shouldRepaint(_StickPainter old) => old.p != p || old.live != live;
+}
+
+/// How a step-at-a-time game is played: the arrow buttons, a hand or the
+/// head.
+Widget kidsPlayWithChips(int selected, ValueChanged<int> onPick) => Column(
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    Text('Play with', style: kidsText(18, weight: FontWeight.w700)),
+    const SizedBox(height: 8),
+    kidsLevelChips(const ['Buttons', 'My hand', 'My head'], selected, onPick),
+  ],
+);
+
+/// Starts tracking for [playWith] (1 hand, 2 head), or none for buttons.
+KidsHands? kidsTrackerFor(AppContainer? container, int playWith) =>
+    container == null || playWith == 0 ? null : KidsHands(container.motion, head: playWith == 2);
+
+/// In place of the arrow buttons while a hand or the head steers: the
+/// stick that shows where it pushes, a left-right swap and a hint.
+class KidsMotionPanel extends StatefulWidget {
+  const KidsMotionPanel({super.key, required this.hands, this.hint});
+  final KidsHands hands;
+  final String? hint;
+
+  @override
+  State<KidsMotionPanel> createState() => _KidsMotionPanelState();
+}
+
+class _KidsMotionPanelState extends State<KidsMotionPanel> {
+  @override
+  Widget build(BuildContext context) {
+    final h = widget.hands;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        KidsMotionStick(hands: h),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: 220,
+          child: Text(
+            !h.camera ? 'Camera is off: swipe on the game' : widget.hint ?? (h.head ? 'Lean your head the way to go' : 'Move your hand the way to go'),
+            textAlign: TextAlign.center,
+            style: kidsText(17, weight: FontWeight.w700),
+          ),
+        ),
+        if (h.camera)
+          TextButton.icon(
+            onPressed: () => setState(() => h.flip = !h.flip),
+            icon: const Icon(Icons.swap_horiz_rounded, color: Colors.white70),
+            label: Text(
+              'Swap sides',
+              style: kidsText(15, color: Colors.white70, weight: FontWeight.w600),
+            ),
+          ),
+      ],
+    );
+  }
 }

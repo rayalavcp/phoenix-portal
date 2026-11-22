@@ -7,10 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../app_container.dart';
 import 'kids_activities.dart';
 import 'kids_games.dart';
 import 'kids_logic.dart';
 import 'kids_more_logic.dart';
+import 'kids_motion.dart' show KidsHands, KidsMotionPanel, kidsPlayWithChips, kidsTrackerFor, steerFrom;
 
 /// The Kids Portal's play shelf: Tic-Tac-Toe, Snake, Simon Says, Pixel
 /// Paint and the Piano.
@@ -216,8 +218,11 @@ class _TicTacToeState extends State<TicTacToe> {
 // ── Snake ─────────────────────────────────────────────────────────────────
 
 class SnakeGame extends StatefulWidget {
-  const SnakeGame({super.key, required this.onBack});
+  const SnakeGame({super.key, required this.onBack, this.container});
   final VoidCallback onBack;
+
+  /// For steering by hand or head (none: buttons and swipes only).
+  final AppContainer? container;
 
   @override
   State<SnakeGame> createState() => _SnakeGameState();
@@ -229,7 +234,9 @@ class _SnakeGameState extends State<SnakeGame> {
   List<(int, int)> _snake = const [];
   (int, int) _dir = (1, 0), _nextDir = (1, 0);
   (int, int) _food = (10, 6);
-  Timer? _timer;
+  Timer? _timer, _steerTimer;
+  KidsHands? _tracker;
+  int _playWith = 0; // buttons, hand, head
   bool _playing = false, _over = false, _newBest = false;
 
   /// Slow, Normal, Fast: milliseconds a step.
@@ -238,6 +245,16 @@ class _SnakeGameState extends State<SnakeGame> {
 
   void _start() {
     _timer?.cancel();
+    _steerTimer?.cancel();
+    _tracker?.dispose();
+    final tracker = _tracker = kidsTrackerFor(widget.container, _playWith);
+    if (tracker != null) {
+      _steerTimer = Timer.periodic(const Duration(milliseconds: 40), (_) {
+        tracker.step(0.04);
+        final s = steerFrom(tracker.point.value);
+        if (s != null) _turn(s.$1, s.$2);
+      });
+    }
     setState(() {
       _snake = [(5, 6), (4, 6), (3, 6)];
       _dir = (1, 0);
@@ -266,6 +283,7 @@ class _SnakeGameState extends State<SnakeGame> {
     final head = (_snake.first.$1 + _dir.$1, _snake.first.$2 + _dir.$2);
     if (head.$1 < 0 || head.$2 < 0 || head.$1 >= _w || head.$2 >= _h || _snake.contains(head)) {
       _timer?.cancel();
+      _steerTimer?.cancel();
       final length = _snake.length;
       final best = await KidsScores.offer('snake', length);
       await KidsScores.offerChallenge('snake', length);
@@ -292,6 +310,8 @@ class _SnakeGameState extends State<SnakeGame> {
   @override
   void dispose() {
     _timer?.cancel();
+    _steerTimer?.cancel();
+    _tracker?.dispose();
     super.dispose();
   }
 
@@ -324,7 +344,15 @@ class _SnakeGameState extends State<SnakeGame> {
             icon: Icons.gesture_rounded,
             pitch: 'Eat the apples, grow long, miss the walls!',
             best: KidsScores.best('snake').then((b) => b == null ? null : 'Longest: $b'),
-            options: kidsLevelChips(const ['Slow', 'Normal', 'Fast'], _level, (i) => setState(() => _level = i)),
+            options: Column(
+              children: [
+                kidsLevelChips(const ['Slow', 'Normal', 'Fast'], _level, (i) => setState(() => _level = i)),
+                if (widget.container != null) ...[
+                  const SizedBox(height: 14),
+                  kidsPlayWithChips(_playWith, (i) => setState(() => _playWith = i)),
+                ],
+              ],
+            ),
             onStart: _start,
           )
         : LayoutBuilder(
@@ -353,7 +381,8 @@ class _SnakeGameState extends State<SnakeGame> {
                   ),
                 ),
               );
-              final pad = Column(
+              final tracker = _tracker;
+              final pad = tracker != null ? KidsMotionPanel(hands: tracker) : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
