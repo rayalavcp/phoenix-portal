@@ -453,7 +453,7 @@ class SchoolService {
         .get(Uri.https(_schoolCafe, '/api/GetISDByShortName', {'shortname': district}))
         .timeout(const Duration(seconds: 20));
     if (isd.statusCode != 200) throw 'district HTTP ${isd.statusCode}';
-    final isdId = findSchoolCafeId(jsonDecode(utf8.decode(isd.bodyBytes)), 'ISD');
+    final isdId = parseSchoolCafeIsdId(jsonDecode(utf8.decode(isd.bodyBytes)));
     if (isdId == null) throw 'district $district not found on SchoolCafe';
     final res = await _client
         .get(Uri.https(_schoolCafe, '/api/GetSchoolsList', {'districtId': isdId}))
@@ -545,12 +545,20 @@ String _key(DateTime d) => '${d.year}-${d.month}-${d.day}';
 /// The district school that best matches a typed [name]: every word of the
 /// name in the school's name, the shortest such name first ("Miller" finds
 /// "Miller Elementary", not "Miller Middle Annex" before it).
+/// Words that only say what kind of school it is: "Miller Elementary"
+/// is SchoolCafe's "Miller ES".
+const _schoolKindWords = {
+  'elementary', 'es', 'el', 'middle', 'ms', 'high', 'hs', 'school', 'sch', 'academy', 'the', 'of',
+};
+
 SchoolChoice? bestSchoolMatch(List<SchoolChoice> schools, String name) {
-  final words = name
+  final all = name
       .toLowerCase()
       .split(RegExp(r'[^a-z0-9]+'))
       .where((w) => w.isNotEmpty)
       .toList();
+  final words = all.where((w) => !_schoolKindWords.contains(w)).toList();
+  if (words.isEmpty) words.addAll(all);
   if (words.isEmpty) return null;
   final hits = [
     for (final s in schools)
@@ -630,6 +638,18 @@ String _title(String raw) => raw
 
 /// The first GUID-looking id in SchoolCafe's answer, preferring a key that
 /// mentions [kind] ("ISD", "School").
+/// The district's id from SchoolCafe's GetISDByShortName answer, e.g.
+/// `[{"ISDId":1611,"ISDName":"FRISCO ISD",…}]` → "1611". Empty list: none.
+String? parseSchoolCafeIsdId(Object? data) {
+  final first = data is List && data.isNotEmpty ? data.first : data;
+  if (first is Map) {
+    for (final e in first.entries) {
+      if ('${e.key}'.toLowerCase() == 'isdid' && e.value != null && '${e.value}'.trim().isNotEmpty) return '${e.value}'.trim();
+    }
+  }
+  return findSchoolCafeId(data, 'ISD');
+}
+
 String? findSchoolCafeId(Object? data, String kind) {
   final guid = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
   String? any;

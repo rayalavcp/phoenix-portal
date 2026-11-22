@@ -155,4 +155,17 @@ void main() {
       expect(day.items, isNot(contains('Ketchup')));
     });
   });
+
+  test("SchoolCafe's real Frisco ISD answers", () {
+    expect(parseSchoolCafeIsdId([
+      {'ISDId': 1611, 'Status': true, 'StateCd': 'TX', 'ISDName': 'FRISCO ISD'},
+    ]), '1611');
+    expect(parseSchoolCafeIsdId([]), isNull);
+    final schools = parseSchoolCafeSchools([
+      {'SchoolId': '702b2a68-5a80-42e6-bb6e-c5fd29c837df', 'SchoolTypeId': 1420, 'SiteTypeDescription': 'Elementary School', 'SchoolName': 'Allen ES'},
+      {'SchoolId': millerElementarySchoolCafeId, 'SchoolTypeId': 1420, 'SiteTypeDescription': 'Elementary School', 'SchoolName': 'Miller ES'},
+    ]);
+    expect(schools.map((s) => s.name), ['Allen ES', 'Miller ES']);
+    expect(bestSchoolMatch(schools, 'Miller Elementary')?.slug, millerElementarySchoolCafeId);
+  });
 }

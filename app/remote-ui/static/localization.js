@@ -220,7 +220,6 @@ function localizeFooter() {
     .split(/(\{heart\}|\{author\})/);
   credit.replaceChildren(...parts.map(part => part === '{heart}' ? heart
     : part === '{author}' ? author : document.createTextNode(part)));
-  document.querySelector('.made-by > a').textContent = t('settingsBuyCoffee');
   credit.dataset.language = languagePreference;
   focused?.focus({preventScroll: true});
 }
