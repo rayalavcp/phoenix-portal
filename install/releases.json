@@ -1,16 +1,16 @@
 [
   {
-    "tag_name": "2026.12.5",
-    "name": "Phoenix Portal 2026.12.5",
+    "tag_name": "2026.12.6",
+    "name": "Phoenix Portal 2026.12.6",
     "draft": false,
     "prerelease": false,
-    "body": "Phoenix Portal no longer contacts the original project: analytics send nothing, the plugin directory reads this repository, and guide links open this repository's docs. Includes everything in 2026.12.4.",
+    "body": "Arcade shelf in the Kids Portal: Munch Maze (maze chase) and Brick Bash (paddle and bricks, by finger, hand or head). Fix: leaving a camera game before starting it no longer crashes.",
     "html_url": "https://github.com/rayalavcp/phoenix-portal/tree/claude/fervent-hopper-25a7jk/install",
     "assets": [
       {
-        "name": "kiosk-satellite-2026.12.5.apk",
+        "name": "kiosk-satellite-2026.12.6.apk",
         "browser_download_url": "https://raw.githubusercontent.com/rayalavcp/phoenix-portal/claude/fervent-hopper-25a7jk/install/phoenix-portal.apk",
-        "size": 99771228,
+        "size": 99837016,
         "state": "uploaded"
       }
     ]

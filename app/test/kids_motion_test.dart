@@ -61,6 +61,15 @@ void main() {
       await tester.pump(const Duration(seconds: 2));
     }
 
+    testWidgets('leaving before starting is fine', (tester) async {
+      for (final g in [BubblePop(container: c, onBack: () {}), SpaceBlaster(container: c, onBack: () {}),
+          FruitCatcher(container: c, onBack: () {}), FingerMath(container: c, onBack: () {})]) {
+        await tester.pumpWidget(MaterialApp(home: Scaffold(body: g)));
+        await tester.pumpWidget(const SizedBox());
+        expect(tester.takeException(), isNull);
+      }
+    });
+
     for (final size in const [Size(1280, 800), Size(800, 1280)]) {
       testWidgets('Bubble Pop at $size', (tester) => play(tester, BubblePop(container: c, onBack: () {}), size));
       testWidgets('Space Blaster at $size', (tester) => play(tester, SpaceBlaster(container: c, onBack: () {}), size));

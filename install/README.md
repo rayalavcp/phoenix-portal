@@ -1,8 +1,13 @@
-# Phoenix Portal test build 2026.12.5 (380)
+# Phoenix Portal test build 2026.12.6 (381)
 
-- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 99771228 bytes.
-  SHA-256 `1823a6b541e96319eaa7fffe3879f3f85bd47bd7cf28435ed8519b8634269064`.
+- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 99837016 bytes.
+  SHA-256 `628b5a076a0abc9b81c0853a17992fd03e527f5f8a3eb2e9ebc075dbb2bd7434`.
 - New in this build:
+  - **Arcade** shelf in the Kids Portal, original retro games: **Munch
+    Maze** (eat the seeds, dodge the robots, power berries) and **Brick
+    Bash** (paddle and bricks; the paddle follows a finger, a hand or the
+    head). Both can be hidden from the remote admin.
+  - Fix: leaving a camera game before pressing Start no longer crashes.
   - **Nothing goes to the original project**: analytics send nothing, the
     plugin directory and every guide link use this repository.
   - **Guides**: every Open guide button opens this repository's docs.

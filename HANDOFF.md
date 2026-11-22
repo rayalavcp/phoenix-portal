@@ -34,7 +34,7 @@ remote administration. Home Assistant is optional.
 - Wallpapers: real 4K photos (Wikimedia Commons, credited in
   `wallpapers/CREDITS.md`); the owner may upload their own.
 - Do not recreate copyrighted game characters (the Space Blaster enemies are
-  original saucers on purpose).
+  original saucers on purpose; the Arcade games use original characters).
 
 ## Layout
 
@@ -61,7 +61,7 @@ remote administration. Home Assistant is optional.
 | Telugu calendar (panchangam), word of the day | `managers/home/panchang.dart`, `managers/home/telugu_words.dart`, `ui/home/telugu_calendar_page.dart` |
 | Photos (Immich / folder), photo frame | `managers/home/photo_service.dart`, `ui/home/photo_frame.dart` |
 | Kids Portal hub and frame | `ui/kids/kids_overlay.dart`, `ui/kids/kids_activities.dart` |
-| Kids games | `kids_learn.dart` (quizzes), `kids_games.dart`, `kids_puzzles.dart`, `kids_play.dart` (incl. piano), `kids_motion.dart` (camera games) |
+| Kids games | `kids_learn.dart` (quizzes), `kids_games.dart`, `kids_puzzles.dart`, `kids_play.dart` (incl. piano), `kids_motion.dart` (camera games), `kids_arcade.dart` (Munch Maze, Brick Bash) |
 | Hand/head tracking for games | native `HandTracker.kt`, `FaceDetector.kt`, `CameraMotion.kt`; Dart `managers/motion/motion_manager.dart` (`startHandTest`, `startHeadTracking`) |
 | Updates from GitHub | `managers/update/update_manager.dart` (`_releasesUrl` = this repo's `install/releases.json`) |
 | Admin Phoenix Home page | `remote-ui/static/phoenix_home.js` (+ CSS in `app.css`, `#tab-phoenix`) |
@@ -95,7 +95,7 @@ pre-existing problem); it passes on its own.
 ## Shipping a build
 
 1. Give it a **new version name** in `app/pubspec.yaml` (e.g.
-   `2026.12.6+381`). The Portal's update check compares names.
+   `2026.12.7+382`). The Portal's update check compares names.
 2. Build, then check: version, signing key, size under 100 MB.
 3. Copy to `install/phoenix-portal.apk`.
 4. `python3 install/make_releases.py <version> "notes"` writes

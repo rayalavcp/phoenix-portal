@@ -201,7 +201,13 @@ class BubblePop extends StatefulWidget {
 class _BubblePopState extends State<BubblePop> with SingleTickerProviderStateMixin {
   static const _seconds = 60;
   late final KidsHands _hands = KidsHands(widget.container.motion);
-  late final Ticker _ticker = createTicker(_tick);
+  late final Ticker _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = createTicker(_tick);
+  }
   final _rng = math.Random();
   final _bubbles = <_Bubble>[];
   Duration _last = Duration.zero;
@@ -449,7 +455,13 @@ class _FruitCatcherState extends State<FruitCatcher> with SingleTickerProviderSt
   bool _byHead = false;
   KidsHands? _tracker;
   KidsHands get _hands => _tracker ??= KidsHands(widget.container.motion, head: _byHead);
-  late final Ticker _ticker = createTicker(_tick);
+  late final Ticker _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = createTicker(_tick);
+  }
   final _rng = math.Random();
   final _fruit = <_Fruit>[];
   Duration _last = Duration.zero;
@@ -931,7 +943,13 @@ class _SpaceBlasterState extends State<SpaceBlaster> with SingleTickerProviderSt
   bool _byHead = true;
   KidsHands? _tracker;
   KidsHands get _hands => _tracker ??= KidsHands(widget.container.motion, head: _byHead);
-  late final Ticker _ticker = createTicker(_tick);
+  late final Ticker _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = createTicker(_tick);
+  }
   final _rng = math.Random();
   final _foes = <_Foe>[];
   final _shots = <_Shot>[];

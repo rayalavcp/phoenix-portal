@@ -8,6 +8,7 @@ import '../../app_container.dart';
 import '../../managers/kids/kids_manager.dart';
 import '../../managers/launcher/app_launcher_manager.dart';
 import 'kids_activities.dart';
+import 'kids_arcade.dart';
 import 'kids_games.dart';
 import 'kids_learn.dart';
 import 'kids_logic.dart';
@@ -84,6 +85,7 @@ const _shelfColors = <String, List<Color>>{
   'Puzzles': [Color(0xFF8E44FF), Color(0xFFD94BC8), Color(0xFFFF6B9A)],
   'Play': [Color(0xFF13B88A), Color(0xFF1FA2C9), Color(0xFF3A7BFF)],
   'Move': [Color(0xFFFF9F1C), Color(0xFFFF5E62), Color(0xFFB04BFF)],
+  'Arcade': [Color(0xFF1A1340), Color(0xFF3B5BFF), Color(0xFFFF4D9A)],
   'Create': [Color(0xFFFF7A3D), Color(0xFFFF4D8D), Color(0xFFB04BFF)],
   'My apps': [Color(0xFF2B3A8F), Color(0xFF4A3FB8), Color(0xFF7A4CD9)],
 };
@@ -93,6 +95,7 @@ const _shelfIcons = <String, IconData>{
   'Puzzles': Icons.extension_rounded,
   'Play': Icons.sports_esports_rounded,
   'Move': Icons.back_hand_rounded,
+  'Arcade': Icons.videogame_asset_rounded,
   'Create': Icons.palette_rounded,
   'My apps': Icons.apps_rounded,
 };
@@ -104,6 +107,7 @@ enum _Game {
   ttt, snake, simon, pixel, piano,
   fractions, money, science, spelling, opposites, mole, lights,
   bubbles, catcher, fingermath, blaster,
+  munch, bricks,
 }
 
 /// The hub's cards: title, pitch, icon, colours, shelf and how the best
@@ -183,6 +187,11 @@ final _games = <_GameInfo>[
       const [Color(0xFF13B88A), Color(0xFF2F7BD6)], null, null, shelf: 'Move'),
   _GameInfo(_Game.fingermath, 'Finger Math', 'Answer with your fingers', Icons.front_hand_rounded,
       const [Color(0xFFFF7A3D), Color(0xFFB04BFF)], null, null, shelf: 'Move'),
+  // Arcade: original retro games.
+  _GameInfo(_Game.munch, 'Munch Maze', 'Eat the seeds, dodge the robots', Icons.grid_on_rounded,
+      const [Color(0xFF1A1340), Color(0xFF3B5BFF)], 'munch1', (b) => 'High score: $b', shelf: 'Arcade'),
+  _GameInfo(_Game.bricks, 'Brick Bash', 'Bounce the ball, smash bricks', Icons.view_module_rounded,
+      const [Color(0xFF8A1E5A), Color(0xFFFF9F1C)], 'bricks1', (b) => 'High score: $b', shelf: 'Arcade'),
   // Create
   const _GameInfo(_Game.draw, 'Draw Studio', 'Paint whatever you like', Icons.brush_rounded,
       [Color(0xFFD42A1A), Color(0xFFFF4D8D)], null, null, shelf: 'Create'),
@@ -192,7 +201,7 @@ final _games = <_GameInfo>[
       [Color(0xFF1A1340), Color(0xFF5B6CFF)], null, null, shelf: 'Create'),
 ];
 
-const _shelves = ['Learn', 'Puzzles', 'Play', 'Move', 'Create'];
+const _shelves = ['Learn', 'Puzzles', 'Play', 'Arcade', 'Move', 'Create'];
 
 class _KidsHome extends StatefulWidget {
   const _KidsHome({super.key, required this.container});
@@ -265,6 +274,8 @@ class _KidsHomeState extends State<_KidsHome> {
       _Game.bubbles => BubblePop(key: const ValueKey('bubbles'), container: widget.container, onBack: _back),
       _Game.catcher => FruitCatcher(key: const ValueKey('catcher'), container: widget.container, onBack: _back),
       _Game.fingermath => FingerMath(key: const ValueKey('fingermath'), container: widget.container, onBack: _back),
+      _Game.munch => MunchMaze(key: const ValueKey('munch'), onBack: _back),
+      _Game.bricks => BrickBash(key: const ValueKey('bricks'), container: widget.container, onBack: _back),
       null => ListenableBuilder(
         key: const ValueKey('home'),
         listenable: widget.container.phoenixHome.kidsHiddenGames,
