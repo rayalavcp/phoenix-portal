@@ -9,7 +9,7 @@
     "assets": [
       {
         "name": "kiosk-satellite-2026.12.3.apk",
-        "browser_download_url": "https://github.com/rayalavcp/phoenix-portal/raw/claude/fervent-hopper-25a7jk/install/phoenix-portal.apk",
+        "browser_download_url": "https://raw.githubusercontent.com/rayalavcp/phoenix-portal/claude/fervent-hopper-25a7jk/install/phoenix-portal.apk",
         "size": 99770944,
         "state": "uploaded"
       }

@@ -35,7 +35,7 @@ def main():
             {
                 # The app picks the APK by this name (see release_apk.dart).
                 'name': f'kiosk-satellite-{version}.apk',
-                'browser_download_url': f'https://github.com/{REPO}/raw/{BRANCH}/install/phoenix-portal.apk',
+                'browser_download_url': f'https://raw.githubusercontent.com/{REPO}/{BRANCH}/install/phoenix-portal.apk',
                 'size': size,
                 'state': 'uploaded',
             }
