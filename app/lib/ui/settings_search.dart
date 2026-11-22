@@ -229,9 +229,9 @@ const List<SettingsSearchEntry> handBuiltSearchEntries = [
   ),
   SettingsSearchEntry(
     category: "Device",
-    title: "Custom repository guide",
+    title: "GitHub update guide",
     description:
-        "How to host the releases file and the APKs on your own network.",
+        "How this Portal updates from GitHub, and how to publish a new version.",
     subpage: "Updates",
     anchorId: "x:update_docs",
   ),

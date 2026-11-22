@@ -13474,13 +13474,13 @@ abstract class UiStrings {
   /// Label or explanation on this Device settings page.
   ///
   /// In en, this message translates to:
-  /// **'Custom repository guide'**
+  /// **'GitHub update guide'**
   String get deviceUpdateGuide;
 
   /// Label or explanation on this Device settings page.
   ///
   /// In en, this message translates to:
-  /// **'How to host the releases file and the APKs on your own network.'**
+  /// **'How this Portal updates from GitHub, and how to publish a new version.'**
   String get deviceUpdateGuideHelp;
 
   /// Label or explanation on this Device settings page.

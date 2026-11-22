@@ -68,8 +68,10 @@ void main() {
 
   String release(String tag) => releases([entry(tag)]);
 
+  // The GitHub source reads the repository's install/releases.json (or, on
+  // an older build, GitHub's releases API).
   bool isReleaseQuery(http.BaseRequest request) =>
-      request.url.host == 'api.github.com';
+      request.url.host == 'api.github.com' || request.url.path.endsWith('/releases.json');
 
   setUp(() async {
     cache = await Directory.systemTemp.createTemp('ks_update_test');

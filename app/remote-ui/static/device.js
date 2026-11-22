@@ -124,15 +124,15 @@ export function renderAnalyticsIntro(panel) {
 // out, the same words the device puts there (_updateDocsUrl in
 // settings_screen.dart).
 export const UPDATE_DOCS_URL =
-  'https://kiosksatellite.com/docs/updates/#custom-repository';
+  'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/install/UPDATES.md';
 
 export function renderUpdateSourceDocs(panel) {
   if (!panel) return;
   renderUploadInstall(panel);
   const card = document.createElement('div');
   card.className = 'card';
-  const docs = readOnlyRow(deviceText('Custom repository guide'),
-    deviceText('How to host the releases file and the APKs on your own network.'), '');
+  const docs = readOnlyRow(deviceText('GitHub update guide'),
+    deviceText('How this Portal updates from GitHub, and how to publish a new version.'), '');
   docs.querySelector('span').remove();
   docs.dataset.searchId = 'x:update_docs';
   const link = document.createElement('a');

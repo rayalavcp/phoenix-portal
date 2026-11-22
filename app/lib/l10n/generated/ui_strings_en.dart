@@ -7671,11 +7671,11 @@ class UiStringsEn extends UiStrings {
   String get deviceUpdateCustom => 'Custom Repository';
 
   @override
-  String get deviceUpdateGuide => 'Custom repository guide';
+  String get deviceUpdateGuide => 'GitHub update guide';
 
   @override
   String get deviceUpdateGuideHelp =>
-      'How to host the releases file and the APKs on your own network.';
+      'How this Portal updates from GitHub, and how to publish a new version.';
 
   @override
   String get deviceInstallFile => 'Install from file';

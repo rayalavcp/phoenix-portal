@@ -236,8 +236,7 @@ const _voiceMusicDocsUrl =
 // in a row description. Mirrored on the remote (renderUpdateSourceDocs in
 // device.js).
 const _updateDocsUrl =
-    'https://kiosksatellite.com/docs/updates/'
-    '#custom-repository';
+    'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/install/UPDATES.md';
 
 /// (defs category, page title, icon, subtitle)
 // The icon is a Material [IconData], or the path of an SVG asset for a
@@ -4111,12 +4110,11 @@ class _CategoryContentState extends State<_CategoryContent> {
             SearchLandingTarget(
               id: 'x:update_docs',
               child: ListTile(
-                title: Text(deviceText(context, 'Custom repository guide')),
+                title: Text(deviceText(context, 'GitHub update guide')),
                 subtitle: Text(
                   deviceText(
                     context,
-                    'How to host the releases file and the APKs on your own '
-                    'network.',
+                    'How this Portal updates from GitHub, and how to publish a new version.',
                   ),
                 ),
                 trailing: Icon(Icons.open_in_new),

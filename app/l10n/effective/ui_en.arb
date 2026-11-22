@@ -28913,7 +28913,7 @@
       ]
     }
   },
-  "deviceUpdateGuide": "Custom repository guide",
+  "deviceUpdateGuide": "GitHub update guide",
   "@deviceUpdateGuide": {
     "context": "Settings:Device:Updates",
     "description": "Label or explanation on this Device settings page.",
@@ -28926,7 +28926,7 @@
       ]
     }
   },
-  "deviceUpdateGuideHelp": "How to host the releases file and the APKs on your own network.",
+  "deviceUpdateGuideHelp": "How this Portal updates from GitHub, and how to publish a new version.",
   "@deviceUpdateGuideHelp": {
     "context": "Settings:Device:Updates",
     "description": "Label or explanation on this Device settings page.",
