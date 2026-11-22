@@ -1,8 +1,10 @@
-# Phoenix Portal test build 2026.12.4 (379)
+# Phoenix Portal test build 2026.12.5 (380)
 
-- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 99771196 bytes.
-  SHA-256 `9556dd3257fb6c3353cc40ece092dc08bd79aae11afa0b89d0df1bbc91e729f7`.
+- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 99771228 bytes.
+  SHA-256 `1823a6b541e96319eaa7fffe3879f3f85bd47bd7cf28435ed8519b8634269064`.
 - New in this build:
+  - **Nothing goes to the original project**: analytics send nothing, the
+    plugin directory and every guide link use this repository.
   - **Guides**: every Open guide button opens this repository's docs.
   - **Updates from GitHub**: the Portal checks install/releases.json in this
     repository and installs new builds itself (see UPDATES.md).
