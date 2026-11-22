@@ -1,8 +1,11 @@
-# Phoenix Portal test build 2026.11.30 (375)
+# Phoenix Portal test build 2026.12.1 (376)
 
-- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 99654756 bytes.
-  SHA-256 `b61abf892152f22d75671e2f7a697df5f06793c0e2300437da5841ee7b0091dc`.
+- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 99704560 bytes.
+  SHA-256 `783d33b5a7fffabcb7817aafd5dd28dcca7662b7133af3749ef0c0fa1335f799`.
 - New in this build:
+  - **Live cameras** on the Today screen (Home Assistant, several: swipe
+    across the card), a **doorbell alert** (the camera live, full screen,
+    for 30 s when it rings) and a **menu items** picker.
   - **Remote admin fixed**: it stopped on its loading spinner since
     2026.11.27 (a startup error in the page's footer translation).
   - **School**: Miller Elementary menus from SchoolCafe (breakfast and
