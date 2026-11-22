@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
@@ -14,33 +15,65 @@ import 'kids_more_logic.dart';
 /// The Kids Portal's play shelf: Tic-Tac-Toe, Snake, Simon Says, Pixel
 /// Paint and the Piano.
 
-/// Plays the piano's tones through the app's own sound player. The notes
-/// are synthesized once into small WAV files in the cache.
+/// Plays the Kids Portal's instruments. Every note is synthesized once (in
+/// the background) into a WAV in the app's cache, then loaded into the
+/// native instrument player (InstrumentBridge.kt, a SoundPool), which plays
+/// a key the moment it is touched and lets notes ring together. Without the
+/// native player (tests, an old build) it falls back to the app's sound
+/// player.
 class KidsTones {
   KidsTones(this._play);
 
-  /// SoundManager.playFile: an id and a local file.
+  /// SoundManager.playFile: an id and a local file (the fallback).
   final Future<bool> Function(String id, String path) _play;
+  static const _channel = MethodChannel('kiosk_satellite/instrument');
 
-  final _paths = <int, String>{};
+  final _paths = <KidsInstrument, List<String>>{};
+  final _ids = <KidsInstrument, List<int>>{};
+  final _ready = <KidsInstrument, Future<void>>{};
   int _n = 0;
-  Future<void>? _ready;
 
-  Future<void> _prepare() async {
+  Future<void> _prepare(KidsInstrument instrument) async {
     final dir = await getTemporaryDirectory();
-    for (var i = 0; i < kidsPianoNotes.length; i++) {
-      final file = File('${dir.path}/phx_note_$i.wav');
-      if (!file.existsSync()) await file.writeAsBytes(toneWav(kidsPianoNotes[i].$2));
-      _paths[i] = file.path;
+    final files = [
+      for (var i = 0; i < kidsPianoNotes.length; i++) File('${dir.path}/phx_${instrument.name}_v2_$i.wav'),
+    ];
+    if (!files.every((f) => f.existsSync())) {
+      final freqs = [for (final n in kidsPianoNotes) n.$2];
+      final wavs = await compute(_renderAll, (freqs, instrument.index));
+      for (var i = 0; i < files.length; i++) {
+        await files[i].writeAsBytes(wavs[i], flush: true);
+      }
+    }
+    _paths[instrument] = [for (final f in files) f.path];
+    try {
+      final ids = await _channel.invokeListMethod<int>('load', {'paths': _paths[instrument]});
+      if (ids != null && ids.length == files.length) _ids[instrument] = ids;
+    } on MissingPluginException {
+      // No native player: the fallback plays the files.
+    } on PlatformException {
+      // Same.
     }
   }
 
-  /// Get the files ready ahead of the first key press.
-  Future<void> warm() => _ready ??= _prepare().catchError((_) {});
+  /// Get an instrument's notes ready ahead of the first key press.
+  Future<void> warm([KidsInstrument instrument = KidsInstrument.piano]) =>
+      _ready[instrument] ??= _prepare(instrument).catchError((_) {});
 
-  Future<void> note(int index) async {
-    await warm();
-    final path = _paths[index];
+  Future<void> note(int index, {KidsInstrument instrument = KidsInstrument.piano, double volume = 1}) async {
+    await warm(instrument);
+    final ids = _ids[instrument];
+    if (ids != null && index < ids.length) {
+      try {
+        final ok = await _channel.invokeMethod<bool>('play', {'id': ids[index], 'volume': volume});
+        if (ok ?? false) return;
+      } on MissingPluginException {
+        // Fall back below.
+      } on PlatformException {
+        // Fall back below.
+      }
+    }
+    final path = _paths[instrument]?.elementAtOrNull(index);
     if (path == null) return;
     try {
       await _play('kidnote${_n++ % 8}', path);
@@ -51,6 +84,10 @@ class KidsTones {
     }
   }
 }
+
+List<Uint8List> _renderAll((List<double>, int) job) => [
+  for (final f in job.$1) wavBytes(instrumentNote(f, KidsInstrument.values[job.$2])),
+];
 
 // ── Tic-Tac-Toe ───────────────────────────────────────────────────────────
 
@@ -694,117 +731,270 @@ class KidsPiano extends StatefulWidget {
 }
 
 class _KidsPianoState extends State<KidsPiano> {
-  /// Songs as key indexes into kidsPianoNotes.
-  static const _songs = <String, List<int>>{
-    'Twinkle Twinkle': [0, 0, 4, 4, 5, 5, 4, 3, 3, 2, 2, 1, 1, 0],
-    'Mary Had a Little Lamb': [2, 1, 0, 1, 2, 2, 2, 1, 1, 1, 2, 4, 4],
-    'Ode to Joy': [2, 2, 3, 4, 4, 3, 2, 1, 0, 0, 1, 2, 2, 1, 1],
-    'Happy Birthday': [0, 0, 1, 0, 3, 2, 0, 0, 1, 0, 4, 3],
-  };
   static const _keyColors = [
     Color(0xFFFF6B6B), Color(0xFFF28A1E), Color(0xFFFFD27A), Color(0xFF52D69F),
     Color(0xFF63C3FF), Color(0xFF5B6CFF), Color(0xFFB06BFF),
   ];
+  static const _instruments = [
+    (KidsInstrument.piano, 'Piano', Icons.piano_rounded),
+    (KidsInstrument.xylophone, 'Xylophone', Icons.music_note_rounded),
+    (KidsInstrument.musicBox, 'Music box', Icons.toys_rounded),
+  ];
 
+  KidsInstrument _instrument = KidsInstrument.piano;
+  bool _letters = true;
   String? _song;
   int _step = 0;
-  int? _pressed;
+  bool _listening = false;
+  int _listenToken = 0;
+
+  /// Keys down right now (for the glow), by pointer.
+  final _down = <int, int>{};
+  final _flash = <int>{};
+  final _sparks = <_Spark>[];
+  int _sparkId = 0;
+
+  final _keysKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
-    unawaited(widget.tones.warm());
+    unawaited(widget.tones.warm(_instrument));
   }
 
-  void _press(int i) {
-    unawaited(widget.tones.note(i));
+  @override
+  void dispose() {
+    _listenToken++;
+    super.dispose();
+  }
+
+  List<(int, double)>? get _notes => _song == null ? null : kidsPianoSongs[_song];
+
+  void _sound(int key, {bool byChild = true}) {
+    unawaited(widget.tones.note(key, instrument: _instrument));
     setState(() {
-      _pressed = i;
-      final song = _song == null ? null : _songs[_song];
-      if (song != null && song[_step] == i) {
-        _step++;
-        if (_step >= song.length) {
-          _step = 0;
-          unawaited(KidsScores.addStars(1));
-          ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text('You played $_song! ⭐')));
-          _song = null;
-        }
+      _flash.add(key);
+      _sparks.add(_Spark(_sparkId++, key));
+      if (_sparks.length > 12) _sparks.removeAt(0);
+    });
+    Future<void>.delayed(const Duration(milliseconds: 180), () {
+      if (mounted && !_down.containsValue(key)) setState(() => _flash.remove(key));
+    });
+    if (!byChild) return;
+    final notes = _notes;
+    if (notes != null && !_listening && notes[_step].$1 == key) {
+      _step++;
+      if (_step >= notes.length) {
+        final done = _song;
+        _step = 0;
+        _song = null;
+        unawaited(KidsScores.addStars(2));
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text('You played $done! ⭐⭐')));
       }
+    }
+  }
+
+  Future<void> _listen() async {
+    final notes = _notes;
+    if (notes == null) return;
+    final token = ++_listenToken;
+    setState(() {
+      _listening = true;
+      _step = 0;
     });
-    Future<void>.delayed(const Duration(milliseconds: 160), () {
-      if (mounted && _pressed == i) setState(() => _pressed = null);
+    for (final (key, beats) in notes) {
+      if (!mounted || token != _listenToken) return;
+      _sound(key, byChild: false);
+      setState(() => _down[-1] = key);
+      await Future<void>.delayed(Duration(milliseconds: (beats * 420).round()));
+    }
+    if (!mounted || token != _listenToken) return;
+    setState(() {
+      _down.remove(-1);
+      _listening = false;
     });
+  }
+
+  /// Which key is under [global]: black keys sit on top of white ones.
+  int? _keyAt(Offset global) {
+    final box = _keysKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return null;
+    final p = box.globalToLocal(global);
+    final size = box.size;
+    if (p.dx < 0 || p.dy < 0 || p.dx > size.width || p.dy > size.height) return null;
+    final whites = [for (var i = 0; i < kidsPianoNotes.length; i++) if (!kidsPianoNotes[i].$3) i];
+    final w = size.width / whites.length;
+    if (p.dy < size.height * 0.6) {
+      for (var i = 0; i < kidsPianoNotes.length; i++) {
+        if (!kidsPianoNotes[i].$3) continue;
+        final left = whites.indexOf(i - 1) * w + w * 0.68;
+        if (p.dx >= left && p.dx <= left + w * 0.64) return i;
+      }
+    }
+    return whites[(p.dx / w).floor().clamp(0, whites.length - 1)];
+  }
+
+  void _pointer(PointerEvent e, {bool up = false}) {
+    if (up) {
+      final key = _down.remove(e.pointer);
+      if (key != null) setState(() => _flash.remove(key));
+      return;
+    }
+    final key = _keyAt(e.position);
+    if (key == null || _down[e.pointer] == key) return;
+    // A new key under this finger: a tap, or a slide across the keys.
+    _down[e.pointer] = key;
+    _sound(key);
   }
 
   @override
   Widget build(BuildContext context) {
-    final song = _song == null ? null : _songs[_song];
-    final hint = song?[_step];
+    final notes = _notes;
+    final hint = notes != null && !_listening ? notes[_step].$1 : null;
     return KidsActivityFrame(
       title: 'Piano',
-      colors: const [Color(0xFF1A1340), Color(0xFF5B6CFF)],
+      colors: const [Color(0xFF14102E), Color(0xFF3A2F7A)],
       onBack: widget.onBack,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final (inst, label, icon) in _instruments)
+            Padding(
+              padding: const EdgeInsets.only(left: 6),
+              child: KidsBounce(
+                onTap: () {
+                  setState(() => _instrument = inst);
+                  unawaited(widget.tones.warm(inst));
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _instrument == inst ? Colors.white : Colors.white.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(icon, size: 20, color: _instrument == inst ? const Color(0xFF1A1340) : Colors.white),
+                      const SizedBox(width: 6),
+                      Text(label, style: kidsText(16, color: _instrument == inst ? const Color(0xFF1A1340) : Colors.white)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         child: Column(
           children: [
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final name in _songs.keys)
-                  KidsBounce(
-                    onTap: () => setState(() {
-                      _song = _song == name ? null : name;
-                      _step = 0;
-                    }),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: _song == name ? Colors.white : Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Text(name, style: kidsText(18, color: _song == name ? const Color(0xFF1A1340) : Colors.white)),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              song == null ? 'Play anything, or pick a song and follow the glowing key' : 'Next: the glowing key (${_step + 1} of ${song.length})',
-              style: kidsText(18, color: Colors.white70, weight: FontWeight.w700),
-            ),
-            const SizedBox(height: 10),
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+            SizedBox(
+              height: 46,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
                 children: [
-                  for (var i = 0; i < kidsPianoNotes.length; i++)
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 2),
-                        child: GestureDetector(
-                          onTapDown: (_) => _press(i),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 90),
-                            alignment: Alignment.bottomCenter,
-                            padding: const EdgeInsets.only(bottom: 14),
-                            decoration: BoxDecoration(
-                              color: _pressed == i
-                                  ? _keyColors[i % 7]
-                                  : hint == i
-                                  ? Color.lerp(Colors.white, _keyColors[i % 7], 0.45)
-                                  : Colors.white,
-                              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
-                              border: Border(bottom: BorderSide(color: _keyColors[i % 7], width: 10)),
-                            ),
-                            child: Text(kidsPianoNotes[i].$1, style: kidsText(22, color: const Color(0xFF1A1340))),
+                  for (final name in kidsPianoSongs.keys)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: KidsBounce(
+                        onTap: () => setState(() {
+                          _listenToken++;
+                          _listening = false;
+                          _down.remove(-1);
+                          _song = _song == name ? null : name;
+                          _step = 0;
+                        }),
+                        child: Container(
+                          alignment: Alignment.center,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: _song == name ? const Color(0xFFFFD27A) : Colors.white.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(18),
                           ),
+                          child: Text(name, style: kidsText(17, color: _song == name ? const Color(0xFF1A1340) : Colors.white)),
                         ),
                       ),
                     ),
                 ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 44,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: notes == null
+                        ? Text('Play anything — slide your finger across the keys!', style: kidsText(18, color: Colors.white70, weight: FontWeight.w700))
+                        : Row(
+                            children: [
+                              Expanded(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: LinearProgressIndicator(
+                                    value: _step / notes.length,
+                                    minHeight: 12,
+                                    backgroundColor: Colors.white12,
+                                    color: const Color(0xFFFFD27A),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(_listening ? 'Listen…' : 'Your turn: the glowing key', style: kidsText(17, color: Colors.white, weight: FontWeight.w700)),
+                            ],
+                          ),
+                  ),
+                  if (notes != null) ...[
+                    const SizedBox(width: 10),
+                    KidsBounce(
+                      onTap: _listening ? null : () => unawaited(_listen()),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(color: const Color(0xFF52D69F), borderRadius: BorderRadius.circular(16)),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.hearing_rounded, color: Color(0xFF0E3B2A), size: 20),
+                            const SizedBox(width: 6),
+                            Text('Listen', style: kidsText(16, color: const Color(0xFF0E3B2A))),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(width: 10),
+                  KidsBounce(
+                    onTap: () => setState(() => _letters = !_letters),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(16)),
+                      child: Text(_letters ? 'A B C' : 'Colours', style: kidsText(16)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: Listener(
+                behavior: HitTestBehavior.opaque,
+                onPointerDown: _pointer,
+                onPointerMove: _pointer,
+                onPointerUp: (e) => _pointer(e, up: true),
+                onPointerCancel: (e) => _pointer(e, up: true),
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: _Keyboard(
+                        key: _keysKey,
+                        lit: {..._flash, ..._down.values},
+                        hint: hint,
+                        letters: _letters,
+                        colors: _keyColors,
+                      ),
+                    ),
+                    for (final spark in _sparks) _SparkView(key: ValueKey(spark.id), spark: spark, keyboard: _keysKey),
+                  ],
+                ),
               ),
             ),
           ],
@@ -812,6 +1002,170 @@ class _KidsPianoState extends State<KidsPiano> {
       ),
     );
   }
+}
+
+/// Gently bobs its child up and down: "press here".
+class _Bob extends StatefulWidget {
+  const _Bob({required this.child});
+  final Widget child;
+
+  @override
+  State<_Bob> createState() => _BobState();
+}
+
+class _BobState extends State<_Bob> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 700))..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _c,
+    builder: (context, child) => Transform.translate(offset: Offset(0, -10 * Curves.easeInOut.transform(_c.value)), child: child),
+    child: Padding(padding: const EdgeInsets.only(bottom: 8), child: widget.child),
+  );
+}
+
+class _Spark {
+  _Spark(this.id, this.key);
+  final int id;
+  final int key;
+}
+
+/// A little note that floats up from a key that was played.
+class _SparkView extends StatelessWidget {
+  const _SparkView({super.key, required this.spark, required this.keyboard});
+  final _Spark spark;
+  final GlobalKey keyboard;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) {
+      final whites = [for (var i = 0; i < kidsPianoNotes.length; i++) if (!kidsPianoNotes[i].$3) i];
+      final w = box.maxWidth / whites.length;
+      final k = spark.key;
+      final x = kidsPianoNotes[k].$3 ? (whites.indexOf(k - 1) + 1) * w : (whites.indexOf(k) + 0.5) * w;
+      const symbols = ['♪', '♫', '♩', '♬'];
+      return TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: 1),
+        duration: const Duration(milliseconds: 900),
+        builder: (context, t, _) => Positioned(
+          left: x - 14 + math.sin(t * 6 + spark.id) * 10,
+          top: box.maxHeight * 0.35 - t * box.maxHeight * 0.45,
+          child: IgnorePointer(
+            child: Opacity(
+              opacity: (1 - t).clamp(0.0, 1.0),
+              child: Text(
+                symbols[spark.id % symbols.length],
+                style: TextStyle(fontSize: 30, color: _KidsPianoState._keyColors[(k * 5) % 7], shadows: const [Shadow(blurRadius: 6)]),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+/// The keys: white keys side by side, black keys on top between them.
+class _Keyboard extends StatelessWidget {
+  const _Keyboard({super.key, required this.lit, required this.hint, required this.letters, required this.colors});
+
+  final Set<int> lit;
+  final int? hint;
+  final bool letters;
+  final List<Color> colors;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) {
+      final whites = [for (var i = 0; i < kidsPianoNotes.length; i++) if (!kidsPianoNotes[i].$3) i];
+      final w = box.maxWidth / whites.length;
+      final h = box.maxHeight;
+      Color colorOf(int i) => colors[whites.indexOf(i) % 7];
+      return Stack(
+        children: [
+          for (final (n, i) in whites.indexed)
+            Positioned(
+              left: n * w,
+              top: 0,
+              width: w,
+              height: h,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 70),
+                  transform: Matrix4.translationValues(0, lit.contains(i) ? 4 : 0, 0),
+                  alignment: Alignment.bottomCenter,
+                  padding: const EdgeInsets.only(bottom: 14),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: lit.contains(i)
+                          ? [Color.lerp(Colors.white, colorOf(i), 0.55)!, colorOf(i)]
+                          : hint == i
+                          ? [Color.lerp(Colors.white, colorOf(i), 0.3)!, colorOf(i)]
+                          : const [Color(0xFFF4F4F8), Colors.white],
+                    ),
+                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+                    boxShadow: [
+                      if (hint == i) BoxShadow(color: colorOf(i), blurRadius: 22, spreadRadius: 2),
+                      if (!lit.contains(i)) const BoxShadow(color: Color(0x66000000), offset: Offset(0, 5), blurRadius: 2),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (hint == i) const _Bob(child: Icon(Icons.touch_app_rounded, color: Colors.white, size: 40, shadows: [Shadow(blurRadius: 8)])),
+                      Container(
+                        width: w * 0.62,
+                        height: w * 0.62,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(color: colorOf(i), shape: BoxShape.circle),
+                        child: letters ? Text(kidsPianoNotes[i].$1, style: kidsText(w * 0.32, color: Colors.white)) : null,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          for (var i = 0; i < kidsPianoNotes.length; i++)
+            if (kidsPianoNotes[i].$3)
+              Positioned(
+                left: whites.indexOf(i - 1) * w + w * 0.68,
+                top: 0,
+                width: w * 0.64,
+                height: h * 0.6,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 70),
+                  transform: Matrix4.translationValues(0, lit.contains(i) ? 3 : 0, 0),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: lit.contains(i)
+                          ? const [Color(0xFF5B6CFF), Color(0xFFB06BFF)]
+                          : hint == i
+                          ? const [Color(0xFF3A3F7A), Color(0xFFFFD27A)]
+                          : const [Color(0xFF26262E), Color(0xFF0C0C10)],
+                    ),
+                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(8)),
+                    boxShadow: [
+                      if (hint == i) const BoxShadow(color: Color(0xFFFFD27A), blurRadius: 18, spreadRadius: 1),
+                      const BoxShadow(color: Color(0x88000000), offset: Offset(0, 4), blurRadius: 4),
+                    ],
+                  ),
+                ),
+              ),
+        ],
+      );
+    },
+  );
 }
 
 // ── Whack-a-Mole ──────────────────────────────────────────────────────────

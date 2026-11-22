@@ -75,6 +75,7 @@ class KioskApplication : Application(), CameraXConfig.Provider {
     private lateinit var locationSensor: LocationSensor
     private lateinit var haptics: HapticsBridge
     private lateinit var tapSound: TapSoundBridge
+    private lateinit var instrument: InstrumentBridge
     private lateinit var bluetoothProxy: BluetoothProxyBridge
     private lateinit var plugins: me.jxl.kiosk_satellite.plugins.PluginBridge
     private lateinit var fleet: FleetBridge
@@ -173,6 +174,8 @@ class KioskApplication : Application(), CameraXConfig.Provider {
         OrientationSensor(applicationContext, messenger)
         haptics = HapticsBridge(applicationContext, messenger)
         tapSound = TapSoundBridge(applicationContext, messenger)
+        // The Kids Portal's piano: instant, overlapping notes.
+        instrument = InstrumentBridge(applicationContext, messenger)
         bluetoothProxy = BluetoothProxyBridge(applicationContext, messenger)
         TlsBridge(applicationContext, messenger)
         fleet = FleetBridge(applicationContext, messenger)

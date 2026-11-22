@@ -112,6 +112,40 @@ void main() {
     expect(wav.length, 44 + 22050 ~/ 10 * 2);
   });
 
+  group('piano', () {
+    test('two octaves, C4 to C6, with ten black keys', () {
+      expect(kidsPianoNotes, hasLength(25));
+      expect(kidsPianoNotes.where((n) => n.$3), hasLength(10));
+      expect(kidsPianoNotes.first.$2, closeTo(261.63, 0.01));
+      expect(kidsPianoNotes[9].$2, closeTo(440, 0.01)); // A4
+      expect(kidsPianoNotes.last.$2, closeTo(1046.5, 0.01));
+    });
+
+    test('every song stays on the keyboard', () {
+      for (final MapEntry(:key, :value) in kidsPianoSongs.entries) {
+        expect(value, isNotEmpty, reason: key);
+        for (final (note, beats) in value) {
+          expect(note, inInclusiveRange(0, 24), reason: key);
+          expect(beats, greaterThan(0), reason: key);
+        }
+      }
+    });
+
+    test('notes never clip and fade out to silence', () {
+      for (final inst in KidsInstrument.values) {
+        for (final f in [261.63, 523.25, 1046.5]) {
+          final n = instrumentNote(f, inst);
+          final peak = n.fold<double>(0, (m, v) => v.abs() > m ? v.abs() : m);
+          expect(peak, inInclusiveRange(0.3, 0.95), reason: '$inst $f');
+          expect(n.first.abs(), lessThan(0.01));
+          expect(n.last.abs(), lessThan(0.01));
+        }
+      }
+      // Low piano notes ring longer than high ones.
+      expect(instrumentNote(261.63, KidsInstrument.piano).length, greaterThan(instrumentNote(1046.5, KidsInstrument.piano).length));
+    });
+  });
+
   test('fractions: four different answers, simplest form at level 3', () {
     for (final level in [1, 2, 3]) {
       for (var i = 0; i < 200; i++) {

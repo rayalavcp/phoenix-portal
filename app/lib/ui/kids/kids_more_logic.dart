@@ -829,11 +829,10 @@ DailyChallenge dailyChallenge(DateTime day) {
 
 // ── Sound ────────────────────────────────────────────────────────────────
 
-/// A short tone as a 16-bit mono WAV: a sine with a soft attack and decay,
-/// so a quick run of notes does not click.
-Uint8List toneWav(double frequency, {int millis = 450, int rate = 22050}) {
-  final samples = rate * millis ~/ 1000;
-  final data = ByteData(44 + samples * 2);
+/// 16-bit mono PCM samples (-1..1) as a WAV file.
+Uint8List wavBytes(Float64List samples, {int rate = 44100}) {
+  final n = samples.length;
+  final data = ByteData(44 + n * 2);
   void str(int o, String s) {
     for (var i = 0; i < s.length; i++) {
       data.setUint8(o + i, s.codeUnitAt(i));
@@ -841,7 +840,7 @@ Uint8List toneWav(double frequency, {int millis = 450, int rate = 22050}) {
   }
 
   str(0, 'RIFF');
-  data.setUint32(4, 36 + samples * 2, Endian.little);
+  data.setUint32(4, 36 + n * 2, Endian.little);
   str(8, 'WAVE');
   str(12, 'fmt ');
   data.setUint32(16, 16, Endian.little);
@@ -852,23 +851,164 @@ Uint8List toneWav(double frequency, {int millis = 450, int rate = 22050}) {
   data.setUint16(32, 2, Endian.little);
   data.setUint16(34, 16, Endian.little);
   str(36, 'data');
-  data.setUint32(40, samples * 2, Endian.little);
-  final attack = rate * 0.01;
-  for (var i = 0; i < samples; i++) {
-    final env = math.min(1.0, i / attack) * math.exp(-3.0 * i / samples);
-    final t = i / rate;
-    // A touch of the octave makes it sound like a toy piano, not a beep.
-    final v = math.sin(2 * math.pi * frequency * t) * 0.8 +
-        math.sin(4 * math.pi * frequency * t) * 0.2;
-    data.setInt16(44 + i * 2, (v * env * 0.6 * 32767).round(), Endian.little);
+  data.setUint32(40, n * 2, Endian.little);
+  for (var i = 0; i < n; i++) {
+    data.setInt16(44 + i * 2, (samples[i].clamp(-1.0, 1.0) * 32767).round(), Endian.little);
   }
   return data.buffer.asUint8List();
 }
 
-/// The C major scale from middle C, two octaves: the piano's keys.
-const kidsPianoNotes = <(String, double)>[
-  ('C', 261.63), ('D', 293.66), ('E', 329.63), ('F', 349.23),
-  ('G', 392.00), ('A', 440.00), ('B', 493.88), ('C', 523.25),
-  ('D', 587.33), ('E', 659.25), ('F', 698.46), ('G', 783.99),
-  ('A', 880.00), ('B', 987.77), ('C', 1046.50),
+/// A short plain tone as a WAV (kept for simple beeps).
+Uint8List toneWav(double frequency, {int millis = 450, int rate = 22050}) {
+  final n = rate * millis ~/ 1000;
+  final out = Float64List(n);
+  final attack = rate * 0.01;
+  for (var i = 0; i < n; i++) {
+    final env = math.min(1.0, i / attack) * math.exp(-3.0 * i / n);
+    final t = i / rate;
+    out[i] = (math.sin(2 * math.pi * frequency * t) * 0.8 + math.sin(4 * math.pi * frequency * t) * 0.2) * env * 0.6;
+  }
+  return wavBytes(out, rate: rate);
+}
+
+/// The Kids Portal's instruments.
+enum KidsInstrument { piano, xylophone, musicBox }
+
+/// One note of [instrument] at [frequency], as samples (-1..1).
+///
+/// The piano is modelled on a struck string: about a dozen overtones, each
+/// slightly sharp (a real string is stiff), the higher ones fading faster;
+/// two strings a hair out of tune with each other, which gives a piano its
+/// slow shimmer; a soft felt knock at the start; low notes ring longer than
+/// high ones. The xylophone is a wooden bar (its overtones are not whole
+/// multiples) hit by a hard mallet, the music box a tiny steel comb.
+Float64List instrumentNote(double frequency, KidsInstrument instrument, {int rate = 44100}) {
+  final rnd = math.Random(frequency.round());
+  switch (instrument) {
+    case KidsInstrument.piano:
+      final seconds = (2.6 - (frequency - 260) / 900).clamp(1.4, 2.6);
+      final n = (rate * seconds).round();
+      final out = Float64List(n);
+      const b = 0.00035; // string stiffness
+      final baseDecay = 0.9 + frequency / 520; // per second
+      final brightness = (1.25 - frequency / 2600).clamp(0.6, 1.2);
+      for (final detune in const [-0.0006, 0.0006]) {
+        for (var h = 1; h <= 12; h++) {
+          final f = frequency * h * math.sqrt(1 + b * h * h) * (1 + detune);
+          if (f > rate / 2.2) break;
+          final amp = math.pow(h, -1.6 * (1.3 - brightness * 0.3)).toDouble() * (h == 1 ? 1.0 : 0.9) * (h % 7 == 0 ? 0.3 : 1);
+          final decay = baseDecay * (1 + 0.45 * (h - 1));
+          final w = 2 * math.pi * f / rate;
+          final phase = rnd.nextDouble() * 0.2;
+          for (var i = 0; i < n; i++) {
+            out[i] += amp * math.sin(w * i + phase) * math.exp(-decay * i / rate);
+          }
+        }
+      }
+      // The hammer: a short, dull knock.
+      var lp = 0.0;
+      final knock = (rate * 0.018).round();
+      for (var i = 0; i < knock && i < n; i++) {
+        lp += 0.12 * ((rnd.nextDouble() * 2 - 1) - lp);
+        out[i] += lp * 0.5 * (1 - i / knock);
+      }
+      return _shape(out, rate, attackMs: 2.5, releaseMs: 180, peak: 0.62 - (frequency - 260) / 4000);
+    case KidsInstrument.xylophone:
+      final n = (rate * 1.1).round();
+      final out = Float64List(n);
+      for (final (ratio, amp, decay) in const [(1.0, 1.0, 4.2), (3.932, 0.35, 11.0), (9.538, 0.12, 22.0)]) {
+        final w = 2 * math.pi * frequency * ratio / rate;
+        if (frequency * ratio > rate / 2.2) continue;
+        for (var i = 0; i < n; i++) {
+          out[i] += amp * math.sin(w * i) * math.exp(-decay * i / rate);
+        }
+      }
+      final click = (rate * 0.004).round();
+      for (var i = 0; i < click; i++) {
+        out[i] += (rnd.nextDouble() * 2 - 1) * 0.35 * (1 - i / click);
+      }
+      return _shape(out, rate, attackMs: 0.8, releaseMs: 120, peak: 0.6);
+    case KidsInstrument.musicBox:
+      final n = (rate * 1.8).round();
+      final out = Float64List(n);
+      for (final (ratio, amp, decay) in const [(1.0, 1.0, 2.2), (2.0, 0.12, 4.0), (5.404, 0.28, 7.5), (8.93, 0.08, 12.0)]) {
+        final w = 2 * math.pi * frequency * 2 * ratio / rate; // an octave up: a tiny comb
+        if (frequency * 2 * ratio > rate / 2.2) continue;
+        for (var i = 0; i < n; i++) {
+          out[i] += amp * math.sin(w * i) * math.exp(-decay * i / rate);
+        }
+      }
+      return _shape(out, rate, attackMs: 1, releaseMs: 200, peak: 0.5);
+  }
+}
+
+/// Soft start and end, scaled to [peak], so notes never click or clip.
+Float64List _shape(Float64List out, int rate, {required double attackMs, required double releaseMs, required double peak}) {
+  final attack = rate * attackMs / 1000, release = rate * releaseMs / 1000;
+  var max = 0.0;
+  for (final v in out) {
+    if (v.abs() > max) max = v.abs();
+  }
+  final scale = max == 0 ? 0.0 : peak / max;
+  for (var i = 0; i < out.length; i++) {
+    final a = i < attack ? i / attack : 1.0;
+    final left = out.length - i;
+    final r = left < release ? left / release : 1.0;
+    out[i] *= scale * a * r;
+  }
+  return out;
+}
+
+/// Two octaves, C4 to C6, every semitone: (name, frequency, black key).
+final kidsPianoNotes = <(String, double, bool)>[
+  for (var i = 0; i <= 24; i++)
+    (
+      const ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'][i % 12],
+      261.6256 * math.pow(2, i / 12).toDouble(),
+      const [1, 3, 6, 8, 10].contains(i % 12),
+    ),
 ];
+
+/// Songs for the piano: (semitones above C4, beats). Checked against their
+/// usual melodies in C (Happy Birthday in F, so it fits the two octaves).
+const kidsPianoSongs = <String, List<(int, double)>>{
+  'Twinkle Twinkle': [
+    (0, 1), (0, 1), (7, 1), (7, 1), (9, 1), (9, 1), (7, 2),
+    (5, 1), (5, 1), (4, 1), (4, 1), (2, 1), (2, 1), (0, 2),
+  ],
+  'Mary Had a Little Lamb': [
+    (4, 1), (2, 1), (0, 1), (2, 1), (4, 1), (4, 1), (4, 2),
+    (2, 1), (2, 1), (2, 2), (4, 1), (7, 1), (7, 2),
+    (4, 1), (2, 1), (0, 1), (2, 1), (4, 1), (4, 1), (4, 1), (4, 1),
+    (2, 1), (2, 1), (4, 1), (2, 1), (0, 2),
+  ],
+  'Row Your Boat': [
+    (0, 1.5), (0, 1.5), (0, 1), (2, 0.5), (4, 1.5),
+    (4, 1), (2, 0.5), (4, 1), (5, 0.5), (7, 3),
+    (12, 0.5), (12, 0.5), (12, 0.5), (7, 0.5), (7, 0.5), (7, 0.5),
+    (4, 0.5), (4, 0.5), (4, 0.5), (0, 0.5), (0, 0.5), (0, 0.5),
+    (7, 1), (5, 0.5), (4, 1), (2, 0.5), (0, 3),
+  ],
+  'Ode to Joy': [
+    (4, 1), (4, 1), (5, 1), (7, 1), (7, 1), (5, 1), (4, 1), (2, 1),
+    (0, 1), (0, 1), (2, 1), (4, 1), (4, 1.5), (2, 0.5), (2, 2),
+    (4, 1), (4, 1), (5, 1), (7, 1), (7, 1), (5, 1), (4, 1), (2, 1),
+    (0, 1), (0, 1), (2, 1), (4, 1), (2, 1.5), (0, 0.5), (0, 2),
+  ],
+  'Jingle Bells': [
+    (4, 1), (4, 1), (4, 2), (4, 1), (4, 1), (4, 2),
+    (4, 1), (7, 1), (0, 1.5), (2, 0.5), (4, 4),
+    (5, 1), (5, 1), (5, 1.5), (5, 0.5), (5, 1), (4, 1), (4, 1), (4, 0.5), (4, 0.5),
+    (4, 1), (2, 1), (2, 1), (4, 1), (2, 2), (7, 2),
+  ],
+  'Happy Birthday': [
+    (0, 0.75), (0, 0.25), (2, 1), (0, 1), (5, 1), (4, 2),
+    (0, 0.75), (0, 0.25), (2, 1), (0, 1), (7, 1), (5, 2),
+    (0, 0.75), (0, 0.25), (12, 1), (9, 1), (5, 1), (4, 1), (2, 2),
+    (10, 0.75), (10, 0.25), (9, 1), (5, 1), (7, 1), (5, 2),
+  ],
+  'Old MacDonald': [
+    (7, 1), (7, 1), (7, 1), (2, 1), (4, 1), (4, 1), (2, 2),
+    (11, 1), (11, 1), (9, 1), (9, 1), (7, 3),
+  ],
+};
