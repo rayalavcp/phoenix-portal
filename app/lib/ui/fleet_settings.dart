@@ -17,7 +17,7 @@ import 'subpage_icons.dart';
 import 'toast.dart';
 
 /// Where the full list of what syncs and what never does lives.
-const fleetDocsUrl = 'https://kiosksatellite.com/docs/fleet/';
+const fleetDocsUrl = 'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/fleet.md';
 
 /// The Fleet Management page: one kiosk leads, the others follow. The
 /// remote admin draws the same cards from the same `fleetStatus` command.

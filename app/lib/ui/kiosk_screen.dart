@@ -3544,7 +3544,7 @@ class _WebViewMissingNotice extends StatelessWidget {
   final bool duraSpeed;
 
   static const _duraSpeedDocsUrl =
-      'https://kiosksatellite.com/docs/permissions/#mediatek-duraspeed';
+      'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/permissions.md#mediatek-duraspeed';
 
   @override
   Widget build(BuildContext context) {

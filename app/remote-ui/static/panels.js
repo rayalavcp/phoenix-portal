@@ -347,7 +347,7 @@ function updateSessionPermissions(tab, shown) {
 /* The Music Library page's voice group, after its settings. Voice music
    lives in Home Assistant (the blueprint), so the group only points at the
    guide. Mirror of the device's group. */
-const MUSIC_VOICE_DOCS_URL = 'https://kiosksatellite.com/docs/music-library/#playing-music-by-voice';
+const MUSIC_VOICE_DOCS_URL = 'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/music-library.md#playing-music-by-voice';
 
 export function updateMusicLibraryPage() {
   const panel = document.querySelector('#tab-sendspin > .subpage[data-subpage="Music Library"]');

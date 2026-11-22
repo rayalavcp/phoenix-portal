@@ -173,7 +173,7 @@ class _UpdateHelperSettingsState extends State<UpdateHelperSettings>
                 Navigator.of(context).popUntil((route) => route.isFirst);
                 widget.container.commands.execute('showLinkPage', {
                   'url':
-                      'https://kiosksatellite.com/docs/updates/#optional-update-helper',
+                      'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/updates.md#optional-update-helper',
                 });
               },
             ),

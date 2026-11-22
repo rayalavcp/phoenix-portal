@@ -221,15 +221,15 @@ const _analyticsIntro =
     'Share anonymized information from your installation to help make '
     'Phoenix Portal better and guide which devices and features get '
     'attention.';
-const _analyticsDocsUrl = 'https://kiosksatellite.com/docs/analytics/';
+const _analyticsDocsUrl = 'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/analytics.md';
 const _voiceAlarmsDocsUrl =
-    'https://kiosksatellite.com/docs/alarms/#setting-alarms-by-voice';
+    'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/alarms.md#setting-alarms-by-voice';
 const _voiceCalendarDocsUrl =
-    'https://kiosksatellite.com/docs/calendar/#managing-the-calendar-by-voice';
+    'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/calendar.md#managing-the-calendar-by-voice';
 const _voiceTimersDocsUrl =
-    'https://kiosksatellite.com/docs/timers/#setting-timers-by-voice';
+    'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/timers.md#setting-timers-by-voice';
 const _voiceMusicDocsUrl =
-    'https://kiosksatellite.com/docs/music-library/#playing-music-by-voice';
+    'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/music-library.md#playing-music-by-voice';
 
 // The Updates page closes with a link to the custom repository guide: the
 // folder layout, the releases file and the APK names live in the docs, not

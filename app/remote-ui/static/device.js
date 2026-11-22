@@ -81,7 +81,7 @@ export function renderUpdateHelper(root, initialStatus) {
     const link = document.createElement('a');
     link.className = 'btn-ghost';
     link.textContent = deviceText('Open guide');
-    link.href = 'https://kiosksatellite.com/docs/updates/#optional-update-helper';
+    link.href = 'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/updates.md#optional-update-helper';
     link.target = '_blank';
     link.rel = 'noreferrer';
     docs.appendChild(link);
@@ -94,7 +94,7 @@ export function renderUpdateHelper(root, initialStatus) {
 // The page's intro and docs link, above its three switches: the same words
 // the device puts there (_analyticsIntro in settings_screen.dart).
 export const ANALYTICS_DOCS_URL =
-  'https://kiosksatellite.com/docs/analytics/';
+  'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/analytics.md';
 
 export function renderAnalyticsIntro(panel) {
   if (!panel) return;
