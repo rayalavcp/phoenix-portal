@@ -1,16 +1,16 @@
 [
   {
-    "tag_name": "2026.12.3",
-    "name": "Phoenix Portal 2026.12.3",
+    "tag_name": "2026.12.4",
+    "name": "Phoenix Portal 2026.12.4",
     "draft": false,
     "prerelease": false,
-    "body": "Updates now come straight from GitHub (Device > Updates; guide: GitHub update guide). Remote admin's Phoenix Home page rows fixed. Includes the Move shelf (Space Blaster, Bubble Pop, Fruit Catcher, Finger Math), live Home Assistant cameras, the doorbell alert and the menu items picker.",
+    "body": "Every Open guide button now opens Phoenix Portal's own guides (docs folder on GitHub) instead of the original project's website. Includes everything in 2026.12.3: updates from GitHub, the Move shelf with Space Blaster, live Home Assistant cameras, the doorbell alert and the menu items picker.",
     "html_url": "https://github.com/rayalavcp/phoenix-portal/tree/claude/fervent-hopper-25a7jk/install",
     "assets": [
       {
-        "name": "kiosk-satellite-2026.12.3.apk",
+        "name": "kiosk-satellite-2026.12.4.apk",
         "browser_download_url": "https://raw.githubusercontent.com/rayalavcp/phoenix-portal/claude/fervent-hopper-25a7jk/install/phoenix-portal.apk",
-        "size": 99770944,
+        "size": 99771196,
         "state": "uploaded"
       }
     ]

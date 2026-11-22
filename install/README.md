@@ -1,8 +1,9 @@
-# Phoenix Portal test build 2026.12.3 (378)
+# Phoenix Portal test build 2026.12.4 (379)
 
-- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 99770944 bytes.
-  SHA-256 `9139e2c6b129797f00fb17f3f8357de7b51b4f4456aedf61086c8df3f78ef662`.
+- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 99771196 bytes.
+  SHA-256 `9556dd3257fb6c3353cc40ece092dc08bd79aae11afa0b89d0df1bbc91e729f7`.
 - New in this build:
+  - **Guides**: every Open guide button opens this repository's docs.
   - **Updates from GitHub**: the Portal checks install/releases.json in this
     repository and installs new builds itself (see UPDATES.md).
   - **Move** shelf in the Kids Portal: Space Blaster (arcade shooter steered
