@@ -35,9 +35,7 @@ class KidsTones {
 
   Future<void> _prepare(KidsInstrument instrument) async {
     final dir = await getTemporaryDirectory();
-    final files = [
-      for (var i = 0; i < kidsPianoNotes.length; i++) File('${dir.path}/phx_${instrument.name}_v2_$i.wav'),
-    ];
+    final files = [for (var i = 0; i < kidsPianoNotes.length; i++) File('${dir.path}/phx_${instrument.name}_v2_$i.wav')];
     if (!files.every((f) => f.existsSync())) {
       final freqs = [for (final n in kidsPianoNotes) n.$2];
       final wavs = await compute(_renderAll, (freqs, instrument.index));
@@ -57,8 +55,7 @@ class KidsTones {
   }
 
   /// Get an instrument's notes ready ahead of the first key press.
-  Future<void> warm([KidsInstrument instrument = KidsInstrument.piano]) =>
-      _ready[instrument] ??= _prepare(instrument).catchError((_) {});
+  Future<void> warm([KidsInstrument instrument = KidsInstrument.piano]) => _ready[instrument] ??= _prepare(instrument).catchError((_) {});
 
   Future<void> note(int index, {KidsInstrument instrument = KidsInstrument.piano, double volume = 1}) async {
     await warm(instrument);
@@ -85,9 +82,7 @@ class KidsTones {
   }
 }
 
-List<Uint8List> _renderAll((List<double>, int) job) => [
-  for (final f in job.$1) wavBytes(instrumentNote(f, KidsInstrument.values[job.$2])),
-];
+List<Uint8List> _renderAll((List<double>, int) job) => [for (final f in job.$1) wavBytes(instrumentNote(f, KidsInstrument.values[job.$2]))];
 
 // ── Tic-Tac-Toe ───────────────────────────────────────────────────────────
 
@@ -161,15 +156,9 @@ class _TicTacToeState extends State<TicTacToe> {
                         onTap: () => unawaited(_tap(i)),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
-                          decoration: BoxDecoration(
-                            color: line.contains(i) ? const Color(0xFFFFD27A) : Colors.white,
-                            borderRadius: BorderRadius.circular(24),
-                          ),
+                          decoration: BoxDecoration(color: line.contains(i) ? const Color(0xFFFFD27A) : Colors.white, borderRadius: BorderRadius.circular(24)),
                           alignment: Alignment.center,
-                          child: Text(
-                            _board[i],
-                            style: kidsText(side / 5, color: _board[i] == 'X' ? const Color(0xFFE0446A) : const Color(0xFF5B6CFF)),
-                          ),
+                          child: Text(_board[i], style: kidsText(side / 5, color: _board[i] == 'X' ? const Color(0xFFE0446A) : const Color(0xFF5B6CFF))),
                         ),
                       ),
                   ],
@@ -281,7 +270,13 @@ class _SnakeGameState extends State<SnakeGame> {
       final best = await KidsScores.offer('snake', length);
       await KidsScores.offerChallenge('snake', length);
       await KidsScores.addStars(length >= 20 ? 3 : (length >= 12 ? 2 : (length >= 7 ? 1 : 0)));
-      if (mounted) setState(() { _over = true; _playing = false; _newBest = best; });
+      if (mounted) {
+        setState(() {
+          _over = true;
+          _playing = false;
+          _newBest = best;
+        });
+      }
       return;
     }
     setState(() {
@@ -325,60 +320,72 @@ class _SnakeGameState extends State<SnakeGame> {
             onAgain: _start,
           )
         : !_playing
-        ? Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.gesture_rounded, size: 96, color: Colors.white),
-                Text('Eat the apples, grow long, miss the walls!', style: kidsText(26, weight: FontWeight.w700)),
-                const SizedBox(height: 8),
-                FutureBuilder<int?>(
-                  future: KidsScores.best('snake'),
-                  builder: (context, snap) => Text(snap.data == null ? 'No best yet' : 'Longest: ${snap.data}', style: kidsText(20, color: Colors.white70)),
-                ),
-                const SizedBox(height: 18),
-                kidsLevelChips(const ['Slow', 'Normal', 'Fast'], _level, (i) => setState(() => _level = i)),
-                const SizedBox(height: 24),
-                KidsButton('Start', icon: Icons.play_arrow_rounded, onTap: _start, size: 32),
-              ],
-            ),
+        ? KidsStartPanel(
+            icon: Icons.gesture_rounded,
+            pitch: 'Eat the apples, grow long, miss the walls!',
+            best: KidsScores.best('snake').then((b) => b == null ? null : 'Longest: $b'),
+            options: kidsLevelChips(const ['Slow', 'Normal', 'Fast'], _level, (i) => setState(() => _level = i)),
+            onStart: _start,
           )
-        : Padding(
-            padding: const EdgeInsets.fromLTRB(24, 4, 24, 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onPanEnd: (d) {
-                      final v = d.velocity.pixelsPerSecond;
-                      if (v.distance < 80) return;
-                      v.dx.abs() > v.dy.abs() ? _turn(v.dx > 0 ? 1 : -1, 0) : _turn(0, v.dy > 0 ? 1 : -1);
-                    },
-                    child: Center(
-                      child: AspectRatio(
-                        aspectRatio: _w / _h,
+        : LayoutBuilder(
+            builder: (context, box) {
+              final wide = box.maxWidth > box.maxHeight;
+              final board = GestureDetector(
+                onPanEnd: (d) {
+                  final v = d.velocity.pixelsPerSecond;
+                  if (v.distance < 80) return;
+                  v.dx.abs() > v.dy.abs() ? _turn(v.dx > 0 ? 1 : -1, 0) : _turn(0, v.dy > 0 ? 1 : -1);
+                },
+                child: Center(
+                  child: AspectRatio(
+                    aspectRatio: _w / _h,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 4),
+                        boxShadow: const [BoxShadow(color: Color(0x40000000), offset: Offset(0, 8), blurRadius: 14)],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(18),
                         child: CustomPaint(painter: _SnakePainter(_snake, _food, _w, _h)),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 20),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _arrow(Icons.arrow_upward_rounded, 0, -1),
-                    const SizedBox(height: 10),
-                    Row(children: [
-                      _arrow(Icons.arrow_back_rounded, -1, 0),
-                      const SizedBox(width: 92),
-                      _arrow(Icons.arrow_forward_rounded, 1, 0),
-                    ]),
-                    const SizedBox(height: 10),
-                    _arrow(Icons.arrow_downward_rounded, 0, 1),
-                  ],
-                ),
-              ],
-            ),
+              );
+              final pad = Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _arrow(Icons.arrow_upward_rounded, 0, -1),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [_arrow(Icons.arrow_back_rounded, -1, 0), const SizedBox(width: 92), _arrow(Icons.arrow_forward_rounded, 1, 0)],
+                  ),
+                  const SizedBox(height: 10),
+                  _arrow(Icons.arrow_downward_rounded, 0, 1),
+                ],
+              );
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+                child: wide
+                    ? Row(
+                        children: [
+                          Expanded(child: board),
+                          const SizedBox(width: 20),
+                          pad,
+                        ],
+                      )
+                    : Column(
+                        children: [
+                          Expanded(child: board),
+                          const SizedBox(height: 16),
+                          pad,
+                        ],
+                      ),
+              );
+            },
           ),
   );
 }
@@ -470,7 +477,12 @@ class _SimonSaysState extends State<SimonSays> {
       final best = await KidsScores.offer('simon', level);
       await KidsScores.offerChallenge('simon', level);
       await KidsScores.addStars(level >= 10 ? 3 : (level >= 6 ? 2 : (level >= 3 ? 1 : 0)));
-      if (mounted) setState(() { _over = true; _newBest = best; });
+      if (mounted) {
+        setState(() {
+          _over = true;
+          _newBest = best;
+        });
+      }
       return;
     }
     _input++;
@@ -538,7 +550,7 @@ class _SimonSaysState extends State<SimonSays> {
                             style: kidsText(30),
                           ),
                           const SizedBox(height: 20),
-                          if (!_started) KidsButton('Start', icon: Icons.play_arrow_rounded, onTap: _start, size: 30),
+                          if (!_started) KidsBigButton('Start', icon: Icons.play_arrow_rounded, onTap: _start, size: 30),
                         ],
                       ),
                     ),
@@ -681,7 +693,10 @@ class _PixelPaintState extends State<PixelPaint> {
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white, width: _color == k ? 6 : 2),
                             ),
-                            child: Text('$k', style: kidsText(26, color: Colors.white).copyWith(shadows: const [Shadow(blurRadius: 4)])),
+                            child: Text(
+                              '$k',
+                              style: kidsText(26, color: Colors.white).copyWith(shadows: const [Shadow(blurRadius: 4)]),
+                            ),
                           ),
                         ),
                     ],
@@ -732,8 +747,13 @@ class KidsPiano extends StatefulWidget {
 
 class _KidsPianoState extends State<KidsPiano> {
   static const _keyColors = [
-    Color(0xFFFF6B6B), Color(0xFFF28A1E), Color(0xFFFFD27A), Color(0xFF52D69F),
-    Color(0xFF63C3FF), Color(0xFF5B6CFF), Color(0xFFB06BFF),
+    Color(0xFFFF6B6B),
+    Color(0xFFF28A1E),
+    Color(0xFFFFD27A),
+    Color(0xFF52D69F),
+    Color(0xFF63C3FF),
+    Color(0xFF5B6CFF),
+    Color(0xFFB06BFF),
   ];
   static const _instruments = [
     (KidsInstrument.piano, 'Piano', Icons.piano_rounded),
@@ -822,7 +842,10 @@ class _KidsPianoState extends State<KidsPiano> {
     final p = box.globalToLocal(global);
     final size = box.size;
     if (p.dx < 0 || p.dy < 0 || p.dx > size.width || p.dy > size.height) return null;
-    final whites = [for (var i = 0; i < kidsPianoNotes.length; i++) if (!kidsPianoNotes[i].$3) i];
+    final whites = [
+      for (var i = 0; i < kidsPianoNotes.length; i++)
+        if (!kidsPianoNotes[i].$3) i,
+    ];
     final w = size.width / whites.length;
     if (p.dy < size.height * 0.6) {
       for (var i = 0; i < kidsPianoNotes.length; i++) {
@@ -925,7 +948,10 @@ class _KidsPianoState extends State<KidsPiano> {
                 children: [
                   Expanded(
                     child: notes == null
-                        ? Text('Play anything — slide your finger across the keys!', style: kidsText(18, color: Colors.white70, weight: FontWeight.w700))
+                        ? Text(
+                            'Play anything — slide your finger across the keys!',
+                            style: kidsText(18, color: Colors.white70, weight: FontWeight.w700),
+                          )
                         : Row(
                             children: [
                               Expanded(
@@ -940,7 +966,10 @@ class _KidsPianoState extends State<KidsPiano> {
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              Text(_listening ? 'Listen…' : 'Your turn: the glowing key', style: kidsText(17, color: Colors.white, weight: FontWeight.w700)),
+                              Text(
+                                _listening ? 'Listen…' : 'Your turn: the glowing key',
+                                style: kidsText(17, color: Colors.white, weight: FontWeight.w700),
+                              ),
                             ],
                           ),
                   ),
@@ -984,13 +1013,7 @@ class _KidsPianoState extends State<KidsPiano> {
                 child: Stack(
                   children: [
                     Positioned.fill(
-                      child: _Keyboard(
-                        key: _keysKey,
-                        lit: {..._flash, ..._down.values},
-                        hint: hint,
-                        letters: _letters,
-                        colors: _keyColors,
-                      ),
+                      child: _Keyboard(key: _keysKey, lit: {..._flash, ..._down.values}, hint: hint, letters: _letters, colors: _keyColors),
                     ),
                     for (final spark in _sparks) _SparkView(key: ValueKey(spark.id), spark: spark, keyboard: _keysKey),
                   ],
@@ -1045,7 +1068,10 @@ class _SparkView extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, box) {
-      final whites = [for (var i = 0; i < kidsPianoNotes.length; i++) if (!kidsPianoNotes[i].$3) i];
+      final whites = [
+        for (var i = 0; i < kidsPianoNotes.length; i++)
+          if (!kidsPianoNotes[i].$3) i,
+      ];
       final w = box.maxWidth / whites.length;
       final k = spark.key;
       final x = kidsPianoNotes[k].$3 ? (whites.indexOf(k - 1) + 1) * w : (whites.indexOf(k) + 0.5) * w;
@@ -1083,7 +1109,10 @@ class _Keyboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, box) {
-      final whites = [for (var i = 0; i < kidsPianoNotes.length; i++) if (!kidsPianoNotes[i].$3) i];
+      final whites = [
+        for (var i = 0; i < kidsPianoNotes.length; i++)
+          if (!kidsPianoNotes[i].$3) i,
+      ];
       final w = box.maxWidth / whites.length;
       final h = box.maxHeight;
       Color colorOf(int i) => colors[whites.indexOf(i) % 7];
@@ -1121,7 +1150,10 @@ class _Keyboard extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (hint == i) const _Bob(child: Icon(Icons.touch_app_rounded, color: Colors.white, size: 40, shadows: [Shadow(blurRadius: 8)])),
+                      if (hint == i)
+                        const _Bob(
+                          child: Icon(Icons.touch_app_rounded, color: Colors.white, size: 40, shadows: [Shadow(blurRadius: 8)]),
+                        ),
                       Container(
                         width: w * 0.62,
                         height: w * 0.62,
@@ -1233,7 +1265,14 @@ class _WhackAMoleState extends State<WhackAMole> {
     final key = 'mole${_level + 1}';
     final best = await KidsScores.offer(key, _score);
     await KidsScores.addStars(_score >= 25 ? 3 : (_score >= 15 ? 2 : (_score >= 8 ? 1 : 0)));
-    if (mounted) setState(() { _playing = false; _over = true; _newBest = best; _mole = null; });
+    if (mounted) {
+      setState(() {
+        _playing = false;
+        _over = true;
+        _newBest = best;
+        _mole = null;
+      });
+    }
   }
 
   @override
@@ -1258,18 +1297,12 @@ class _WhackAMoleState extends State<WhackAMole> {
             onAgain: () => setState(() => _over = false),
           )
         : !_playing
-        ? Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.pest_control_rodent_rounded, size: 96, color: Colors.white),
-                Text('Tap the moles before they hide!', style: kidsText(26, weight: FontWeight.w700)),
-                const SizedBox(height: 18),
-                kidsLevelChips(const ['Easy', 'Medium', 'Hard'], _level, (i) => setState(() => _level = i)),
-                const SizedBox(height: 24),
-                KidsButton('Start', icon: Icons.play_arrow_rounded, onTap: _start, size: 32),
-              ],
-            ),
+        ? KidsStartPanel(
+            icon: Icons.pest_control_rodent_rounded,
+            pitch: 'Tap the moles before they hide!',
+            best: KidsScores.best('mole${_level + 1}').then((b) => b == null ? null : 'Best: $b moles'),
+            options: kidsLevelChips(const ['Easy', 'Medium', 'Hard'], _level, (i) => setState(() => _level = i)),
+            onStart: _start,
           )
         : LayoutBuilder(
             builder: (context, box) {
@@ -1283,23 +1316,36 @@ class _WhackAMoleState extends State<WhackAMole> {
                     mainAxisSpacing: 14,
                     crossAxisSpacing: 14,
                     physics: const NeverScrollableScrollPhysics(),
-                    children: [
-                      for (var i = 0; i < 9; i++)
-                        GestureDetector(
-                          onTapDown: (_) => _whack(i),
-                          child: Container(
-                            decoration: const BoxDecoration(color: Color(0xFF3E2A12), shape: BoxShape.circle),
-                            alignment: Alignment.center,
-                            child: AnimatedScale(
-                              scale: _mole == i ? 1 : 0,
-                              duration: const Duration(milliseconds: 120),
-                              child: const Icon(Icons.pest_control_rodent_rounded, size: 90, color: Color(0xFFC79A6B)),
-                            ),
-                          ),
-                        ),
-                    ].asMap().entries.map((e) => _bonked == e.key
-                        ? Stack(alignment: Alignment.center, children: [e.value, const Icon(Icons.star_rounded, size: 70, color: Color(0xFFFFD27A))])
-                        : e.value).toList(),
+                    children:
+                        [
+                              for (var i = 0; i < 9; i++)
+                                GestureDetector(
+                                  onTapDown: (_) => _whack(i),
+                                  child: Container(
+                                    decoration: const BoxDecoration(color: Color(0xFF3E2A12), shape: BoxShape.circle),
+                                    alignment: Alignment.center,
+                                    child: AnimatedScale(
+                                      scale: _mole == i ? 1 : 0,
+                                      duration: const Duration(milliseconds: 120),
+                                      child: const Icon(Icons.pest_control_rodent_rounded, size: 90, color: Color(0xFFC79A6B)),
+                                    ),
+                                  ),
+                                ),
+                            ]
+                            .asMap()
+                            .entries
+                            .map(
+                              (e) => _bonked == e.key
+                                  ? Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        e.value,
+                                        const Icon(Icons.star_rounded, size: 70, color: Color(0xFFFFD27A)),
+                                      ],
+                                    )
+                                  : e.value,
+                            )
+                            .toList(),
                   ),
                 ),
               );
@@ -1343,7 +1389,12 @@ class _LightsOutState extends State<LightsOut> {
     if (!b.contains(true)) {
       final best = await KidsScores.offer('lights$_n', _moves, lowerIsBetter: true);
       await KidsScores.addStars(_level + 1);
-      if (mounted) setState(() { _won = true; _newBest = best; });
+      if (mounted) {
+        setState(() {
+          _won = true;
+          _newBest = best;
+        });
+      }
     }
   }
 
@@ -1364,18 +1415,11 @@ class _LightsOutState extends State<LightsOut> {
               onAgain: () => setState(() => _board = null),
             )
           : b == null
-          ? Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.lightbulb_rounded, size: 96, color: Color(0xFFFFD27A)),
-                  Text('Turn every light off. A tap flips its neighbours too!', textAlign: TextAlign.center, style: kidsText(26, weight: FontWeight.w700)),
-                  const SizedBox(height: 18),
-                  kidsLevelChips(const ['3×3 Easy', '4×4 Medium', '5×5 Hard'], _level, (i) => setState(() => _level = i)),
-                  const SizedBox(height: 24),
-                  KidsButton('Start', icon: Icons.play_arrow_rounded, onTap: _start, size: 32),
-                ],
-              ),
+          ? KidsStartPanel(
+              icon: Icons.lightbulb_rounded,
+              pitch: 'Turn every light off. A tap flips its neighbours too!',
+              options: kidsLevelChips(const ['3×3 Easy', '4×4 Medium', '5×5 Hard'], _level, (i) => setState(() => _level = i)),
+              onStart: _start,
             )
           : LayoutBuilder(
               builder: (context, box) {

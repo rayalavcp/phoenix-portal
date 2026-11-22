@@ -345,6 +345,27 @@ class PhoenixHomeManager extends Manager {
   /// Apps a parent put in the Kids Portal's "My apps" row, by package.
   final kidsApps = ValueNotifier<List<String>>(const []);
 
+  /// Kids Portal activities a parent has hidden (their ids, e.g. 'snake').
+  final kidsHiddenGames = ValueNotifier<List<String>>(const []);
+
+  Future<void> setKidsHiddenGames(List<String> ids) async {
+    kidsHiddenGames.value = List.unmodifiable(ids.toSet());
+    await (await _prefs()).setStringList(_kidsHiddenKey, kidsHiddenGames.value);
+  }
+
+  /// Clears every Kids Portal best score, today's stars and the challenge.
+  final kidsScoresReset = ValueNotifier<int>(0);
+
+  Future<void> resetKidsScores() async {
+    final prefs = await _prefs();
+    for (final k in prefs.getKeys().toList()) {
+      if (k.startsWith('phx.kids.best.') || k == 'phx.kids.stars' || k == 'phx.kids.challenge_done') {
+        await prefs.remove(k);
+      }
+    }
+    kidsScoresReset.value++;
+  }
+
   /// Phoenix Home's tiles in order and size, and the ones taken off.
   final tiles = ValueNotifier<List<HomeTileSpec>>(defaultHomeTiles);
   final hiddenTiles = ValueNotifier<Set<String>>(const {});
@@ -620,6 +641,7 @@ class PhoenixHomeManager extends Manager {
   static const _usageKey = 'phx.home.usage';
   static const _pinnedKey = 'phx.home.pinned_entities';
   static const _kidsAppsKey = 'phx.home.kids_apps';
+  static const _kidsHiddenKey = 'phx.kids.hidden_games';
   static const _tilesKey = 'phx.home.tiles';
   static const _hiddenTilesKey = 'phx.home.hidden_tiles';
   static const _themeKey = 'phx.home.theme';
@@ -801,6 +823,16 @@ class PhoenixHomeManager extends Manager {
     'favorites': favorites.value,
     'hiddenApps': hidden.value.toList(),
     'kidsApps': kidsApps.value,
+    'kids': {
+      'enabled': _settings.get(defs.kidsEnabled),
+      'name': _settings.get(defs.kidsName),
+      'minutes': _settings.get(defs.kidsDailyMinutes),
+      'bedtime': _settings.get(defs.kidsBedtime),
+      'wake': _settings.get(defs.kidsWakeTime),
+      'hasPin': _settings.get(defs.kidsPin).isNotEmpty,
+      'profile': _settings.get(defs.phoenixProfile),
+      'hiddenGames': kidsHiddenGames.value,
+    },
     'apps': [for (final a in _launcher.installed) {'package': a.package, 'label': a.label}],
     'school': school.config.value.toJson(),
     'photos': {...photos.settings.value.toJson(), 'immichConfigured': _immich.configured},
@@ -861,8 +893,20 @@ class PhoenixHomeManager extends Manager {
       hidden.value = _strings(p['hiddenApps']).toSet();
       await prefs.setStringList(_hiddenKey, hidden.value.toList());
     }
+    if (p['kids'] is Map) {
+      final k = (p['kids'] as Map).cast<String, Object?>();
+      if (k['enabled'] is bool) await _settings.set(defs.kidsEnabled, k['enabled'] as bool);
+      if (k['name'] is String) await _settings.set(defs.kidsName, (k['name'] as String).trim());
+      if (k['minutes'] is String) await _settings.set(defs.kidsDailyMinutes, k['minutes'] as String);
+      if (k['bedtime'] is String) await _settings.set(defs.kidsBedtime, k['bedtime'] as String);
+      if (k['wake'] is String) await _settings.set(defs.kidsWakeTime, k['wake'] as String);
+      if (k['pin'] is String) await _settings.set(defs.kidsPin, (k['pin'] as String).trim());
+      if (k['hiddenGames'] is List) await setKidsHiddenGames([for (final g in k['hiddenGames'] as List) '$g']);
+      if (k['resetScores'] == true) await resetKidsScores();
+    }
     if (p['kidsApps'] is List) {
       kidsApps.value = _strings(p['kidsApps']);
+    kidsHiddenGames.value = prefs.getStringList(_kidsHiddenKey) ?? const [];
       await prefs.setStringList(_kidsAppsKey, kidsApps.value);
     }
     if (p['school'] is Map) {
@@ -1270,6 +1314,8 @@ class PhoenixHomeManager extends Manager {
     backdrop.dispose();
     wallpaper.dispose();
     smartHomeTarget.dispose();
+    kidsHiddenGames.dispose();
+    kidsScoresReset.dispose();
     glassOpacity.dispose();
     wallpaperUrl.dispose();
     weatherDemo.dispose();

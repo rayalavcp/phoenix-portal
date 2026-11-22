@@ -14,12 +14,7 @@ import 'kids_more_logic.dart';
 
 /// One question: what to show and the answers to pick from.
 class QuizItem {
-  const QuizItem({
-    required this.prompt,
-    required this.choices,
-    required this.answer,
-    this.explain,
-  });
+  const QuizItem({required this.prompt, required this.choices, required this.answer, this.explain});
 
   final Widget prompt;
   final List<String> choices;
@@ -139,107 +134,146 @@ class _KidsQuizState extends State<KidsQuiz> {
     },
   );
 
-  Widget _ready() => Center(
-    child: SingleChildScrollView(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(widget.icon, size: 96, color: Colors.white),
-          const SizedBox(height: 8),
-          Text(widget.pitch, textAlign: TextAlign.center, style: kidsText(26, weight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          FutureBuilder<int?>(
-            future: KidsScores.best(widget.scoreKey),
-            builder: (context, snap) => Text(
-              snap.data == null ? 'No best yet' : 'Best: ${snap.data} of ${widget.count}',
-              style: kidsText(20, color: Colors.white70, weight: FontWeight.w700),
-            ),
-          ),
-          if (widget.modes.length > 1) ...[
-            const SizedBox(height: 18),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                for (var i = 0; i < widget.modes.length; i++)
-                  KidsBounce(
-                    onTap: () => setState(() => _mode = i),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: i == _mode ? Colors.white : Colors.white.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: Text(
-                        widget.modes[i],
-                        style: kidsText(20, color: i == _mode ? const Color(0xFF1A1340) : Colors.white),
-                      ),
-                    ),
-                  ),
-              ],
+  Widget _ready() => KidsStartPanel(
+    icon: widget.icon,
+    pitch: widget.pitch,
+    best: KidsScores.best(widget.scoreKey).then((b) => b == null ? null : 'Best: $b of ${widget.count}'),
+    options: widget.modes.length > 1 ? kidsLevelChips(widget.modes, _mode, (i) => setState(() => _mode = i)) : null,
+    onStart: _start,
+  );
+
+  static const _answerColors = [
+    [Color(0xFFFF6B8B), Color(0xFFE8456B)],
+    [Color(0xFF4FC3F7), Color(0xFF2196F3)],
+    [Color(0xFFFFD54F), Color(0xFFFFB300)],
+    [Color(0xFF81C784), Color(0xFF43A047)],
+  ];
+
+  Widget _answer(int i, String choice) {
+    final done = _picked != null;
+    final right = choice == _item.answer;
+    final colors = !done
+        ? _answerColors[i % 4]
+        : right
+        ? const [Color(0xFF5BE39A), Color(0xFF22B86A)]
+        : choice == _picked
+        ? const [Color(0xFFFF8A80), Color(0xFFE53935)]
+        : [Colors.white.withValues(alpha: 0.25), Colors.white.withValues(alpha: 0.15)];
+    final ink = !done && i % 4 == 2 ? const Color(0xFF4A2A00) : Colors.white;
+    return KidsBounce(
+      onTap: done ? null : () => unawaited(_pick(choice)),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: colors),
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 3),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: done ? 0.1 : 0.25),
+              offset: const Offset(0, 6),
+              blurRadius: 8,
             ),
           ],
-          const SizedBox(height: 24),
-          KidsButton('Start', icon: Icons.play_arrow_rounded, onTap: _start, size: 32),
-        ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (done && right) ...[const Icon(Icons.check_circle_rounded, color: Colors.white, size: 34), const SizedBox(width: 8)],
+            if (done && !right && choice == _picked) ...[const Icon(Icons.cancel_rounded, color: Colors.white, size: 34), const SizedBox(width: 8)],
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  choice,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  style: kidsText(34, color: ink),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   Widget _playing() => LayoutBuilder(
     builder: (context, box) {
       final wide = box.maxWidth > box.maxHeight;
       final prompt = Center(child: _item.prompt);
-      final answers = Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      final choices = _item.choices;
+      final grid = Column(
         children: [
-          for (final choice in _item.choices)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 7),
-              child: KidsBounce(
-                onTap: () => unawaited(_pick(choice)),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  decoration: BoxDecoration(
-                    color: _picked == null
-                        ? Colors.white
-                        : choice == _item.answer
-                        ? const Color(0xFF52D69F)
-                        : choice == _picked
-                        ? const Color(0xFFFF8A8A)
-                        : Colors.white.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: Text(
-                    choice,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    style: kidsText(26, color: const Color(0xFF1A1340)),
-                  ),
+          for (var row = 0; row < (choices.length + 1) ~/ 2; row++)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 7),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var col = 0; col < 2; col++) ...[
+                      if (col == 1) const SizedBox(width: 14),
+                      Expanded(child: row * 2 + col < choices.length ? _answer(row * 2 + col, choices[row * 2 + col]) : const SizedBox()),
+                    ],
+                  ],
                 ),
               ),
             ),
-          if (_picked != null && _picked != _item.answer && _item.explain != null)
-            Text(_item.explain!, textAlign: TextAlign.center, style: kidsText(20, weight: FontWeight.w700)),
         ],
       );
+      final explain = _picked != null && _picked != _item.answer && _item.explain != null
+          ? Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                _item.explain!,
+                textAlign: TextAlign.center,
+                style: kidsText(22, weight: FontWeight.w700),
+              ),
+            )
+          : const SizedBox.shrink();
       return Padding(
-        padding: const EdgeInsets.fromLTRB(28, 8, 28, 20),
+        padding: const EdgeInsets.fromLTRB(24, 4, 24, 20),
         child: wide
             ? Row(
                 children: [
-                  Expanded(flex: 5, child: prompt),
-                  const SizedBox(width: 28),
-                  Expanded(flex: 4, child: answers),
+                  Expanded(
+                    flex: 5,
+                    child: Container(
+                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(36)),
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          Expanded(child: prompt),
+                          explain,
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 22),
+                  Expanded(flex: 5, child: grid),
                 ],
               )
             : Column(
                 children: [
-                  Expanded(child: prompt),
-                  answers,
+                  Expanded(
+                    flex: 5,
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(36)),
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          Expanded(child: prompt),
+                          explain,
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(flex: 4, child: grid),
                 ],
               ),
       );
@@ -299,10 +333,7 @@ class TellingTime extends StatelessWidget {
     next: (mode, _, rng) {
       final q = clockQuestion(mode + 1, rng);
       return QuizItem(
-        prompt: AspectRatio(
-          aspectRatio: 1,
-          child: CustomPaint(painter: KidsClockPainter(q.hour, q.minute)),
-        ),
+        prompt: AspectRatio(aspectRatio: 1, child: CustomPaint(painter: KidsClockPainter(q.hour, q.minute))),
         choices: q.choices,
         answer: q.answer,
         explain: 'It is ${q.answer}',
@@ -336,12 +367,21 @@ class KidsClockPainter extends CustomPainter {
       final long = i % 5 == 0;
       final p1 = c + Offset(math.cos(a), math.sin(a)) * r * (long ? 0.86 : 0.9);
       final p2 = c + Offset(math.cos(a), math.sin(a)) * r * 0.95;
-      canvas.drawLine(p1, p2, Paint()..color = const Color(0xFF1A1340)..strokeWidth = long ? r * 0.025 : r * 0.01);
+      canvas.drawLine(
+        p1,
+        p2,
+        Paint()
+          ..color = const Color(0xFF1A1340)
+          ..strokeWidth = long ? r * 0.025 : r * 0.01,
+      );
     }
     for (var n = 1; n <= 12; n++) {
       final a = n * math.pi / 6 - math.pi / 2;
       final tp = TextPainter(
-        text: TextSpan(text: '$n', style: kidsText(r * 0.17, color: const Color(0xFF1A1340))),
+        text: TextSpan(
+          text: '$n',
+          style: kidsText(r * 0.17, color: const Color(0xFF1A1340)),
+        ),
         textDirection: TextDirection.ltr,
       )..layout();
       tp.paint(canvas, c + Offset(math.cos(a), math.sin(a)) * r * 0.7 - Offset(tp.width / 2, tp.height / 2));
@@ -494,13 +534,17 @@ class _PiePainter extends CustomPainter {
     final rect = Offset.zero & size;
     final sweep = 2 * math.pi / parts;
     for (var i = 0; i < parts; i++) {
-      canvas.drawArc(rect.deflate(4), -math.pi / 2 + i * sweep, sweep, true,
-          Paint()..color = i < shaded ? const Color(0xFFFFD27A) : Colors.white);
-      canvas.drawArc(rect.deflate(4), -math.pi / 2 + i * sweep, sweep, true,
-          Paint()
-            ..color = const Color(0xFF1A1340)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 4);
+      canvas.drawArc(rect.deflate(4), -math.pi / 2 + i * sweep, sweep, true, Paint()..color = i < shaded ? const Color(0xFFFFD27A) : Colors.white);
+      canvas.drawArc(
+        rect.deflate(4),
+        -math.pi / 2 + i * sweep,
+        sweep,
+        true,
+        Paint()
+          ..color = const Color(0xFF1A1340)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 4,
+      );
     }
   }
 
@@ -527,12 +571,7 @@ class MoneyQuiz extends StatelessWidget {
         prompt: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 10,
-              runSpacing: 10,
-              children: [for (final c in q.coins) _Coin(c)],
-            ),
+            Wrap(alignment: WrapAlignment.center, spacing: 10, runSpacing: 10, children: [for (final c in q.coins) _Coin(c)]),
             const SizedBox(height: 16),
             Text(q.prompt, textAlign: TextAlign.center, style: kidsText(26)),
           ],

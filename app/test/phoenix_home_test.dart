@@ -180,6 +180,26 @@ void main() {
       expect(home.layout.value, 'today');
     });
 
+    test('Kids Portal settings from the admin portal', () async {
+      final home = c.phoenixHome;
+      SharedPreferences.setMockInitialValues({'phx.kids.best.math': 12, 'phx.kids.stars': '2026-11-22:5', 'other': 1});
+      await home.applyRemote({
+        'kids': {'name': ' Ria ', 'minutes': '45', 'bedtime': '20:30', 'wake': '06:30', 'pin': '2468', 'hiddenGames': ['snake', 'mole', 'snake'], 'resetScores': true},
+      });
+      final k = home.remoteState()['kids'] as Map;
+      expect(k['name'], 'Ria');
+      expect(k['minutes'], '45');
+      expect(k['bedtime'], '20:30');
+      expect(k['wake'], '06:30');
+      expect(k['hasPin'], isTrue);
+      expect(k['hiddenGames'], unorderedEquals(['snake', 'mole']));
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getInt('phx.kids.best.math'), isNull);
+      expect(prefs.getString('phx.kids.stars'), isNull);
+      expect(prefs.getInt('other'), 1);
+      expect(home.kidsScoresReset.value, 1);
+    });
+
     test('glass, Smart Home button and built-in wallpapers', () async {
       final home = c.phoenixHome;
       expect(home.smartHomeTarget.value, 'ha');

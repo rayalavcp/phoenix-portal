@@ -244,6 +244,64 @@ function schoolSection() {
     })));
 }
 
+/* ---- Kids Portal ---- */
+
+const KIDS_GAMES = [
+  ['Learn', [['math', 'Math Blitz'], ['times', 'Times Tables'], ['clock', 'Telling the Time'], ['flags', 'Flag Quiz'], ['words', 'Word Scramble'],
+    ['patterns', 'Patterns'], ['fractions', 'Fractions'], ['money', 'Money'], ['science', 'Science'], ['spelling', 'Spelling'], ['opposites', 'Opposites']]],
+  ['Puzzles', [['sudoku', 'Sudoku'], ['maze', 'Maze'], ['wordsearch', 'Word Search'], ['guess', 'Word Guess'], ['memory', 'Memory Pro'], ['g2048', '2048'], ['lights', 'Lights Out']]],
+  ['Play', [['snake', 'Snake'], ['mole', 'Whack-a-Mole'], ['simon', 'Simon Says'], ['ttt', 'Tic-Tac-Toe'], ['connect4', 'Connect Four']]],
+  ['Create', [['draw', 'Draw Studio'], ['pixel', 'Pixel Paint'], ['piano', 'Piano']]],
+];
+
+function kidsSection() {
+  const k = model.kids || {};
+  const name = el('input', { type: 'text', class: 'field', value: k.name || '', placeholder: 'Leave empty for "Hi there!"' });
+  const pin = el('input', { type: 'password', class: 'field', inputmode: 'numeric', placeholder: k.hasPin ? 'A PIN is set: type a new one, or leave empty' : 'No PIN: leaving is a 3-second press' });
+  const minutes = select([['0', 'No limit'], ['15', '15 minutes'], ['30', '30 minutes'], ['45', '45 minutes'], ['60', '1 hour'], ['90', '1.5 hours'], ['120', '2 hours'], ['180', '3 hours']],
+    k.minutes || '90', (v) => save({ kids: { minutes: v } }, 'Daily screen time'));
+  const bedtime = select([['', 'Off'], ...['19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00'].map((t) => [t, t])],
+    k.bedtime || '', (v) => save({ kids: { bedtime: v } }, 'Bedtime'));
+  const wake = select(['06:00', '06:30', '07:00', '07:30', '08:00'].map((t) => [t, t]), k.wake || '07:00', (v) => save({ kids: { wake: v } }, 'Wake-up time'));
+  const hidden = new Set(k.hiddenGames || []);
+  const games = el('div', {}, ...KIDS_GAMES.map(([shelf, list]) => el('div', { class: 'phx-kids-shelf' },
+    el('div', { class: 'desc', text: shelf }),
+    el('div', { class: 'phx-inline phx-wrap' }, ...list.map(([id, title]) => el('label', { class: 'phx-chip' },
+      checkbox(!hidden.has(id), (on) => { if (on) hidden.delete(id); else hidden.add(id); }), ` ${title}`))))));
+  const profiles = el('div', { class: 'phx-inline' }, ...[['family', 'Family'], ['kids', 'Kids (locked)'], ['night', 'Night']].map(([id, label]) =>
+    el('button', {
+      class: (k.profile || 'family') === id ? 'btn-primary' : 'btn-ghost', type: 'button', text: label,
+      onclick: async () => {
+        const r = await cmd('setProfile', { profile: id }).catch(() => null);
+        showToast(r?.ok ? { title: `Profile: ${label}`, kind: 'success' } : { title: "Couldn't change the profile", message: r?.error || '', kind: 'error' });
+        if (r?.ok) { model.kids = { ...k, profile: id }; render(); }
+      },
+    })));
+  return card('Kids Portal',
+    row('Profile now', 'Family: everything. Kids: the Portal stays on the Kids Portal until a parent unlocks it. Night: the bedtime screen.', profiles),
+    row('Kids Portal in the menu', 'Show the Kids Portal button on the home screen and in the menu',
+      checkbox(k.enabled !== false, (on) => save({ kids: { enabled: on } }, 'Kids Portal'))),
+    row("Child's name", 'Used in the greeting',
+      el('div', { class: 'phx-inline' }, name, el('button', { class: 'btn-ghost', type: 'button', text: 'Save', onclick: () => save({ kids: { name: name.value.trim() } }, "Child's name") }))),
+    row('Daily screen time', 'When it runs out, an all-done screen shows until tomorrow', minutes),
+    row('Bedtime', 'From bedtime until wake-up the Kids Portal shows the bedtime screen', bedtime),
+    row('Wake-up time', null, wake),
+    row('Parent PIN', 'Asked to leave the Kids Portal or add time. Digits only.',
+      el('div', { class: 'phx-inline' }, pin,
+        el('button', { class: 'btn-ghost', type: 'button', text: 'Save PIN', onclick: () => {
+          const v = pin.value.trim();
+          if (v && !/^\d{4,8}$/.test(v)) { showToast({ title: 'Use 4 to 8 digits', kind: 'error' }); return; }
+          save({ kids: { pin: v } }, v ? 'Parent PIN' : 'PIN removed');
+          pin.value = '';
+        } }))),
+    row('Activities shown', 'Untick an activity to hide it from the Kids Portal', games),
+    el('div', { class: 'phx-actions' },
+      el('button', { class: 'btn-primary', type: 'button', text: 'Save activities', onclick: () => save({ kids: { hiddenGames: [...hidden] } }, 'Activities') }),
+      el('button', { class: 'btn-ghost', type: 'button', text: 'Reset stars and best scores', onclick: () => {
+        if (confirm('Clear every best score, today\'s stars and the daily challenge?')) save({ kids: { resetScores: true } }, 'Scores reset');
+      } })));
+}
+
 /* ---- Photos ---- */
 
 function photosSection() {
@@ -292,7 +350,7 @@ function render() {
     host = el('div', { id: 'phoenix-editor' });
     tab.append(host);
   }
-  host.replaceChildren(...deviceSection(), ...lookSection(), ...tilesSection(), ...appsSection(), ...schoolSection(), ...photosSection());
+  host.replaceChildren(...deviceSection(), ...lookSection(), ...tilesSection(), ...appsSection(), ...kidsSection(), ...schoolSection(), ...photosSection());
 }
 
 /** The Phoenix Home tab was opened: read the device's state and draw. */

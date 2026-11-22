@@ -69,18 +69,17 @@ class KidsResult extends StatelessWidget {
               for (var i = 0; i < 3; i++)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: Icon(
-                    Icons.star_rounded,
-                    size: i == 1 ? 110 : 84,
-                    color: i < stars ? const Color(0xFFFFD27A) : Colors.white.withValues(alpha: 0.2),
-                  ),
+                  child: Icon(Icons.star_rounded, size: i == 1 ? 110 : 84, color: i < stars ? const Color(0xFFFFD27A) : Colors.white.withValues(alpha: 0.2)),
                 ),
             ],
           ),
           const SizedBox(height: 8),
           Text(title, style: kidsText(48)),
           const SizedBox(height: 6),
-          Text(detail, style: kidsText(24, color: Colors.white70, weight: FontWeight.w700)),
+          Text(
+            detail,
+            style: kidsText(24, color: Colors.white70, weight: FontWeight.w700),
+          ),
           if (newBest) ...[
             const SizedBox(height: 14),
             Container(
@@ -90,7 +89,7 @@ class KidsResult extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 26),
-          KidsButton('Play again', icon: Icons.replay_rounded, onTap: onAgain),
+          KidsBigButton('Play again', icon: Icons.replay_rounded, onTap: onAgain),
         ],
       ),
     ),
@@ -107,26 +106,8 @@ class _StartCard extends StatelessWidget {
   final VoidCallback onStart;
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 110, color: Colors.white),
-        const SizedBox(height: 10),
-        Text(text, textAlign: TextAlign.center, style: kidsText(28, weight: FontWeight.w700)),
-        const SizedBox(height: 10),
-        FutureBuilder<int?>(
-          future: KidsScores.best(game),
-          builder: (context, snap) => Text(
-            snap.data == null ? 'No best yet' : '$bestLabel: ${snap.data}',
-            style: kidsText(22, color: Colors.white70, weight: FontWeight.w700),
-          ),
-        ),
-        const SizedBox(height: 24),
-        KidsButton('Start', icon: Icons.play_arrow_rounded, onTap: onStart, size: 32),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) =>
+      KidsStartPanel(icon: icon, pitch: text, best: KidsScores.best(game).then((b) => b == null ? null : '$bestLabel: $b'), onStart: onStart);
 }
 
 // ── Math Blitz ─────────────────────────────────────────────────────────
@@ -175,7 +156,12 @@ class _MathBlitzState extends State<MathBlitz> {
     final best = await KidsScores.offer('math', _score);
     await KidsScores.offerChallenge('math', _score);
     await KidsScores.addStars(_stars);
-    if (mounted) setState(() { _phase = _Phase.over; _newBest = best; });
+    if (mounted) {
+      setState(() {
+        _phase = _Phase.over;
+        _newBest = best;
+      });
+    }
   }
 
   int get _stars => _score >= 25 ? 3 : (_score >= 15 ? 2 : (_score >= 6 ? 1 : 0));
@@ -211,12 +197,14 @@ class _MathBlitzState extends State<MathBlitz> {
     colors: const [Color(0xFFE0446A), Color(0xFFF28A1E)],
     onBack: widget.onBack,
     trailing: _phase == _Phase.playing
-        ? Row(children: [
-            Text('Level ${mathLevel(_score)}', style: kidsText(24, color: Colors.white70)),
-            const SizedBox(width: 18),
-            const Icon(Icons.bolt_rounded, color: Color(0xFFFFF3B0), size: 34),
-            Text('$_score', style: kidsText(34)),
-          ])
+        ? Row(
+            children: [
+              Text('Level ${mathLevel(_score)}', style: kidsText(24, color: Colors.white70)),
+              const SizedBox(width: 18),
+              const Icon(Icons.bolt_rounded, color: Color(0xFFFFF3B0), size: 34),
+              Text('$_score', style: kidsText(34)),
+            ],
+          )
         : null,
     child: AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
@@ -260,7 +248,10 @@ class _MathBlitzState extends State<MathBlitz> {
               child: Center(
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 220),
-                  transitionBuilder: (c, a) => ScaleTransition(scale: a, child: FadeTransition(opacity: a, child: c)),
+                  transitionBuilder: (c, a) => ScaleTransition(
+                    scale: a,
+                    child: FadeTransition(opacity: a, child: c),
+                  ),
                   child: Text('${_problem.text} = ?', key: ValueKey('${_problem.text}$_score'), style: kidsText(96)),
                 ),
               ),
@@ -278,10 +269,7 @@ class _MathBlitzState extends State<MathBlitz> {
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             height: 130,
-                            decoration: BoxDecoration(
-                              color: c == _wrong ? Colors.white24 : Colors.white,
-                              borderRadius: BorderRadius.circular(32),
-                            ),
+                            decoration: BoxDecoration(color: c == _wrong ? Colors.white24 : Colors.white, borderRadius: BorderRadius.circular(32)),
                             alignment: Alignment.center,
                             child: Text('$c', style: kidsText(56, color: c == _wrong ? Colors.white : const Color(0xFFC2185B))),
                           ),
@@ -357,7 +345,12 @@ class _WordScrambleState extends State<WordScramble> {
     final best = await KidsScores.offer('words', _score);
     await KidsScores.offerChallenge('words', _score);
     await KidsScores.addStars(_stars);
-    if (mounted) setState(() { _phase = _Phase.over; _newBest = best; });
+    if (mounted) {
+      setState(() {
+        _phase = _Phase.over;
+        _newBest = best;
+      });
+    }
   }
 
   int get _stars => _score >= 85 ? 3 : (_score >= 60 ? 2 : (_score >= 30 ? 1 : 0));
@@ -374,7 +367,12 @@ class _WordScrambleState extends State<WordScramble> {
     } else {
       setState(() => _shake = true);
       await Future<void>.delayed(const Duration(milliseconds: 450));
-      if (mounted) setState(() { _shake = false; _picked.clear(); });
+      if (mounted) {
+        setState(() {
+          _shake = false;
+          _picked.clear();
+        });
+      }
     }
   }
 
@@ -407,9 +405,7 @@ class _WordScrambleState extends State<WordScramble> {
     title: 'Word Scramble',
     colors: const [Color(0xFF14A06B), Color(0xFF1C8ED6)],
     onBack: widget.onBack,
-    trailing: _phase == _Phase.playing
-        ? Text('Word $_round/$_rounds   ·   $_score pts', style: kidsText(24))
-        : null,
+    trailing: _phase == _Phase.playing ? Text('Word $_round/$_rounds   ·   $_score pts', style: kidsText(24)) : null,
     child: AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
       child: switch (_phase) {
@@ -562,7 +558,12 @@ class _Game2048State extends State<Game2048> {
     }
     if (!canMove(_board)) {
       final best = await KidsScores.offer('2048', _score);
-      if (mounted) setState(() { _over = true; _newBest = best; });
+      if (mounted) {
+        setState(() {
+          _over = true;
+          _newBest = best;
+        });
+      }
     }
   }
 
@@ -605,50 +606,64 @@ class _Game2048State extends State<Game2048> {
               if (v.distance < 40) return;
               unawaited(_move(v.dx.abs() > v.dy.abs() ? (v.dx > 0 ? Dir.right : Dir.left) : (v.dy > 0 ? Dir.down : Dir.up)));
             },
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                LayoutBuilder(
-                  builder: (context, box) {
-                    final side = math.min(box.maxHeight - 24, 640.0);
-                    final cell = (side - 5 * 12) / 4;
-                    return Container(
-                      width: side,
-                      height: side,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(28)),
-                      child: Column(
-                        children: [
-                          for (var r = 0; r < 4; r++)
-                            Padding(
-                              padding: EdgeInsets.only(top: r == 0 ? 0 : 12),
-                              child: Row(
-                                children: [
-                                  for (var c = 0; c < 4; c++)
-                                    Padding(
-                                      padding: EdgeInsets.only(left: c == 0 ? 0 : 12),
-                                      child: _Tile(
-                                        key: ValueKey('$r-$c-${_board[r][c]}-${_fresh == (r, c)}'),
-                                        value: _board[r][c],
-                                        size: cell,
-                                        isNew: _fresh == (r, c),
-                                        colors: _tileColors[_board[r][c]] ?? (const Color(0xFF1A1340), Colors.white),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                        ],
+            child: LayoutBuilder(
+              builder: (context, outer) {
+                final wide = outer.maxWidth > outer.maxHeight;
+                final side = wide
+                    ? math.min(math.min(outer.maxHeight - 24, outer.maxWidth - 340), 640.0)
+                    : math.min(math.min(outer.maxWidth - 40, outer.maxHeight - 170), 640.0);
+                return Flex(
+                  direction: wide ? Axis.horizontal : Axis.vertical,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Builder(
+                      builder: (context) {
+                        final cell = (side - 5 * 12) / 4;
+                        return Container(
+                          width: side,
+                          height: side,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(28)),
+                          child: Column(
+                            children: [
+                              for (var r = 0; r < 4; r++)
+                                Padding(
+                                  padding: EdgeInsets.only(top: r == 0 ? 0 : 12),
+                                  child: Row(
+                                    children: [
+                                      for (var c = 0; c < 4; c++)
+                                        Padding(
+                                          padding: EdgeInsets.only(left: c == 0 ? 0 : 12),
+                                          child: _Tile(
+                                            key: ValueKey('$r-$c-${_board[r][c]}-${_fresh == (r, c)}'),
+                                            value: _board[r][c],
+                                            size: cell,
+                                            isNew: _fresh == (r, c),
+                                            colors: _tileColors[_board[r][c]] ?? (const Color(0xFF1A1340), Colors.white),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 40, height: 24),
+                    SizedBox(
+                      width: wide ? 260 : side,
+                      child: Text(
+                        wide
+                            ? 'Swipe to slide the tiles.\nMatching numbers join.\nReach 2048!'
+                            : 'Swipe to slide the tiles. Matching numbers join. Reach 2048!',
+                        textAlign: wide ? TextAlign.start : TextAlign.center,
+                        style: kidsText(24, weight: FontWeight.w700),
                       ),
-                    );
-                  },
-                ),
-                const SizedBox(width: 40),
-                SizedBox(
-                  width: 260,
-                  child: Text('Swipe to slide the tiles.\nMatching numbers join.\nReach 2048!', style: kidsText(24, weight: FontWeight.w700)),
-                ),
-              ],
+                    ),
+                  ],
+                );
+              },
             ),
           ),
   );
@@ -666,14 +681,16 @@ class _Tile extends StatelessWidget {
     final box = Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: value == 0 ? Colors.white.withValues(alpha: 0.12) : colors.$1,
-        borderRadius: BorderRadius.circular(18),
-      ),
+      decoration: BoxDecoration(color: value == 0 ? Colors.white.withValues(alpha: 0.12) : colors.$1, borderRadius: BorderRadius.circular(18)),
       alignment: Alignment.center,
       child: value == 0
           ? null
-          : FittedBox(child: Padding(padding: const EdgeInsets.all(10), child: Text('$value', style: kidsText(54, color: colors.$2)))),
+          : FittedBox(
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Text('$value', style: kidsText(54, color: colors.$2)),
+              ),
+            ),
     );
     if (value == 0) return box;
     return TweenAnimationBuilder<double>(
@@ -719,7 +736,10 @@ class _ConnectFourState extends State<ConnectFour> {
       _last = (r, col);
     });
     if (await _ended()) return;
-    setState(() { _thinking = true; _message = 'Thinking…'; });
+    setState(() {
+      _thinking = true;
+      _message = 'Thinking…';
+    });
     await Future<void>.delayed(const Duration(milliseconds: 450));
     final ai = c4AiMove(_board, hard: _hard);
     if (!mounted) return;
@@ -749,7 +769,10 @@ class _ConnectFourState extends State<ConnectFour> {
       return true;
     }
     if (_board.full) {
-      setState(() { _over = true; _message = "It's a draw!"; });
+      setState(() {
+        _over = true;
+        _message = "It's a draw!";
+      });
       await KidsScores.addStars(1);
       return true;
     }
@@ -763,65 +786,82 @@ class _ConnectFourState extends State<ConnectFour> {
     onBack: widget.onBack,
     trailing: Row(
       children: [
-        _ModeChip(label: 'Easy', on: !_hard, onTap: () { _hard = false; _reset(); }),
-        const SizedBox(width: 8),
-        _ModeChip(label: 'Hard', on: _hard, onTap: () { _hard = true; _reset(); }),
-      ],
-    ),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        LayoutBuilder(
-          builder: (context, box) {
-            final cell = math.min((box.maxHeight - 40) / c4Rows, 92.0);
-            return Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: const Color(0xFF2B48C8), borderRadius: BorderRadius.circular(26)),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (var c = 0; c < c4Cols; c++)
-                    GestureDetector(
-                      onTap: () => _play(c),
-                      child: Column(
-                        children: [
-                          for (var r = 0; r < c4Rows; r++)
-                            _Disc(
-                              size: cell,
-                              who: _board.cells[r][c],
-                              glow: _line?.contains((r, c)) ?? false,
-                              dropFrom: _last == (r, c) ? r + 1 : 0,
-                            ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            );
+        _ModeChip(
+          label: 'Easy',
+          on: !_hard,
+          onTap: () {
+            _hard = false;
+            _reset();
           },
         ),
-        const SizedBox(width: 36),
-        SizedBox(
-          width: 280,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const _Legend(color: Color(0xFFFF4D6D), label: 'You'),
-              const SizedBox(height: 10),
-              const _Legend(color: Color(0xFFFFD60A), label: 'Computer'),
-              const SizedBox(height: 26),
-              Text(_message, style: kidsText(30)),
-              const SizedBox(height: 10),
-              Text('Wins this session: $_wins', style: kidsText(20, color: Colors.white70, weight: FontWeight.w700)),
-              if (_over) ...[
-                const SizedBox(height: 22),
-                KidsButton('New game', icon: Icons.replay_rounded, size: 24, onTap: _reset),
-              ],
-            ],
-          ),
+        const SizedBox(width: 8),
+        _ModeChip(
+          label: 'Hard',
+          on: _hard,
+          onTap: () {
+            _hard = true;
+            _reset();
+          },
         ),
       ],
+    ),
+    child: LayoutBuilder(
+      builder: (context, outer) {
+        final wide = outer.maxWidth > outer.maxHeight;
+        final cell = wide
+            ? math.min(math.min((outer.maxHeight - 40) / c4Rows, (outer.maxWidth - 380) / c4Cols), 92.0)
+            : math.min(math.min((outer.maxWidth - 60) / c4Cols, (outer.maxHeight - 260) / c4Rows), 92.0);
+        return Flex(
+          direction: wide ? Axis.horizontal : Axis.vertical,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Builder(
+              builder: (context) {
+                return Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: const Color(0xFF2B48C8), borderRadius: BorderRadius.circular(26)),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (var c = 0; c < c4Cols; c++)
+                        GestureDetector(
+                          onTap: () => _play(c),
+                          child: Column(
+                            children: [
+                              for (var r = 0; r < c4Rows; r++)
+                                _Disc(size: cell, who: _board.cells[r][c], glow: _line?.contains((r, c)) ?? false, dropFrom: _last == (r, c) ? r + 1 : 0),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(width: 36, height: 20),
+            SizedBox(
+              width: wide ? 280 : cell * c4Cols + 20,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _Legend(color: Color(0xFFFF4D6D), label: 'You'),
+                  const SizedBox(height: 10),
+                  const _Legend(color: Color(0xFFFFD60A), label: 'Computer'),
+                  const SizedBox(height: 26),
+                  Text(_message, style: kidsText(30)),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Wins this session: $_wins',
+                    style: kidsText(20, color: Colors.white70, weight: FontWeight.w700),
+                  ),
+                  if (_over) ...[const SizedBox(height: 22), KidsButton('New game', icon: Icons.replay_rounded, size: 24, onTap: _reset)],
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     ),
   );
 }
@@ -879,7 +919,11 @@ class _Legend extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      Container(width: 30, height: 30, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+      Container(
+        width: 30,
+        height: 30,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      ),
       const SizedBox(width: 12),
       Text(label, style: kidsText(24)),
     ],
@@ -898,10 +942,7 @@ class _ModeChip extends StatelessWidget {
     child: AnimatedContainer(
       duration: const Duration(milliseconds: 180),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-      decoration: BoxDecoration(
-        color: on ? Colors.white : Colors.white24,
-        borderRadius: BorderRadius.circular(20),
-      ),
+      decoration: BoxDecoration(color: on ? Colors.white : Colors.white24, borderRadius: BorderRadius.circular(20)),
       child: Text(label, style: kidsText(20, color: on ? const Color(0xFF1C3D9E) : Colors.white)),
     ),
   );
@@ -966,20 +1007,31 @@ class _MemoryProState extends State<MemoryPro> {
     _moves++;
     final [a, b] = _open.toList();
     if (_cards[a] == _cards[b]) {
-      setState(() { _matched.addAll(_open); _open.clear(); });
+      setState(() {
+        _matched.addAll(_open);
+        _open.clear();
+      });
       if (_matched.length == _cards.length) {
         _clock?.cancel();
         final best = await KidsScores.offer('memory', _seconds, lowerIsBetter: true);
         await KidsScores.offerChallenge('memory', _seconds);
         await KidsScores.addStars(_stars);
-        if (mounted) setState(() { _done = true; _newBest = best; });
+        if (mounted) {
+          setState(() {
+            _done = true;
+            _newBest = best;
+          });
+        }
       }
       return;
     }
     _busy = true;
     await Future<void>.delayed(const Duration(milliseconds: 800));
     if (!mounted) return;
-    setState(() { _open.clear(); _busy = false; });
+    setState(() {
+      _open.clear();
+      _busy = false;
+    });
   }
 
   int get _stars => _moves <= 12 ? 3 : (_moves <= 18 ? 2 : 1);
@@ -1081,7 +1133,12 @@ class _Card extends StatelessWidget {
               ),
               alignment: Alignment.center,
               child: showFace
-                  ? FittedBox(child: Padding(padding: const EdgeInsets.all(12), child: Icon(face.$1, color: face.$2, size: 64)))
+                  ? FittedBox(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Icon(face.$1, color: face.$2, size: 64),
+                      ),
+                    )
                   : const Icon(Icons.question_mark_rounded, color: Colors.white70, size: 40),
             ),
           ),

@@ -34,25 +34,7 @@ mixin _Stopwatch<T extends StatefulWidget> on State<T> {
   }
 }
 
-Widget _choiceChips(List<String> labels, int selected, ValueChanged<int> onPick) => Wrap(
-  alignment: WrapAlignment.center,
-  spacing: 10,
-  runSpacing: 10,
-  children: [
-    for (var i = 0; i < labels.length; i++)
-      KidsBounce(
-        onTap: () => onPick(i),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-          decoration: BoxDecoration(
-            color: i == selected ? Colors.white : Colors.white.withValues(alpha: 0.18),
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Text(labels[i], style: kidsText(20, color: i == selected ? const Color(0xFF1A1340) : Colors.white)),
-        ),
-      ),
-  ],
-);
+Widget _choiceChips(List<String> labels, int selected, ValueChanged<int> onPick) => kidsLevelChips(labels, selected, onPick);
 
 Widget _startScreen({
   required IconData icon,
@@ -61,30 +43,7 @@ Widget _startScreen({
   required String Function(int) bestText,
   required Widget options,
   required VoidCallback onStart,
-}) => Center(
-  child: SingleChildScrollView(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 96, color: Colors.white),
-        const SizedBox(height: 8),
-        Text(pitch, textAlign: TextAlign.center, style: kidsText(26, weight: FontWeight.w700)),
-        const SizedBox(height: 8),
-        FutureBuilder<int?>(
-          future: best,
-          builder: (context, snap) => Text(
-            snap.data == null ? 'No best yet' : bestText(snap.data!),
-            style: kidsText(20, color: Colors.white70, weight: FontWeight.w700),
-          ),
-        ),
-        const SizedBox(height: 18),
-        options,
-        const SizedBox(height: 24),
-        KidsButton('Start', icon: Icons.play_arrow_rounded, onTap: onStart, size: 32),
-      ],
-    ),
-  ),
-);
+}) => KidsStartPanel(icon: icon, pitch: pitch, best: best.then((b) => b == null ? null : bestText(b)), options: options, onStart: onStart);
 
 String _mmss(int s) => '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
 
@@ -130,7 +89,12 @@ class _SudokuGameState extends State<SudokuGame> with _Stopwatch {
       stopClock();
       final best = await KidsScores.offer(_key, seconds, lowerIsBetter: true);
       await KidsScores.addStars(_size == 4 ? 1 : (_size == 6 ? 2 : 3));
-      if (mounted) setState(() { _done = true; _newBest = best; });
+      if (mounted) {
+        setState(() {
+          _done = true;
+          _newBest = best;
+        });
+      }
     }
   }
 
@@ -191,19 +155,12 @@ class _SudokuGameState extends State<SudokuGame> with _Stopwatch {
                         decoration: BoxDecoration(
                           color: i == _selected
                               ? const Color(0xFFFFE08A)
-                              : (_selected != null &&
-                                    (i ~/ _size == _selected! ~/ _size || i % _size == _selected! % _size))
+                              : (_selected != null && (i ~/ _size == _selected! ~/ _size || i % _size == _selected! % _size))
                               ? const Color(0xFFEFF1FF)
                               : null,
                           border: Border(
-                            right: BorderSide(
-                              color: const Color(0xFF1A1340),
-                              width: (i % _size) % bw == bw - 1 && i % _size != _size - 1 ? 2.5 : 0.5,
-                            ),
-                            bottom: BorderSide(
-                              color: const Color(0xFF1A1340),
-                              width: (i ~/ _size) % bh == bh - 1 && i ~/ _size != _size - 1 ? 2.5 : 0.5,
-                            ),
+                            right: BorderSide(color: const Color(0xFF1A1340), width: (i % _size) % bw == bw - 1 && i % _size != _size - 1 ? 2.5 : 0.5),
+                            bottom: BorderSide(color: const Color(0xFF1A1340), width: (i ~/ _size) % bh == bh - 1 && i ~/ _size != _size - 1 ? 2.5 : 0.5),
                           ),
                         ),
                         child: _cells[i] == 0
@@ -265,7 +222,11 @@ class _SudokuGameState extends State<SudokuGame> with _Stopwatch {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('Tap a square, then a number', textAlign: TextAlign.center, style: kidsText(20, weight: FontWeight.w700)),
+                    Text(
+                      'Tap a square, then a number',
+                      textAlign: TextAlign.center,
+                      style: kidsText(20, weight: FontWeight.w700),
+                    ),
                     const SizedBox(height: 16),
                     pad,
                   ],
@@ -336,7 +297,12 @@ class _MazeGameState extends State<MazeGame> with _Stopwatch {
       final best = await KidsScores.offer('maze', seconds, lowerIsBetter: true);
       await KidsScores.offerChallenge('maze', seconds);
       await KidsScores.addStars(_sizeIndex + 1);
-      if (mounted) setState(() { _done = true; _newBest = best; });
+      if (mounted) {
+        setState(() {
+          _done = true;
+          _newBest = best;
+        });
+      }
     }
   }
 
@@ -356,13 +322,7 @@ class _MazeGameState extends State<MazeGame> with _Stopwatch {
             onStart: _start,
           )
         : _done
-        ? KidsResult(
-            title: 'You escaped!',
-            detail: 'in $clock',
-            stars: _sizeIndex + 1,
-            newBest: _newBest,
-            onAgain: () => setState(() => _maze = null),
-          )
+        ? KidsResult(title: 'You escaped!', detail: 'in $clock', stars: _sizeIndex + 1, newBest: _newBest, onAgain: () => setState(() => _maze = null))
         : _board(),
   );
 
@@ -407,13 +367,7 @@ class _MazeGameState extends State<MazeGame> with _Stopwatch {
             children: [
               _arrow(Icons.arrow_upward_rounded, 0, -1),
               const SizedBox(height: 10),
-              Row(
-                children: [
-                  _arrow(Icons.arrow_back_rounded, -1, 0),
-                  const SizedBox(width: 92),
-                  _arrow(Icons.arrow_forward_rounded, 1, 0),
-                ],
-              ),
+              Row(children: [_arrow(Icons.arrow_back_rounded, -1, 0), const SizedBox(width: 92), _arrow(Icons.arrow_forward_rounded, 1, 0)]),
               const SizedBox(height: 10),
               _arrow(Icons.arrow_downward_rounded, 0, 1),
             ],
@@ -454,7 +408,10 @@ class _MazePainter extends CustomPainter {
     }
     void glyph(IconData icon, int gx, int gy, Color color) {
       final tp = TextPainter(
-        text: TextSpan(text: String.fromCharCode(icon.codePoint), style: TextStyle(fontFamily: icon.fontFamily, package: icon.fontPackage, fontSize: math.min(cw, ch) * 0.8, color: color)),
+        text: TextSpan(
+          text: String.fromCharCode(icon.codePoint),
+          style: TextStyle(fontFamily: icon.fontFamily, package: icon.fontPackage, fontSize: math.min(cw, ch) * 0.8, color: color),
+        ),
         textDirection: TextDirection.ltr,
       )..layout();
       tp.paint(canvas, Offset(gx * cw + (cw - tp.width) / 2, gy * ch + (ch - tp.height) / 2));
@@ -528,7 +485,12 @@ class _WordSearchGameState extends State<WordSearchGame> with _Stopwatch {
       stopClock();
       final best = await KidsScores.offer('wordsearch', seconds, lowerIsBetter: true);
       await KidsScores.addStars(seconds < 120 ? 3 : (seconds < 240 ? 2 : 1));
-      if (mounted) setState(() { _done = true; _newBest = best; });
+      if (mounted) {
+        setState(() {
+          _done = true;
+          _newBest = best;
+        });
+      }
     }
   }
 
@@ -578,7 +540,12 @@ class _WordSearchGameState extends State<WordSearchGame> with _Stopwatch {
               GestureDetector(
                 onPanStart: (d) {
                   final c = _cellAt(d.localPosition, side);
-                  if (c != null) setState(() { _from = c; _drag = [c]; });
+                  if (c != null) {
+                    setState(() {
+                      _from = c;
+                      _drag = [c];
+                    });
+                  }
                 },
                 onPanUpdate: (d) {
                   final c = _cellAt(d.localPosition, side);
@@ -632,9 +599,10 @@ class _WordSearchGameState extends State<WordSearchGame> with _Stopwatch {
                             const SizedBox(width: 10),
                             Text(
                               w,
-                              style: kidsText(24, color: _found.contains(w) ? Colors.white54 : Colors.white).copyWith(
-                                decoration: _found.contains(w) ? TextDecoration.lineThrough : null,
-                              ),
+                              style: kidsText(
+                                24,
+                                color: _found.contains(w) ? Colors.white54 : Colors.white,
+                              ).copyWith(decoration: _found.contains(w) ? TextDecoration.lineThrough : null),
                             ),
                           ],
                         ),
@@ -669,10 +637,16 @@ class _WordGuessState extends State<WordGuess> {
   List<String> get _pool {
     final pool = [
       for (final w in kidsGuessWords)
-        if (switch (_level) { 0 => w.length <= 6, 1 => w.length >= 7 && w.length <= 8, _ => w.length >= 9 }) w,
+        if (switch (_level) {
+          0 => w.length <= 6,
+          1 => w.length >= 7 && w.length <= 8,
+          _ => w.length >= 9,
+        })
+          w,
     ];
     return pool.isEmpty ? kidsGuessWords : pool;
   }
+
   final _rng = math.Random();
   late String _word;
   final _guessed = <String>{};
@@ -730,7 +704,11 @@ class _WordGuessState extends State<WordGuess> {
                 AnimatedOpacity(
                   duration: const Duration(milliseconds: 300),
                   opacity: i < _lives - _misses ? 1 : 0.15,
-                  child: Icon(Icons.circle, size: 40, color: [const Color(0xFFFF6B6B), const Color(0xFFFFD27A), const Color(0xFF52D69F), const Color(0xFF63C3FF), const Color(0xFFB06BFF)][i % 5]),
+                  child: Icon(
+                    Icons.circle,
+                    size: 40,
+                    color: [const Color(0xFFFF6B6B), const Color(0xFFFFD27A), const Color(0xFF52D69F), const Color(0xFF63C3FF), const Color(0xFFB06BFF)][i % 5],
+                  ),
                 ),
             ],
           ),
@@ -743,18 +721,14 @@ class _WordGuessState extends State<WordGuess> {
           const Spacer(),
           FittedBox(
             fit: BoxFit.scaleDown,
-            child: Text(
-              _over ? _word.split('').join(' ') : maskedWord(_word, _guessed),
-              style: kidsText(64),
-            ),
+            child: Text(_over ? _word.split('').join(' ') : maskedWord(_word, _guessed), style: kidsText(64)),
           ),
           const Spacer(),
           if (_over)
             Column(
               children: [
                 Text(_won ? 'You got it!' : 'The word was $_word', style: kidsText(32)),
-                if (_newBest)
-                  Text('New best streak!', style: kidsText(22, color: const Color(0xFFFFD27A))),
+                if (_newBest) Text('New best streak!', style: kidsText(22, color: const Color(0xFFFFD27A))),
                 const SizedBox(height: 12),
                 KidsButton('Next word', icon: Icons.arrow_forward_rounded, onTap: _next),
               ],

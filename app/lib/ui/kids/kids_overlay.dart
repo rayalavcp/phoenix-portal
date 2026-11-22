@@ -49,57 +49,116 @@ class KidsOverlay extends StatelessWidget {
   );
 }
 
-/// The night-sky ground every Kids Portal screen sits on.
-class _KidsGround extends StatelessWidget {
+/// The ground every Kids Portal screen sits on: a bright colour world with
+/// bubbles and sparkles drifting slowly up through it.
+class _KidsGround extends StatefulWidget {
   const _KidsGround({super.key, required this.child, this.colors});
   final Widget child;
   final List<Color>? colors;
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: colors ?? const [Color(0xFF1E2140), Color(0xFF161933), Color(0xFF101220)],
-      ),
-    ),
-    child: Stack(
-      fit: StackFit.expand,
-      children: [
-        // Soft color glows, painted once: depth without any animation cost.
-        const _Glow(alignment: Alignment(-0.9, -0.8), color: Color(0x22F26A1B), size: 520),
-        const _Glow(alignment: Alignment(1.0, 0.9), color: Color(0x225B6CFF), size: 620),
-        const _Glow(alignment: Alignment(0.6, -1.1), color: Color(0x1552D69F), size: 420),
-        child,
-      ],
-    ),
-  );
+  State<_KidsGround> createState() => _KidsGroundState();
 }
 
-class _Glow extends StatelessWidget {
-  const _Glow({required this.alignment, required this.color, required this.size});
-  final Alignment alignment;
-  final Color color;
-  final double size;
+class _KidsGroundState extends State<_KidsGround> with SingleTickerProviderStateMixin {
+  late final AnimationController _drift = AnimationController(vsync: this, duration: const Duration(seconds: 40))..repeat();
 
   @override
-  Widget build(BuildContext context) => Align(
-    alignment: alignment,
-    child: IgnorePointer(
-      child: Container(
-        width: size,
-        height: size,
+  void dispose() {
+    _drift.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = widget.colors ?? _shelfColors['Learn']!;
+    return TweenAnimationBuilder<List<Color>>(
+      tween: _ColorsTween(begin: colors, end: colors),
+      duration: const Duration(milliseconds: 500),
+      builder: (context, c, child) => DecoratedBox(
         decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
+          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: c),
         ),
+        child: child,
       ),
-    ),
-  );
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Positioned.fill(
+            child: IgnorePointer(
+              child: RepaintBoundary(child: CustomPaint(painter: _BubblesPainter(_drift))),
+            ),
+          ),
+          widget.child,
+        ],
+      ),
+    );
+  }
 }
 
-// ── Home ───────────────────────────────────────────────────────────────
+class _ColorsTween extends Tween<List<Color>> {
+  _ColorsTween({required super.begin, required super.end});
+
+  @override
+  List<Color> lerp(double t) => [
+    for (var i = 0; i < end!.length; i++) Color.lerp(begin![i % begin!.length], end![i], t)!,
+  ];
+}
+
+/// Bubbles rising and sparkles twinkling, slowly: alive, never busy.
+class _BubblesPainter extends CustomPainter {
+  _BubblesPainter(this.t) : super(repaint: t);
+  final Animation<double> t;
+
+  static final _seed = List.generate(60, (i) => math.Random(i * 131 + 7).nextDouble());
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final time = t.value;
+    final fill = Paint();
+    for (var i = 0; i < 16; i++) {
+      final r = 18 + _seed[i] * 70;
+      final speed = 0.4 + _seed[i + 16] * 0.6;
+      final y = size.height + r - ((time * speed + _seed[i + 32]) % 1) * (size.height + 2 * r);
+      final x = _seed[(i * 7) % 60] * size.width + math.sin((time * 2 * math.pi) * 2 + i) * 24;
+      fill.color = Colors.white.withValues(alpha: 0.06 + _seed[(i * 3) % 60] * 0.07);
+      canvas.drawCircle(Offset(x, y), r, fill);
+    }
+    for (var i = 0; i < 12; i++) {
+      final c = Offset(_seed[(i * 5 + 1) % 60] * size.width, _seed[(i * 11 + 3) % 60] * size.height);
+      final twinkle = 0.5 + 0.5 * math.sin(time * 2 * math.pi * 6 + i * 1.7);
+      final k = 6 + _seed[(i * 13) % 60] * 10;
+      final path = Path()
+        ..moveTo(c.dx, c.dy - k)
+        ..quadraticBezierTo(c.dx, c.dy, c.dx + k, c.dy)
+        ..quadraticBezierTo(c.dx, c.dy, c.dx, c.dy + k)
+        ..quadraticBezierTo(c.dx, c.dy, c.dx - k, c.dy)
+        ..quadraticBezierTo(c.dx, c.dy, c.dx, c.dy - k);
+      fill.color = Colors.white.withValues(alpha: 0.15 + 0.35 * twinkle);
+      canvas.drawPath(path, fill);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BubblesPainter old) => false;
+}
+
+/// Each shelf's colour world, its icon and its tab colour.
+const _shelfColors = <String, List<Color>>{
+  'Learn': [Color(0xFF3A7BFF), Color(0xFF6A4CFF), Color(0xFF9B5CFF)],
+  'Puzzles': [Color(0xFF8E44FF), Color(0xFFD94BC8), Color(0xFFFF6B9A)],
+  'Play': [Color(0xFF13B88A), Color(0xFF1FA2C9), Color(0xFF3A7BFF)],
+  'Create': [Color(0xFFFF7A3D), Color(0xFFFF4D8D), Color(0xFFB04BFF)],
+  'My apps': [Color(0xFF2B3A8F), Color(0xFF4A3FB8), Color(0xFF7A4CD9)],
+};
+
+const _shelfIcons = <String, IconData>{
+  'Learn': Icons.menu_book_rounded,
+  'Puzzles': Icons.extension_rounded,
+  'Play': Icons.sports_esports_rounded,
+  'Create': Icons.palette_rounded,
+  'My apps': Icons.apps_rounded,
+};
 
 enum _Game {
   math, words, g2048, connect4, memory, draw,
@@ -204,6 +263,21 @@ class _KidsHomeState extends State<_KidsHome> {
 
   void _back() => setState(() => _game = null);
 
+  // A parent reset the scores from the admin portal: show it at once.
+  void _scoresReset() => KidsScores.changes.value++;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.container.phoenixHome.kidsScoresReset.addListener(_scoresReset);
+  }
+
+  @override
+  void dispose() {
+    widget.container.phoenixHome.kidsScoresReset.removeListener(_scoresReset);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => AnimatedSwitcher(
     duration: const Duration(milliseconds: 360),
@@ -240,7 +314,11 @@ class _KidsHomeState extends State<_KidsHome> {
       _Game.opposites => OppositesQuiz(key: const ValueKey('opposites'), onBack: _back),
       _Game.mole => WhackAMole(key: const ValueKey('mole'), onBack: _back),
       _Game.lights => LightsOut(key: const ValueKey('lights'), onBack: _back),
-      null => _home(context),
+      null => ListenableBuilder(
+        key: const ValueKey('home'),
+        listenable: widget.container.phoenixHome.kidsHiddenGames,
+        builder: (context, _) => _home(context),
+      ),
     },
   );
 
@@ -264,9 +342,11 @@ class _KidsHomeState extends State<_KidsHome> {
     final challenge = dailyChallenge(DateTime.now());
     final shelves = [..._shelves, if (apps.isNotEmpty) 'My apps'];
     final shelf = shelves.contains(_shelf) ? _shelf : shelves.first;
-    final games = _games.where((g) => g.shelf == shelf).toList();
+    final hidden = widget.container.phoenixHome.kidsHiddenGames.value;
+    final games = _games.where((g) => g.shelf == shelf && !hidden.contains(g.game.name)).toList();
     return _KidsGround(
       key: const ValueKey('home'),
+      colors: _shelfColors[shelf],
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(32, 22, 72, 16),
@@ -301,11 +381,25 @@ class _KidsHomeState extends State<_KidsHome> {
                   _ParentLock(container: widget.container),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: Text(
-                      name.isEmpty ? 'Hi there!' : 'Hi $name!',
-                      style: kidsText(34),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                name.isEmpty ? 'Hi there!' : 'Hi $name!',
+                                style: kidsText(40).copyWith(shadows: const [Shadow(color: Color(0x40000000), offset: Offset(0, 3), blurRadius: 8)]),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const _Wave(),
+                          ],
+                        ),
+                        Text('What shall we do today?', style: kidsText(18, color: Colors.white.withValues(alpha: 0.85), weight: FontWeight.w700)),
+                      ],
                     ),
                   ),
                   const _StarsPill(),
@@ -326,28 +420,40 @@ class _KidsHomeState extends State<_KidsHome> {
                 },
               ),
               const SizedBox(height: 18),
-              // The shelves as quiet tabs.
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  for (final s in shelves)
-                    KidsBounce(
-                      onTap: () => setState(() => _shelf = s),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: s == shelf ? Colors.white : Colors.white.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(22),
-                        ),
-                        child: Text(
-                          s,
-                          style: kidsText(19, color: s == shelf ? const Color(0xFF1E2140) : Colors.white70),
+              // The shelves: big colourful tabs.
+              SizedBox(
+                height: 64,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  clipBehavior: Clip.none,
+                  children: [
+                    for (final s in shelves)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: KidsBounce(
+                          onTap: () => setState(() => _shelf = s),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(horizontal: 22),
+                            decoration: BoxDecoration(
+                              color: s == shelf ? Colors.white : Colors.white.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(32),
+                              border: Border.all(color: Colors.white.withValues(alpha: s == shelf ? 1 : 0.35), width: 2),
+                              boxShadow: s == shelf ? const [BoxShadow(color: Color(0x40000000), offset: Offset(0, 6), blurRadius: 10)] : null,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(_shelfIcons[s], color: s == shelf ? _shelfColors[s]!.first : Colors.white, size: 28),
+                                const SizedBox(width: 8),
+                                Text(s, style: kidsText(22, color: s == shelf ? const Color(0xFF2A1F6B) : Colors.white)),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
               Expanded(
@@ -367,11 +473,12 @@ class _KidsHomeState extends State<_KidsHome> {
                         )
                       : GridView.builder(
                           key: ValueKey(shelf),
+                          padding: const EdgeInsets.only(top: 6, bottom: 12),
                           gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 260,
-                            mainAxisExtent: 150,
-                            mainAxisSpacing: 14,
-                            crossAxisSpacing: 14,
+                            maxCrossAxisExtent: 290,
+                            mainAxisExtent: 172,
+                            mainAxisSpacing: 18,
+                            crossAxisSpacing: 18,
                           ),
                           itemCount: games.length,
                           itemBuilder: (context, i) => _GameCard(
@@ -389,8 +496,8 @@ class _KidsHomeState extends State<_KidsHome> {
   }
 }
 
-/// Today's challenge: one game, one target, three bonus stars once won.
-/// A quiet line, not a banner.
+/// Today's challenge: a bright banner with one game, one target and three
+/// bonus stars once won.
 class _ChallengeCard extends StatelessWidget {
   const _ChallengeCard({required this.challenge, required this.onPlay});
   final DailyChallenge challenge;
@@ -406,26 +513,52 @@ class _ChallengeCard extends StatelessWidget {
         return KidsBounce(
           onTap: done ? null : onPlay,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            padding: const EdgeInsets.fromLTRB(14, 12, 18, 12),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.07),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+              gradient: LinearGradient(
+                colors: done ? const [Color(0xFF5BE39A), Color(0xFF22B86A)] : const [Color(0xFFFFE066), Color(0xFFFF9F1C)],
+              ),
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.7), width: 3),
+              boxShadow: const [BoxShadow(color: Color(0x40000000), offset: Offset(0, 8), blurRadius: 14)],
             ),
             child: Row(
               children: [
-                Icon(done ? Icons.emoji_events_rounded : Icons.wb_sunny_rounded,
-                    color: const Color(0xFFFFD27A), size: 28),
-                const SizedBox(width: 12),
-                Text(done ? 'Challenge done: ' : "Today's challenge: ",
-                    style: kidsText(18, color: Colors.white60, weight: FontWeight.w700)),
-                Expanded(
-                  child: Text(challenge.text, maxLines: 1, overflow: TextOverflow.ellipsis, style: kidsText(18)),
+                Container(
+                  width: 58,
+                  height: 58,
+                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                  child: Icon(done ? Icons.emoji_events_rounded : Icons.bolt_rounded, color: done ? const Color(0xFF22B86A) : const Color(0xFFFF8A00), size: 38),
                 ),
-                Text(done ? '+3 stars' : '3 stars', style: kidsText(16, color: const Color(0xFFFFD27A))),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(done ? 'CHALLENGE DONE!' : "TODAY'S CHALLENGE", style: kidsText(14, color: const Color(0xFF5A3300), weight: FontWeight.w900)),
+                      Text(challenge.text, maxLines: 1, overflow: TextOverflow.ellipsis, style: kidsText(24, color: const Color(0xFF3A2100))),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [for (var i = 0; i < 3; i++) const Icon(Icons.star_rounded, color: Colors.white, size: 30)],
+                ),
                 if (!done) ...[
-                  const SizedBox(width: 10),
-                  const Icon(Icons.chevron_right_rounded, color: Colors.white60),
+                  const SizedBox(width: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                    decoration: BoxDecoration(color: const Color(0xFF3A2100), borderRadius: BorderRadius.circular(22)),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 26),
+                        Text('Play', style: kidsText(20)),
+                      ],
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -443,47 +576,115 @@ class _GameCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The game's colour as a soft tint on the dark ground: calm, but each
-    // game still has its own hue.
-    final tint = Color.lerp(info.colors.first, const Color(0xFF1E2140), 0.62)!;
-    final accent = Color.lerp(info.colors.first, Colors.white, 0.35)!;
+    final c1 = info.colors.first, c2 = info.colors.last;
     return KidsBounce(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(18, 16, 16, 14),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: tint,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [c1, c2]),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.55), width: 3),
+          boxShadow: [
+            BoxShadow(color: Color.lerp(c2, Colors.black, 0.45)!.withValues(alpha: 0.9), offset: const Offset(0, 6)),
+            const BoxShadow(color: Color(0x33000000), offset: Offset(0, 12), blurRadius: 16),
+          ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            Icon(info.icon, color: accent, size: 34),
-            const Spacer(),
-            Text(info.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: kidsText(22)),
-            const SizedBox(height: 2),
-            if (info.bestKey != null)
-              ValueListenableBuilder<int>(
-                valueListenable: KidsScores.changes,
-                builder: (context, _, _) => FutureBuilder<int?>(
-                  future: KidsScores.best(info.bestKey!),
-                  builder: (context, snap) => Text(
-                    snap.data == null ? info.pitch : info.bestText!(snap.data!),
+            // A big faded copy of the icon, peeking out of the corner.
+            Positioned(right: -18, bottom: -22, child: Icon(info.icon, size: 130, color: Colors.white.withValues(alpha: 0.18))),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 14, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [BoxShadow(color: Color(0x33000000), offset: Offset(0, 4), blurRadius: 6)],
+                    ),
+                    child: Icon(info.icon, color: Color.lerp(c1, Colors.black, 0.1), size: 34),
+                  ),
+                  const Spacer(),
+                  Text(
+                    info.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: kidsText(15, color: Colors.white60, weight: FontWeight.w700),
+                    style: kidsText(24).copyWith(shadows: const [Shadow(color: Color(0x40000000), offset: Offset(0, 2), blurRadius: 4)]),
                   ),
-                ),
-              )
-            else
-              Text(info.pitch, maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: kidsText(15, color: Colors.white60, weight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  _BestLine(info: info),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
+}
+
+class _BestLine extends StatelessWidget {
+  const _BestLine({required this.info});
+  final _GameInfo info;
+
+  Widget _pill(String text, {bool best = false}) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+    decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(14)),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (best) ...[const Icon(Icons.emoji_events_rounded, color: Color(0xFFFFE066), size: 16), const SizedBox(width: 4)],
+        Flexible(child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: kidsText(14, weight: FontWeight.w800))),
+      ],
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    if (info.bestKey == null) return _pill(info.pitch);
+    return ValueListenableBuilder<int>(
+      valueListenable: KidsScores.changes,
+      builder: (context, _, _) => FutureBuilder<int?>(
+        future: KidsScores.best(info.bestKey!),
+        builder: (context, snap) => snap.data == null ? _pill(info.pitch) : _pill(info.bestText!(snap.data!), best: true),
+      ),
+    );
+  }
+}
+
+/// A waving hand next to the greeting.
+class _Wave extends StatefulWidget {
+  const _Wave();
+
+  @override
+  State<_Wave> createState() => _WaveState();
+}
+
+class _WaveState extends State<_Wave> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 2200))..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _c,
+    builder: (context, child) {
+      // Two quick waves, then a rest.
+      final t = _c.value;
+      final angle = t < 0.4 ? math.sin(t / 0.4 * 4 * math.pi) * 0.35 : 0.0;
+      return Transform.rotate(angle: angle, alignment: Alignment.bottomCenter, child: child);
+    },
+    child: const Icon(Icons.waving_hand_rounded, color: Color(0xFFFFD23F), size: 40, shadows: [Shadow(color: Color(0x40000000), blurRadius: 6)]),
+  );
 }
 
 class _StarsPill extends StatelessWidget {
@@ -495,14 +696,19 @@ class _StarsPill extends StatelessWidget {
     builder: (context, _, _) => FutureBuilder<int>(
       future: KidsScores.starsToday(),
       builder: (context, snap) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(40)),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [Color(0xFFFFE066), Color(0xFFFFB627)]),
+          borderRadius: BorderRadius.circular(40),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 2),
+          boxShadow: const [BoxShadow(color: Color(0x33000000), offset: Offset(0, 4), blurRadius: 8)],
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.star_rounded, color: Color(0xFFFFD27A), size: 28),
+            const Icon(Icons.star_rounded, color: Colors.white, size: 30),
             const SizedBox(width: 6),
-            Text('${snap.data ?? 0} today', style: kidsText(20)),
+            Text('${snap.data ?? 0}', style: kidsText(24, color: const Color(0xFF4A2A00))),
           ],
         ),
       ),

@@ -2221,5 +2221,7 @@
   .phx-tile-controls select { width: auto; }
   .phx-actions { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px 0 4px; }
   .phx-inline { display: flex; gap: 10px; align-items: center; }
+  .phx-inline.phx-wrap { flex-wrap: wrap; row-gap: 6px; }
+  .phx-kids-shelf { margin-bottom: 8px; }
   .phx-inline .field { margin-bottom: 0; }
   .phx-chip { display: inline-flex; align-items: center; gap: 6px; margin-right: 14px; }
