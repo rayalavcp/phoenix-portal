@@ -501,7 +501,7 @@ class _SchoolSetupState extends State<_SchoolSetup> {
   late SchoolConfig _cfg = widget.school.config.value;
   late final _district = TextEditingController(text: _cfg.district);
   late final _schoolId = TextEditingController(text: _cfg.schoolSlug);
-  late final _line = TextEditingController(text: _cfg.servingLine);
+  late final _line = TextEditingController(text: _cfg.servingLine == 'auto' ? '' : _cfg.servingLine);
   late final _grade = TextEditingController(text: _cfg.grade);
   late final _name = TextEditingController(text: _cfg.schoolName);
   late final _calendar = TextEditingController(text: _cfg.calendarUrl);
@@ -576,7 +576,7 @@ class _SchoolSetupState extends State<_SchoolSetup> {
       _cfg.copyWith(
         schoolName: _name.text.trim(),
         schoolSlug: _schoolId.text.trim(),
-        servingLine: _line.text.trim().isEmpty ? 'Main Line' : _line.text.trim(),
+        servingLine: _line.text.trim().isEmpty ? 'auto' : _line.text.trim(),
         grade: _grade.text.trim().isEmpty ? '02' : _grade.text.trim(),
         menuTypes: _cfg.provider == 'schoolcafe' && _cfg.menuTypes.isEmpty
             ? const [('Breakfast', 'Breakfast'), ('Lunch', 'Lunch')]
@@ -708,7 +708,7 @@ class _SchoolSetupState extends State<_SchoolSetup> {
                     Expanded(
                       child: TextField(
                         controller: _line,
-                        decoration: const InputDecoration(labelText: 'Serving line', hintText: 'Main Line'),
+                        decoration: const InputDecoration(labelText: 'Serving line', hintText: 'Leave empty to detect it', helperText: 'Empty: found automatically'),
                       ),
                     ),
                     const SizedBox(width: 16),

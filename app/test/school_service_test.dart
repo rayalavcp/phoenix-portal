@@ -98,4 +98,61 @@ void main() {
     expect(back.hasMenu, isTrue);
     expect(SchoolConfig.fromJson('junk').district, 'friscoisd');
   });
+
+  group('Frisco ISD defaults (SchoolCafe, Miller Elementary)', () {
+    test('a fresh setup is Miller Elementary with the Frisco ISD calendar', () {
+      const c = SchoolConfig();
+      expect(c.provider, 'schoolcafe');
+      expect(c.schoolSlug, millerElementarySchoolCafeId);
+      expect(c.schoolName, 'Miller Elementary');
+      expect(c.calendarUrl, friscoIsdCalendarUrl);
+      expect(c.servingLine, 'auto');
+      expect(c.grade, '02');
+      expect(c.hasMenu, isTrue);
+    });
+
+    test('an earlier setup with blanks picks up the defaults', () {
+      final c = SchoolConfig.fromJson({'provider': 'schoolcafe', 'district': 'friscoisd', 'school': '', 'calendar': '', 'servingLine': 'Main Line', 'menus': []});
+      expect(c.schoolSlug, millerElementarySchoolCafeId);
+      expect(c.calendarUrl, friscoIsdCalendarUrl);
+      expect(c.servingLine, 'auto');
+      expect(c.menuTypes, hasLength(2));
+    });
+
+    test('a parent-chosen school and calendar are kept', () {
+      final c = SchoolConfig.fromJson({'school': 'abc', 'calendar': 'calendar.frisco_isd', 'servingLine': 'Grab and Go'});
+      expect(c.schoolSlug, 'abc');
+      expect(c.calendarUrl, 'calendar.frisco_isd');
+      expect(c.servingLine, 'Grab and Go');
+    });
+
+    test('serving line from GetServiceLine', () {
+      expect(
+        parseSchoolCafeServingLine([
+          {'SchoolId': '00000000-0000-0000-0000-000000000000', 'ServingLineDescription': 'Main (Trayline)'},
+        ]),
+        'Main (Trayline)',
+      );
+      expect(parseSchoolCafeServingLine([]), isNull);
+      expect(parseSchoolCafeServingLine({'Message': 'nope'}), isNull);
+    });
+
+    test("Miller's real Dec 1 lunch, without the condiments", () {
+      final day = parseSchoolCafeDay({
+        'ENTREES': [
+          {'MenuItemDescription': 'Cheese Tortellini with Marinara '},
+          {'MenuItemDescription': 'Chicken Tenders'},
+        ],
+        'GRAINS': [
+          {'MenuItemDescription': 'Whole Grain Cheesy Garlic Breadstick'},
+        ],
+        'CONDIMENTS': [
+          {'MenuItemDescription': 'Ketchup'},
+        ],
+      }, DateTime(2026, 12, 1));
+      expect(day.sections.map((s) => s.$1), ['Entrees', 'Grains']);
+      expect(day.items.first, 'Cheese Tortellini with Marinara');
+      expect(day.items, isNot(contains('Ketchup')));
+    });
+  });
 }

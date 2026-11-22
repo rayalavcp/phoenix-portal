@@ -177,7 +177,7 @@ function schoolSection() {
   const district = el('input', { type: 'text', class: 'field', value: s.district || 'friscoisd', placeholder: 'friscoisd' });
   let provider = s.provider || 'schoolcafe';
   const schoolId = el('input', { type: 'text', class: 'field', value: provider === 'schoolcafe' ? (s.school || '') : '', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' });
-  const line = el('input', { type: 'text', class: 'field', value: s.servingLine || 'Main Line', placeholder: 'Main Line' });
+  const line = el('input', { type: 'text', class: 'field', value: s.servingLine && s.servingLine !== 'auto' ? s.servingLine : '', placeholder: 'Found automatically' });
   const grade = el('input', { type: 'text', class: 'field', value: s.grade || '02', placeholder: '02' });
   const calendar = el('input', { type: 'text', class: 'field', value: s.calendar || '', placeholder: 'calendar.frisco_isd or https://… .ics' });
   const start = el('input', { type: 'time', class: 'field', value: hhmm(s.start) });
@@ -222,7 +222,7 @@ function schoolSection() {
     row('Menu source', 'Frisco ISD posts its menus on SchoolCafe',
       select([['schoolcafe', 'SchoolCafe (Frisco ISD)'], ['nutrislice', 'Nutrislice']], provider, (v) => { provider = v; })),
     row('SchoolCafe school ID', 'The school\'s ID from SchoolCafe (the same one your Home Assistant SchoolCafe setup uses)', schoolId),
-    row('Serving line', 'Usually Main Line', line),
+    row('Serving line', 'Leave empty: found automatically (Frisco ISD: Main (Trayline) and Hot Breakfast)', line),
     row('Grade', 'Two digits, e.g. 02 for 2nd grade', grade),
     row('District', 'friscoisd for Frisco ISD',
       el('div', { class: 'phx-inline' }, district, el('button', { class: 'btn-ghost', type: 'button', text: 'Load schools', onclick: load }))),
@@ -235,7 +235,7 @@ function schoolSection() {
       class: 'btn-primary', type: 'button', text: 'Save school',
       onclick: () => save({
         school: {
-          provider, servingLine: line.value.trim() || 'Main Line', grade: grade.value.trim() || '02',
+          provider, servingLine: line.value.trim() || 'auto', grade: grade.value.trim() || '02',
           schoolName: name.value.trim(), district: district.value.trim().toLowerCase(),
           school: provider === 'schoolcafe' ? schoolId.value.trim() : (s.school || ''),
           menus: s.menus, calendar: calendar.value.trim(), start: start.value.replace(/^0(\d)/, '$1'), end: end.value.replace(/^0(\d)/, '$1'),

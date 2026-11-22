@@ -16,13 +16,13 @@ import '../../core/logging.dart';
 class SchoolConfig {
   const SchoolConfig({
     this.provider = 'schoolcafe',
-    this.servingLine = 'Main Line',
+    this.servingLine = 'auto',
     this.grade = '02',
     this.district = 'friscoisd',
-    this.schoolSlug = '',
+    this.schoolSlug = millerElementarySchoolCafeId,
     this.schoolName = 'Miller Elementary',
     this.menuTypes = const [('Breakfast', 'Breakfast'), ('Lunch', 'Lunch')],
-    this.calendarUrl = '',
+    this.calendarUrl = friscoIsdCalendarUrl,
     this.startTime = '',
     this.endTime = '',
   });
@@ -31,8 +31,9 @@ class SchoolConfig {
   /// districts, schoolcafe.com) or 'nutrislice'.
   final String provider;
 
-  /// SchoolCafe's serving line ("Main Line") and grade ("02"), which pick
-  /// the menu a student sees.
+  /// SchoolCafe's serving line and grade ("02"), which pick the menu a
+  /// student sees. 'auto' asks SchoolCafe for each meal's line (Frisco ISD:
+  /// "Main (Trayline)" for lunch, "Hot Breakfast" for breakfast).
   final String servingLine;
   final String grade;
 
@@ -105,20 +106,40 @@ class SchoolConfig {
           if (m is Map && '${m['slug'] ?? ''}'.isNotEmpty)
             ('${m['slug']}', '${m['name'] ?? m['slug']}'),
     ];
+    String text(String key, String fallback) {
+      final v = '${raw[key] ?? ''}'.trim();
+      return v.isEmpty ? fallback : v;
+    }
+
+    final provider = raw['provider'] == 'nutrislice' ? 'nutrislice' : 'schoolcafe';
+    final district = text('district', 'friscoisd');
+    final frisco = provider == 'schoolcafe' && district == 'friscoisd';
+    // An old "Main Line" never matched Frisco ISD's menus: let it look the
+    // line up instead.
+    final line = text('servingLine', 'auto');
     return SchoolConfig(
-      provider: raw['provider'] == 'nutrislice' ? 'nutrislice' : 'schoolcafe',
-      servingLine: '${raw['servingLine'] ?? 'Main Line'}',
-      grade: '${raw['grade'] ?? '02'}',
-      district: '${raw['district'] ?? 'friscoisd'}',
-      schoolSlug: '${raw['school'] ?? ''}',
-      schoolName: '${raw['schoolName'] ?? 'Miller Elementary'}',
-      menuTypes: raw['menus'] is List ? menus : const [('Breakfast', 'Breakfast'), ('Lunch', 'Lunch')],
-      calendarUrl: '${raw['calendar'] ?? ''}',
+      provider: provider,
+      servingLine: line == 'Main Line' ? 'auto' : line,
+      grade: text('grade', '02'),
+      district: district,
+      // Blank fields from an earlier setup pick up the Frisco ISD defaults.
+      schoolSlug: text('school', frisco ? millerElementarySchoolCafeId : ''),
+      schoolName: text('schoolName', 'Miller Elementary'),
+      menuTypes: raw['menus'] is List && menus.isNotEmpty ? menus : const [('Breakfast', 'Breakfast'), ('Lunch', 'Lunch')],
+      calendarUrl: text('calendar', frisco ? friscoIsdCalendarUrl : ''),
       startTime: '${raw['start'] ?? ''}',
       endTime: '${raw['end'] ?? ''}',
     );
   }
 }
+
+/// Miller Elementary, Frisco ISD, on SchoolCafe (looked up from SchoolCafe's
+/// Frisco ISD school list, district 1611).
+const millerElementarySchoolCafeId = 'd7bd7613-a7ac-4508-b50f-fd713b8b9bba';
+
+/// Frisco ISD's public school calendar (Google Calendar, iCal).
+const friscoIsdCalendarUrl =
+    'https://calendar.google.com/calendar/ical/friscoisd.org_1f00mj0hnlmf2s32hao46a61m4%40group.calendar.google.com/public/basic.ics';
 
 /// A school from the district's Nutrislice list, with its menus.
 @immutable
@@ -347,6 +368,34 @@ class SchoolService {
     return null;
   }
 
+  final _lines = <String, String>{};
+
+  /// The school's serving line for a meal ("Main (Trayline)", "Hot
+  /// Breakfast"), from SchoolCafe; a guess by meal when it cannot say.
+  Future<String> _servingLine(String school, String meal, DateTime from) async {
+    final key = '$school|$meal';
+    final known = _lines[key];
+    if (known != null) return known;
+    String fmt(DateTime d) => '${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}/${d.year}';
+    try {
+      final res = await _client
+          .get(Uri.https(_schoolCafe, '/api/GetServiceLine', {
+            'schoolid': school,
+            'startdate': fmt(from.subtract(const Duration(days: 7))),
+            'enddate': fmt(from.add(const Duration(days: 60))),
+            'mealtype': meal,
+          }))
+          .timeout(const Duration(seconds: 20));
+      if (res.statusCode == 200) {
+        final line = parseSchoolCafeServingLine(jsonDecode(utf8.decode(res.bodyBytes)));
+        if (line != null) return _lines[key] = line;
+      }
+    } catch (e) {
+      _log.warn('phoenix_home', 'serving line: $e');
+    }
+    return meal.toLowerCase().contains('breakfast') ? 'Hot Breakfast' : 'Main (Trayline)';
+  }
+
   Future<void> _resolveSchool(SchoolConfig c) async {
     try {
       final match = bestSchoolMatch(await schools(c.district), c.schoolName);
@@ -357,7 +406,7 @@ class SchoolService {
       ];
       final next = c.copyWith(
         schoolSlug: match.slug,
-        menuTypes: picked.isEmpty ? match.menuTypes : picked,
+        menuTypes: picked.isNotEmpty ? picked : (match.menuTypes.isNotEmpty ? match.menuTypes : c.menuTypes),
       );
       config.value = next;
       await (await _prefs()).setString(_configKey, jsonEncode(next.toJson()));
@@ -419,6 +468,7 @@ class SchoolService {
     DateTime monday,
   ) async {
     if (c.provider == 'schoolcafe') {
+      final line = c.servingLine == 'auto' || c.servingLine.isEmpty ? await _servingLine(c.schoolSlug, type, monday) : c.servingLine;
       final days = <MenuDay>[];
       for (var i = 0; i < 5; i++) {
         final day = monday.add(Duration(days: i));
@@ -427,7 +477,7 @@ class SchoolService {
             .get(Uri.https(_schoolCafe, '/api/CalendarView/GetDailyMenuitemsByGrade', {
               'SchoolId': c.schoolSlug,
               'ServingDate': date,
-              'ServingLine': c.servingLine,
+              'ServingLine': line,
               'MealType': type,
               'Grade': c.grade,
               'PersonId': 'null',
@@ -551,10 +601,23 @@ MenuDay parseSchoolCafeDay(Object? data, DateTime day) {
         final name = '${item['MenuItemDescription'] ?? ''}'.trim();
         if (name.isNotEmpty && !items.contains(name)) items.add(name);
       }
-      if (items.isNotEmpty) sections.add((_title('${e.key}'), items));
+      // Sauce cups and dressings are noise on a menu card.
+      if (items.isNotEmpty && !'${e.key}'.toUpperCase().contains('CONDIMENT')) sections.add((_title('${e.key}'), items));
     }
   }
   return MenuDay(DateTime(day.year, day.month, day.day), sections);
+}
+
+/// The first serving line in SchoolCafe's GetServiceLine answer.
+String? parseSchoolCafeServingLine(Object? data) {
+  if (data is! List) return null;
+  for (final e in data) {
+    if (e is Map) {
+      final line = '${e['ServingLineDescription'] ?? ''}'.trim();
+      if (line.isNotEmpty) return line;
+    }
+  }
+  return null;
 }
 
 /// "LUNCH- HOT" → "Lunch Hot", "ENTREES" → "Entrees".
