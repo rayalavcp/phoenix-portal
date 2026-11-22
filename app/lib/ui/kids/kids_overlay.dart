@@ -28,7 +28,11 @@ class KidsOverlay extends StatelessWidget {
     valueListenable: container.kids.screen,
     // A transparent Material: the text styles, ink and dialogs need one, and
     // the overlay sits outside any Scaffold.
-    builder: (context, screen, _) => Material(
+    builder: (context, screen, _) => ValueListenableBuilder(
+      valueListenable: container.phoenixHome.backdrop,
+      builder: (context, photo, _) => KidsBackdrop(
+        photo: photo,
+        child: Material(
       type: MaterialType.transparency,
       child: AnimatedSwitcher(
       duration: const Duration(milliseconds: 420),
@@ -46,6 +50,8 @@ class KidsOverlay extends StatelessWidget {
       },
       ),
     ),
+      ),
+    ),
   );
 }
 
@@ -60,87 +66,15 @@ class _KidsGround extends StatefulWidget {
   State<_KidsGround> createState() => _KidsGroundState();
 }
 
-class _KidsGroundState extends State<_KidsGround> with SingleTickerProviderStateMixin {
-  late final AnimationController _drift = AnimationController(vsync: this, duration: const Duration(seconds: 40))..repeat();
-
+class _KidsGroundState extends State<_KidsGround> {
   @override
-  void dispose() {
-    _drift.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = widget.colors ?? _shelfColors['Learn']!;
-    return TweenAnimationBuilder<List<Color>>(
-      tween: _ColorsTween(begin: colors, end: colors),
-      duration: const Duration(milliseconds: 500),
-      builder: (context, c, child) => DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: c),
-        ),
-        child: child,
-      ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Positioned.fill(
-            child: IgnorePointer(
-              child: RepaintBoundary(child: CustomPaint(painter: _BubblesPainter(_drift))),
-            ),
-          ),
-          widget.child,
-        ],
-      ),
-    );
-  }
-}
-
-class _ColorsTween extends Tween<List<Color>> {
-  _ColorsTween({required super.begin, required super.end});
-
-  @override
-  List<Color> lerp(double t) => [
-    for (var i = 0; i < end!.length; i++) Color.lerp(begin![i % begin!.length], end![i], t)!,
-  ];
-}
-
-/// Bubbles rising and sparkles twinkling, slowly: alive, never busy.
-class _BubblesPainter extends CustomPainter {
-  _BubblesPainter(this.t) : super(repaint: t);
-  final Animation<double> t;
-
-  static final _seed = List.generate(60, (i) => math.Random(i * 131 + 7).nextDouble());
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final time = t.value;
-    final fill = Paint();
-    for (var i = 0; i < 16; i++) {
-      final r = 18 + _seed[i] * 70;
-      final speed = 0.4 + _seed[i + 16] * 0.6;
-      final y = size.height + r - ((time * speed + _seed[i + 32]) % 1) * (size.height + 2 * r);
-      final x = _seed[(i * 7) % 60] * size.width + math.sin((time * 2 * math.pi) * 2 + i) * 24;
-      fill.color = Colors.white.withValues(alpha: 0.06 + _seed[(i * 3) % 60] * 0.07);
-      canvas.drawCircle(Offset(x, y), r, fill);
-    }
-    for (var i = 0; i < 12; i++) {
-      final c = Offset(_seed[(i * 5 + 1) % 60] * size.width, _seed[(i * 11 + 3) % 60] * size.height);
-      final twinkle = 0.5 + 0.5 * math.sin(time * 2 * math.pi * 6 + i * 1.7);
-      final k = 6 + _seed[(i * 13) % 60] * 10;
-      final path = Path()
-        ..moveTo(c.dx, c.dy - k)
-        ..quadraticBezierTo(c.dx, c.dy, c.dx + k, c.dy)
-        ..quadraticBezierTo(c.dx, c.dy, c.dx, c.dy + k)
-        ..quadraticBezierTo(c.dx, c.dy, c.dx - k, c.dy)
-        ..quadraticBezierTo(c.dx, c.dy, c.dx, c.dy - k);
-      fill.color = Colors.white.withValues(alpha: 0.15 + 0.35 * twinkle);
-      canvas.drawPath(path, fill);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_BubblesPainter old) => false;
+  Widget build(BuildContext context) => Stack(
+    fit: StackFit.expand,
+    children: [
+      KidsCalmBackground(tint: widget.colors?.first, blur: 6),
+      widget.child,
+    ],
+  );
 }
 
 /// Each shelf's colour world, its icon and its tab colour.
@@ -436,9 +370,9 @@ class _KidsHomeState extends State<_KidsHome> {
                             duration: const Duration(milliseconds: 200),
                             padding: const EdgeInsets.symmetric(horizontal: 22),
                             decoration: BoxDecoration(
-                              color: s == shelf ? Colors.white : Colors.white.withValues(alpha: 0.18),
+                              color: s == shelf ? Colors.white : const Color(0xFF101828).withValues(alpha: 0.45),
                               borderRadius: BorderRadius.circular(32),
-                              border: Border.all(color: Colors.white.withValues(alpha: s == shelf ? 1 : 0.35), width: 2),
+                              border: Border.all(color: Colors.white.withValues(alpha: s == shelf ? 1 : 0.25), width: 1.5),
                               boxShadow: s == shelf ? const [BoxShadow(color: Color(0x40000000), offset: Offset(0, 6), blurRadius: 10)] : null,
                             ),
                             child: Row(
@@ -515,11 +449,9 @@ class _ChallengeCard extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.fromLTRB(14, 12, 18, 12),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: done ? const [Color(0xFF5BE39A), Color(0xFF22B86A)] : const [Color(0xFFFFE066), Color(0xFFFF9F1C)],
-              ),
+              color: const Color(0xFF101828).withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.7), width: 3),
+              border: Border.all(color: (done ? const Color(0xFF5BE39A) : const Color(0xFFFFD23F)).withValues(alpha: 0.7), width: 2),
               boxShadow: const [BoxShadow(color: Color(0x40000000), offset: Offset(0, 8), blurRadius: 14)],
             ),
             child: Row(
@@ -527,8 +459,11 @@ class _ChallengeCard extends StatelessWidget {
                 Container(
                   width: 58,
                   height: 58,
-                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                  child: Icon(done ? Icons.emoji_events_rounded : Icons.bolt_rounded, color: done ? const Color(0xFF22B86A) : const Color(0xFFFF8A00), size: 38),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(colors: done ? const [Color(0xFF5BE39A), Color(0xFF22B86A)] : const [Color(0xFFFFE066), Color(0xFFFFB627)]),
+                  ),
+                  child: Icon(done ? Icons.emoji_events_rounded : Icons.bolt_rounded, color: Colors.white, size: 36),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -536,26 +471,29 @@ class _ChallengeCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(done ? 'CHALLENGE DONE!' : "TODAY'S CHALLENGE", style: kidsText(14, color: const Color(0xFF5A3300), weight: FontWeight.w900)),
-                      Text(challenge.text, maxLines: 1, overflow: TextOverflow.ellipsis, style: kidsText(24, color: const Color(0xFF3A2100))),
+                      Text(done ? 'CHALLENGE DONE!' : "TODAY'S CHALLENGE", style: kidsText(14, color: const Color(0xFFFFD23F), weight: FontWeight.w900)),
+                      Text(challenge.text, maxLines: 1, overflow: TextOverflow.ellipsis, style: kidsText(24)),
                     ],
                   ),
                 ),
                 const SizedBox(width: 10),
                 Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: [for (var i = 0; i < 3; i++) const Icon(Icons.star_rounded, color: Colors.white, size: 30)],
+                  children: [for (var i = 0; i < 3; i++) const Icon(Icons.star_rounded, color: Color(0xFFFFD23F), size: 30)],
                 ),
                 if (!done) ...[
                   const SizedBox(width: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                    decoration: BoxDecoration(color: const Color(0xFF3A2100), borderRadius: BorderRadius.circular(22)),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [Color(0xFFFFE066), Color(0xFFFFB627)]),
+                      borderRadius: BorderRadius.circular(22),
+                    ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 26),
-                        Text('Play', style: kidsText(20)),
+                        const Icon(Icons.play_arrow_rounded, color: Color(0xFF4A2A00), size: 26),
+                        Text('Play', style: kidsText(20, color: const Color(0xFF4A2A00))),
                       ],
                     ),
                   ),
@@ -582,46 +520,32 @@ class _GameCard extends StatelessWidget {
       child: Container(
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [c1, c2]),
+          color: const Color(0xFF101828).withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.55), width: 3),
-          boxShadow: [
-            BoxShadow(color: Color.lerp(c2, Colors.black, 0.45)!.withValues(alpha: 0.9), offset: const Offset(0, 6)),
-            const BoxShadow(color: Color(0x33000000), offset: Offset(0, 12), blurRadius: 16),
-          ],
+          border: Border.all(color: Colors.white.withValues(alpha: 0.22), width: 1.5),
+          boxShadow: const [BoxShadow(color: Color(0x33000000), offset: Offset(0, 8), blurRadius: 14)],
         ),
-        child: Stack(
-          children: [
-            // A big faded copy of the icon, peeking out of the corner.
-            Positioned(right: -18, bottom: -22, child: Icon(info.icon, size: 130, color: Colors.white.withValues(alpha: 0.18))),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 14, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: Color(0x33000000), offset: Offset(0, 4), blurRadius: 6)],
-                    ),
-                    child: Icon(info.icon, color: Color.lerp(c1, Colors.black, 0.1), size: 34),
-                  ),
-                  const Spacer(),
-                  Text(
-                    info.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: kidsText(24).copyWith(shadows: const [Shadow(color: Color(0x40000000), offset: Offset(0, 2), blurRadius: 4)]),
-                  ),
-                  const SizedBox(height: 4),
-                  _BestLine(info: info),
-                ],
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 14, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [c1, c2]),
+                  boxShadow: const [BoxShadow(color: Color(0x33000000), offset: Offset(0, 4), blurRadius: 6)],
+                ),
+                child: Icon(info.icon, color: Colors.white, size: 34),
               ),
-            ),
-          ],
+              const Spacer(),
+              Text(info.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: kidsText(24)),
+              const SizedBox(height: 4),
+              _BestLine(info: info),
+            ],
+          ),
         ),
       ),
     );
@@ -634,7 +558,7 @@ class _BestLine extends StatelessWidget {
 
   Widget _pill(String text, {bool best = false}) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-    decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(14)),
+    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [

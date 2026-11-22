@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 
 /// The Kids Portal's built-in activities. Everything here is offline and
@@ -37,6 +40,72 @@ class _KidsBounceState extends State<KidsBounce> {
   );
 }
 
+/// The calm photo every Kids Portal screen sits on (the home screen's
+/// wallpaper), handed down from the overlay.
+class KidsBackdrop extends InheritedWidget {
+  const KidsBackdrop({super.key, required this.photo, required super.child});
+  final Uint8List? photo;
+
+  static Uint8List? of(BuildContext context) => context.dependOnInheritedWidgetOfExactType<KidsBackdrop>()?.photo;
+
+  @override
+  bool updateShouldNotify(KidsBackdrop old) => !identical(old.photo, photo);
+}
+
+/// The photo, softly blurred, under a gentle veil (lightly tinted with
+/// [tint]) so text and cards read easily. Without a photo: a quiet dusk
+/// gradient.
+class KidsCalmBackground extends StatelessWidget {
+  const KidsCalmBackground({super.key, this.tint, this.blur = 10});
+  final Color? tint;
+  final double blur;
+
+  @override
+  Widget build(BuildContext context) {
+    final photo = KidsBackdrop.of(context);
+    final veil = tint == null ? const Color(0xFF101828) : Color.lerp(tint, const Color(0xFF101828), 0.6)!;
+    return RepaintBoundary(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (photo == null)
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF6A7FA3), Color(0xFF4A5A7A), Color(0xFF2E3850)],
+                ),
+              ),
+            )
+          else
+            ImageFiltered(
+              imageFilter: ImageFilter.blur(sigmaX: blur, sigmaY: blur, tileMode: TileMode.mirror),
+              child: Image.memory(
+                photo,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+                cacheWidth: 960,
+                gaplessPlayback: true,
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
+              ),
+            ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [veil.withValues(alpha: 0.5), veil.withValues(alpha: 0.68)],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// The shared frame of an activity: its colour world with playful shapes
 /// floating in it, a big back button, the title, and the body.
 class KidsActivityFrame extends StatelessWidget {
@@ -49,18 +118,10 @@ class KidsActivityFrame extends StatelessWidget {
   final Widget? trailing;
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: BoxDecoration(
-      gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: colors),
-    ),
-    child: Stack(
+  Widget build(BuildContext context) => Stack(
       fit: StackFit.expand,
       children: [
-        Positioned.fill(
-          child: IgnorePointer(
-            child: CustomPaint(painter: KidsDecorPainter(seed: title.hashCode)),
-          ),
-        ),
+        KidsCalmBackground(tint: colors.first),
         SafeArea(
           child: Column(
             children: [
@@ -101,7 +162,6 @@ class KidsActivityFrame extends StatelessWidget {
           ),
         ),
       ],
-    ),
   );
 }
 
@@ -176,9 +236,9 @@ class KidsStartPanel extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.fromLTRB(28, 28, 28, 30),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.16),
+            color: const Color(0xFF101828).withValues(alpha: 0.35),
             borderRadius: BorderRadius.circular(40),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 2),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1.5),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,

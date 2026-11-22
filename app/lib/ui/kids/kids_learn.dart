@@ -152,14 +152,27 @@ class _KidsQuizState extends State<KidsQuiz> {
   Widget _answer(int i, String choice) {
     final done = _picked != null;
     final right = choice == _item.answer;
-    final colors = !done
-        ? _answerColors[i % 4]
-        : right
-        ? const [Color(0xFF5BE39A), Color(0xFF22B86A)]
-        : choice == _picked
-        ? const [Color(0xFFFF8A80), Color(0xFFE53935)]
-        : [Colors.white.withValues(alpha: 0.25), Colors.white.withValues(alpha: 0.15)];
-    final ink = !done && i % 4 == 2 ? const Color(0xFF4A2A00) : Colors.white;
+    final accent = _answerColors[i % 4].last;
+    final Color fill;
+    final Color edge;
+    final Color ink;
+    if (!done) {
+      fill = Colors.white.withValues(alpha: 0.94);
+      edge = accent;
+      ink = const Color(0xFF1E2A44);
+    } else if (right) {
+      fill = const Color(0xFF2FB872);
+      edge = Colors.white;
+      ink = Colors.white;
+    } else if (choice == _picked) {
+      fill = const Color(0xFFE0525A);
+      edge = Colors.white;
+      ink = Colors.white;
+    } else {
+      fill = Colors.white.withValues(alpha: 0.35);
+      edge = Colors.white.withValues(alpha: 0.3);
+      ink = const Color(0xFF1E2A44).withValues(alpha: 0.6);
+    }
     return KidsBounce(
       onTap: done ? null : () => unawaited(_pick(choice)),
       child: AnimatedContainer(
@@ -167,31 +180,25 @@ class _KidsQuizState extends State<KidsQuiz> {
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: colors),
+          color: fill,
           borderRadius: BorderRadius.circular(26),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 3),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: done ? 0.1 : 0.25),
-              offset: const Offset(0, 6),
-              blurRadius: 8,
-            ),
-          ],
+          border: Border(
+            top: BorderSide(color: edge, width: 3),
+            left: BorderSide(color: edge, width: 3),
+            right: BorderSide(color: edge, width: 3),
+            bottom: BorderSide(color: edge, width: 9),
+          ),
+          boxShadow: const [BoxShadow(color: Color(0x33000000), offset: Offset(0, 6), blurRadius: 10)],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (done && right) ...[const Icon(Icons.check_circle_rounded, color: Colors.white, size: 34), const SizedBox(width: 8)],
-            if (done && !right && choice == _picked) ...[const Icon(Icons.cancel_rounded, color: Colors.white, size: 34), const SizedBox(width: 8)],
+            if (done && right) ...[const Icon(Icons.check_circle_rounded, color: Colors.white, size: 40), const SizedBox(width: 8)],
+            if (done && !right && choice == _picked) ...[const Icon(Icons.cancel_rounded, color: Colors.white, size: 40), const SizedBox(width: 8)],
             Flexible(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
-                child: Text(
-                  choice,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  style: kidsText(34, color: ink),
-                ),
+                child: Text(choice, textAlign: TextAlign.center, maxLines: 2, style: kidsText(44, color: ink)),
               ),
             ),
           ],
@@ -230,7 +237,7 @@ class _KidsQuizState extends State<KidsQuiz> {
               child: Text(
                 _item.explain!,
                 textAlign: TextAlign.center,
-                style: kidsText(22, weight: FontWeight.w700),
+                style: kidsText(26, weight: FontWeight.w700),
               ),
             )
           : const SizedBox.shrink();
@@ -242,7 +249,7 @@ class _KidsQuizState extends State<KidsQuiz> {
                   Expanded(
                     flex: 5,
                     child: Container(
-                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(36)),
+                      decoration: BoxDecoration(color: const Color(0xFF101828).withValues(alpha: 0.45), borderRadius: BorderRadius.circular(36), border: Border.all(color: Colors.white.withValues(alpha: 0.18))),
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         children: [
@@ -262,7 +269,7 @@ class _KidsQuizState extends State<KidsQuiz> {
                     flex: 5,
                     child: Container(
                       width: double.infinity,
-                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(36)),
+                      decoration: BoxDecoration(color: const Color(0xFF101828).withValues(alpha: 0.45), borderRadius: BorderRadius.circular(36), border: Border.all(color: Colors.white.withValues(alpha: 0.18))),
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         children: [
@@ -427,7 +434,7 @@ class FlagQuiz extends StatelessWidget {
           children: [
             Text(flagEmoji(q.code), style: const TextStyle(fontSize: 150)),
             const SizedBox(height: 8),
-            Text(q.prompt, textAlign: TextAlign.center, style: kidsText(28)),
+            Text(q.prompt, textAlign: TextAlign.center, style: kidsText(34)),
           ],
         ),
         choices: q.choices,
@@ -513,7 +520,7 @@ class FractionsQuiz extends StatelessWidget {
           children: [
             SizedBox(width: 260, height: 260, child: CustomPaint(painter: _PiePainter(q.parts, q.shaded))),
             const SizedBox(height: 12),
-            Text(q.prompt, textAlign: TextAlign.center, style: kidsText(26)),
+            Text(q.prompt, textAlign: TextAlign.center, style: kidsText(34)),
           ],
         ),
         choices: q.choices,
@@ -573,7 +580,7 @@ class MoneyQuiz extends StatelessWidget {
           children: [
             Wrap(alignment: WrapAlignment.center, spacing: 10, runSpacing: 10, children: [for (final c in q.coins) _Coin(c)]),
             const SizedBox(height: 16),
-            Text(q.prompt, textAlign: TextAlign.center, style: kidsText(26)),
+            Text(q.prompt, textAlign: TextAlign.center, style: kidsText(34)),
           ],
         ),
         choices: q.choices,
@@ -592,10 +599,10 @@ class _Coin extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (size, color, label) = switch (value) {
-      1 => (64.0, const Color(0xFFC77B42), '1¢'),
-      5 => (76.0, const Color(0xFFB8BCC4), '5¢'),
-      10 => (60.0, const Color(0xFFD5D8DE), '10¢'),
-      _ => (84.0, const Color(0xFFC9CDD4), '25¢'),
+      1 => (96.0, const Color(0xFFC77B42), '1¢'),
+      5 => (112.0, const Color(0xFFB8BCC4), '5¢'),
+      10 => (90.0, const Color(0xFFD5D8DE), '10¢'),
+      _ => (124.0, const Color(0xFFC9CDD4), '25¢'),
     };
     return Container(
       width: size,
