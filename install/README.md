@@ -1,8 +1,11 @@
-# Phoenix Portal test build 2026.12.1 (376)
+# Phoenix Portal test build 2026.12.2 (377)
 
-- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 99704560 bytes.
-  SHA-256 `783d33b5a7fffabcb7817aafd5dd28dcca7662b7133af3749ef0c0fa1335f799`.
+- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 99770760 bytes.
+  SHA-256 `03a09c0039a7112f2e22f4ee4cf8be3bbe4f63f2a146629c5fc05f3d483feab5`.
 - New in this build:
+  - **Move** shelf in the Kids Portal: Space Blaster (arcade shooter steered
+    by head or hand), Bubble Pop, Fruit Catcher, Finger Math, using the
+    Portal's camera (on-device hand and head tracking).
   - **Live cameras** on the Today screen (Home Assistant, several: swipe
     across the card), a **doorbell alert** (the camera live, full screen,
     for 30 s when it rings) and a **menu items** picker.
