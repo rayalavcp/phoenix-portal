@@ -51,7 +51,19 @@ const builtinWallpapers = <(String, String, String)>[
   ('ember_flow', 'Ember (minimal)', ''),
 ];
 
+/// The minimal wallpapers ship inside the app; the 4K photos are fetched
+/// from the project's repository the first time they show, then kept.
 String builtinWallpaperAsset(String id) => 'assets/wallpapers/$id.jpg';
+
+/// A small picture of a wallpaper, for the picker.
+String builtinWallpaperThumb(String id) => 'assets/wallpapers/thumbs/$id.jpg';
+
+/// Where a built-in 4K photo is downloaded from (the wallpapers folder of
+/// the repository: the branch this build came from, then main).
+List<Uri> builtinWallpaperUrls(String id) => [
+  for (final branch in const ['claude/fervent-hopper-25a7jk', 'main'])
+    Uri.parse('https://raw.githubusercontent.com/rayalavcp/phoenix-portal/$branch/wallpapers/$id.jpg'),
+];
 
 final _photoWallpapers = [for (final w in builtinWallpapers) if (w.$3.isNotEmpty) w];
 
@@ -431,7 +443,7 @@ class PhoenixHomeManager extends Manager {
           backdrop.value = await file.readAsBytes();
         } else {
           try {
-            backdrop.value = await _builtin(builtinWallpapers.first.$1);
+            backdrop.value = await _builtin(builtinWallpapers.firstWhere((w) => w.$3.isEmpty).$1);
           } catch (_) {}
         }
       }
@@ -439,8 +451,24 @@ class PhoenixHomeManager extends Manager {
   }
 
   Future<Uint8List> _builtin(String id) async {
-    final data = await rootBundle.load(builtinWallpaperAsset(id));
-    return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    final photo = builtinWallpapers.any((w) => w.$1 == id && w.$3.isNotEmpty);
+    if (!photo) {
+      final data = await rootBundle.load(builtinWallpaperAsset(id));
+      return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    }
+    final file = await _cacheFile('photo_$id');
+    if (file != null && file.existsSync()) return file.readAsBytes();
+    Object? failure;
+    for (final url in builtinWallpaperUrls(id)) {
+      try {
+        final bytes = await _download(url);
+        await file?.writeAsBytes(bytes, flush: true);
+        return bytes;
+      } catch (e) {
+        failure = e;
+      }
+    }
+    throw failure ?? 'could not download $id';
   }
 
   /// Bing's recent 4K photos, for the wallpaper picker: (id, thumbnail URL).

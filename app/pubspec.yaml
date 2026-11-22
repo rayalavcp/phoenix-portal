@@ -165,6 +165,7 @@ flutter:
     - assets/store/
     # Phoenix Home's built-in 4K wallpapers (rendered for this app).
     - assets/wallpapers/
+    - assets/wallpapers/thumbs/
   fonts:
     # Rubik (SIL Open Font License) — an open geometric sans that gives the
     # clock the clean, friendly feel of Google Sans without the licensing.

@@ -1331,7 +1331,7 @@ class _WallpaperPickerState extends State<WallpaperPicker> {
               children: [
                 for (final (id, name, _) in builtinWallpapers)
                   _thumb(
-                    image: Image.asset(builtinWallpaperAsset(id), fit: BoxFit.cover, cacheWidth: 300, width: double.infinity),
+                    image: Image.asset(builtinWallpaperThumb(id), fit: BoxFit.cover, width: double.infinity),
                     label: name,
                     selected: current == 'builtin:$id',
                     onTap: () => unawaited(home.setWallpaper('builtin:$id')),

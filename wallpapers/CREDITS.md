@@ -20,6 +20,6 @@ resized to 3840x2160. Each keeps its licence; see the linked page.
 | gavarnie_valley.jpg | Gavarnie valley | Moahim | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:2019_-_Parc_national_des_Pyrenees_-_Vall%C3%A9e_de_Gavarnie.jpg |
 | valle_de_la_luna.jpg | Valle de la Luna | Diego Delso | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Anfiteatro,_Valle_de_la_Luna,_San_Pedro_de_Atacama,_Chile,_2016-02-01,_DD_149.JPG |
 
-The other files (mountains_dawn, alpine_lake, misty_forest, desert_dunes,
+The minimal wallpapers in app/assets/wallpapers (mountains_dawn, alpine_lake, misty_forest, desert_dunes,
 autumn_valley, rolling_hills, ocean_sunset, moonlit_bay, aurora_night,
-deep_ocean, ember_flow) were rendered for this app.
+deep_ocean, ember_flow) were rendered for this app. The app downloads these photos from this folder the first time it shows them.
