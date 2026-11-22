@@ -1,8 +1,12 @@
-# Phoenix Portal test build 2026.11.29 (373)
+# Phoenix Portal test build 2026.11.30 (375)
 
-- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 99654736 bytes.
-  SHA-256 `7305795e7431b5027f5d6b1efb1d171feb815119859d1fcfbde188a9185e4b03`.
+- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 99654756 bytes.
+  SHA-256 `b61abf892152f22d75671e2f7a697df5f06793c0e2300437da5841ee7b0091dc`.
 - New in this build:
+  - **Remote admin fixed**: it stopped on its loading spinner since
+    2026.11.27 (a startup error in the page's footer translation).
+  - **School**: Miller Elementary menus from SchoolCafe (breakfast and
+    lunch) and the Frisco ISD calendar, set up by default.
   - **Today home screen** (the default): the time and weather right on a
     4K wallpaper with live weather effects (rain, storms, snow, fog, sun,
     clouds, stars), glance cards on the right (camera, up next, school,
