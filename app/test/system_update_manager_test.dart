@@ -224,46 +224,16 @@ void main() {
           BiscuitSystemUpdateSource(sdkInt: 25, device: 'biscuit');
     });
 
-    test('the new image shows as an install by hand', () async {
+    test("never contacts the original project's repositories", () async {
       await manager.init();
       await commands.execute('checkSystemUpdateNow', const {});
-      expect(
-        fetched.first.toString(),
-        'https://api.github.com/repos/jxlarrea/lineageos-echo-kiosk-satellite/releases?per_page=100',
-      );
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      // No GitHub request for the original project's new image.
+      expect(fetched, isEmpty);
+      expect(manager.manual.value, isNull);
+      // The image's own updater (BiscuitService) still answers for itself.
       final status = await commands.execute('getSystemUpdateStatus', const {});
-      final data = status.data! as Map;
-      expect(
-        data['repository'],
-        'https://github.com/jxlarrea/lineageos-biscuit-kiosk-satellite',
-      );
-      // The old repository's update, if any, still comes from BiscuitService.
-      expect(data['availableVersion'], '2026.10.5');
-      expect(data['manualVersion'], '2026.10.6');
-      expect(data['manualNotes'], '- **LineageOS 18.1.**');
-      expect(data['manualUrl'], BiscuitSystemUpdateSource.guide);
-      await manager.dispose();
-    });
-
-    test('install refuses the new image and names the guide', () async {
-      await manager.init();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      final install = await commands.execute('installSystemUpdate', const {});
-      expect(install.ok, isFalse);
-      expect(install.error, contains('installs by hand'));
-      expect(install.error, contains(BiscuitSystemUpdateSource.guide));
-      expect(calls, isNot(contains('install')));
-      await manager.dispose();
-    });
-
-    test('GitHub not answering keeps what was known', () async {
-      await manager.init();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      expect(manager.manual.value?.version, '2026.10.6');
-      manager.clientFactory = () =>
-          MockClient((_) async => http.Response('rate limited', 403));
-      await commands.execute('checkSystemUpdateNow', const {});
-      expect(manager.manual.value?.version, '2026.10.6');
+      expect((status.data! as Map)['availableVersion'], '2026.10.5');
       await manager.dispose();
     });
   });

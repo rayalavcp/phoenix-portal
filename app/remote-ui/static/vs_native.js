@@ -665,7 +665,7 @@ export async function renderNativeVs(root, byKey) {
    a delete button each, Add models (the files go up one by one, then the
    kiosk checks them together) and the documentation. A fleet follower
    whose leader syncs Voice Satellite shows the list only. */
-const CUSTOM_DOCS = 'https://github.com/jxlarrea/kiosk-satellite/blob/main/docs/custom-wake-words.md';
+const CUSTOM_DOCS = 'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/custom-wake-words.md';
 const ENGINE_LABELS = { microwakeword: 'microWakeWord', openwakeword: 'openWakeWord', vswakeword: 'vsWakeWord' };
 
 function customModelsGroup() {

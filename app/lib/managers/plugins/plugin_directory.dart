@@ -36,7 +36,7 @@ class PluginDirectory {
   static final defaultUrl = Uri.parse(
     const String.fromEnvironment(
       'KS_PLUGIN_DIRECTORY_URL',
-      defaultValue: 'https://kiosksatellite.com/plugins/index.json',
+      defaultValue: 'https://raw.githubusercontent.com/rayalavcp/phoenix-portal/claude/fervent-hopper-25a7jk/plugins/index.json',
     ),
   );
   static const maxBytes = 2 * 1024 * 1024;

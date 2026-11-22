@@ -53,8 +53,10 @@ class AnalyticsManager extends Manager {
   }) : _now = now ?? DateTime.now,
        _random = random ?? Random.secure();
 
-  static const defaultEndpoint =
-      'https://analytics.kiosksatellite.com/v1/report';
+  /// Phoenix Portal has no analytics server: nothing is sent anywhere, even
+  /// with the switches on. (The original project's endpoint was removed so
+  /// no data can reach it.)
+  static const defaultEndpoint = '';
 
   /// The wire format's version, bumped when a field changes meaning.
   static const schema = 1;
@@ -1166,6 +1168,10 @@ class AnalyticsManager extends Manager {
   }
 
   Future<bool> _post(Map<String, Object?> body) async {
+    if (endpoint.isEmpty) {
+      log.debug(name, 'analytics not sent: no analytics server');
+      return false;
+    }
     final client = clientFactory();
     try {
       final res = await client

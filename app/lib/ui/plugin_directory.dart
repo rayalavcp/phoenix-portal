@@ -15,7 +15,7 @@ import 'settings_search.dart';
 import 'toast.dart';
 
 const pluginSubmitUrl =
-    'https://github.com/jxlarrea/kiosk-satellite-plugins#submit-your-plugin';
+    'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/plugins/README.md';
 
 /// Browse plugins: Community Plugins, searchable, with each plugin's
 /// stars and downloads. Picking one runs the same preview

@@ -271,6 +271,9 @@ class SystemUpdateManager extends Manager {
   Future<void> _checkSuccessor() async {
     final successor = _source?.successor;
     if (successor == null) return;
+    // Phoenix Portal never contacts the original project: its system images
+    // are not Phoenix Portal's to offer.
+    if (successor.repository.startsWith('jxlarrea/')) return;
     final client = clientFactory();
     try {
       final res = await client
