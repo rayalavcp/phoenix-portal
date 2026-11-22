@@ -140,8 +140,11 @@ class _TicTacToeState extends State<TicTacToe> {
       trailing: Text('You $_wins · Draw $_draws · Me $_losses', style: kidsText(24)),
       child: LayoutBuilder(
         builder: (context, box) {
-          final side = math.min(box.maxHeight - 24, box.maxWidth * 0.55);
-          return Row(
+          // Side by side in landscape, stacked in portrait.
+          final wide = box.maxWidth > box.maxHeight;
+          final side = wide ? math.min(box.maxHeight - 24, box.maxWidth * 0.55) : math.min(box.maxWidth - 48, box.maxHeight * 0.6);
+          return Flex(
+            direction: wide ? Axis.horizontal : Axis.vertical,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               SizedBox(
@@ -166,46 +169,53 @@ class _TicTacToeState extends State<TicTacToe> {
                   ],
                 ),
               ),
-              const SizedBox(width: 32),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    r == null
-                        ? (_thinking ? 'Hmm, thinking…' : 'Your turn! You are X')
-                        : r == 'X'
-                        ? 'You win!'
-                        : r == 'O'
-                        ? 'I win this time!'
-                        : "It's a draw!",
-                    style: kidsText(30),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      for (final (label, hard) in const [('Easy', false), ('Hard', true)])
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 6),
-                          child: KidsBounce(
-                            onTap: () => setState(() {
-                              _hard = hard;
-                              _board = List.filled(9, '');
-                            }),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: _hard == hard ? Colors.white : Colors.white.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(22),
+              const SizedBox(width: 32, height: 24),
+              Flexible(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        r == null
+                            ? (_thinking ? 'Hmm, thinking…' : 'Your turn! You are X')
+                            : r == 'X'
+                            ? 'You win!'
+                            : r == 'O'
+                            ? 'I win this time!'
+                            : "It's a draw!",
+                        style: kidsText(30),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (final (label, hard) in const [('Easy', false), ('Hard', true)])
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            child: KidsBounce(
+                              onTap: () => setState(() {
+                                _hard = hard;
+                                _board = List.filled(9, '');
+                              }),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: _hard == hard ? Colors.white : Colors.white.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(22),
+                                ),
+                                child: Text(label, style: kidsText(22, color: _hard == hard ? const Color(0xFF1A1340) : Colors.white)),
                               ),
-                              child: Text(label, style: kidsText(22, color: _hard == hard ? const Color(0xFF1A1340) : Colors.white)),
                             ),
                           ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  KidsButton('New game', icon: Icons.replay_rounded, onTap: () => setState(() => _board = List.filled(9, ''))),
-                ],
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    KidsButton('New game', icon: Icons.replay_rounded, onTap: () => setState(() => _board = List.filled(9, ''))),
+                  ],
+                ),
               ),
             ],
           );
@@ -216,6 +226,79 @@ class _TicTacToeState extends State<TicTacToe> {
 }
 
 // ── Snake ─────────────────────────────────────────────────────────────────
+
+/// Snake's stages, 20 × 13: '#' a wall. A new stage every [snakeApplesPerStage]
+/// apples; after the last they come round again, faster.
+const snakeStages = <(String, List<String>)>[
+  ('Open field', []),
+  ('Bars', ['.....####...........', '...........####.....']),
+  (
+    'Plus',
+    [
+      '..........#.........',
+      '..........#.........',
+      '..........#.........',
+      '....................',
+      '....###.......###...',
+      '....................',
+      '..........#.........',
+      '..........#.........',
+      '..........#.........',
+    ],
+  ),
+  (
+    'Corners',
+    [
+      '.###............###.',
+      '.#................#.',
+      '....................',
+      '....................',
+      '....................',
+      '....................',
+      '....................',
+      '....................',
+      '.#................#.',
+      '.###............###.',
+    ],
+  ),
+  (
+    'Gates',
+    [
+      '......#......#......',
+      '......#......#......',
+      '......#......#......',
+      '......#......#......',
+      '....................',
+      '....................',
+      '....................',
+      '......#......#......',
+      '......#......#......',
+      '......#......#......',
+      '......#......#......',
+    ],
+  ),
+];
+
+/// Where each stage's rows start (the rest of the field is open).
+const _snakeStageTop = [0, 3, 2, 1, 1];
+
+const snakeApplesPerStage = 6;
+
+/// The wall cells of [stage] (1-based, going round).
+Set<(int, int)> snakeWalls(int stage) {
+  final i = (stage - 1) % snakeStages.length;
+  final rows = snakeStages[i].$2;
+  final top = _snakeStageTop[i];
+  final out = <(int, int)>{};
+  for (var r = 0; r < rows.length; r++) {
+    // 'Bars' has its two bars six rows apart.
+    final y = i == 1 ? top + r * 6 : top + r;
+    for (var x = 0; x < rows[r].length; x++) {
+      if (rows[r][x] == '#') out.add((x, y));
+    }
+  }
+  return out;
+}
 
 class SnakeGame extends StatefulWidget {
   const SnakeGame({super.key, required this.onBack, this.container});
@@ -238,10 +321,15 @@ class _SnakeGameState extends State<SnakeGame> {
   KidsHands? _tracker;
   int _playWith = 0; // buttons, hand, head
   bool _playing = false, _over = false, _newBest = false;
+  Set<(int, int)> _walls = const {};
+  int _stage = 1, _apples = 0;
+  double _banner = 0;
 
   /// Slow, Normal, Fast: milliseconds a step.
   static const _speeds = [270, 190, 120];
   int _level = 1;
+
+  Duration get _period => Duration(milliseconds: math.max(70, (_speeds[_level] * math.pow(0.93, _stage - 1)).round()));
 
   void _start() {
     _timer?.cancel();
@@ -259,17 +347,34 @@ class _SnakeGameState extends State<SnakeGame> {
       _snake = [(5, 6), (4, 6), (3, 6)];
       _dir = (1, 0);
       _nextDir = (1, 0);
+      _stage = 1;
+      _apples = 0;
+      _walls = const {};
+      _banner = 0;
       _placeFood();
       _playing = true;
       _over = false;
     });
-    _timer = Timer.periodic(Duration(milliseconds: _speeds[_level]), (_) => _step());
+    _timer = Timer.periodic(_period, (_) => _step());
   }
 
   void _placeFood() {
     do {
       _food = (_rng.nextInt(_w), _rng.nextInt(_h));
-    } while (_snake.contains(_food));
+    } while (_snake.contains(_food) || _walls.contains(_food));
+  }
+
+  /// On to the next stage: its walls (never on the snake or just ahead of
+  /// it) and a little more speed.
+  void _nextStage() {
+    _stage++;
+    final head = _snake.first;
+    final ahead = {for (var k = 1; k <= 4; k++) (head.$1 + _dir.$1 * k, head.$2 + _dir.$2 * k)};
+    _walls = snakeWalls(_stage).where((c) => !_snake.contains(c) && !ahead.contains(c)).toSet();
+    if (_walls.contains(_food)) _placeFood();
+    _banner = 2;
+    _timer?.cancel();
+    _timer = Timer.periodic(_period, (_) => _step());
   }
 
   void _turn(int dx, int dy) {
@@ -281,7 +386,8 @@ class _SnakeGameState extends State<SnakeGame> {
   Future<void> _step() async {
     _dir = _nextDir;
     final head = (_snake.first.$1 + _dir.$1, _snake.first.$2 + _dir.$2);
-    if (head.$1 < 0 || head.$2 < 0 || head.$1 >= _w || head.$2 >= _h || _snake.contains(head)) {
+    _banner = math.max(0, _banner - _period.inMilliseconds / 1000);
+    if (head.$1 < 0 || head.$2 < 0 || head.$1 >= _w || head.$2 >= _h || _snake.contains(head) || _walls.contains(head)) {
       _timer?.cancel();
       _steerTimer?.cancel();
       final length = _snake.length;
@@ -300,6 +406,8 @@ class _SnakeGameState extends State<SnakeGame> {
     setState(() {
       _snake = [head, ..._snake];
       if (head == _food) {
+        _apples++;
+        if (_apples % snakeApplesPerStage == 0) _nextStage();
         _placeFood();
       } else {
         _snake.removeLast();
@@ -330,11 +438,11 @@ class _SnakeGameState extends State<SnakeGame> {
     title: 'Snake',
     colors: const [Color(0xFF1F8A4C), Color(0xFF14A06B)],
     onBack: widget.onBack,
-    trailing: _playing ? Text('Length ${_snake.length}', style: kidsText(30)) : null,
+    trailing: _playing ? Text('Stage $_stage  ·  Length ${_snake.length}', style: kidsText(28)) : null,
     child: _over
         ? KidsResult(
             title: 'Bonk!',
-            detail: 'Your snake grew to ${_snake.length}',
+            detail: 'Your snake grew to ${_snake.length} · reached stage $_stage (${snakeStages[(_stage - 1) % snakeStages.length].$1})',
             stars: _snake.length >= 20 ? 3 : (_snake.length >= 12 ? 2 : (_snake.length >= 7 ? 1 : 0)),
             newBest: _newBest,
             onAgain: _start,
@@ -347,10 +455,7 @@ class _SnakeGameState extends State<SnakeGame> {
             options: Column(
               children: [
                 kidsLevelChips(const ['Slow', 'Normal', 'Fast'], _level, (i) => setState(() => _level = i)),
-                if (widget.container != null) ...[
-                  const SizedBox(height: 14),
-                  kidsPlayWithChips(_playWith, (i) => setState(() => _playWith = i)),
-                ],
+                if (widget.container != null) ...[const SizedBox(height: 14), kidsPlayWithChips(_playWith, (i) => setState(() => _playWith = i))],
               ],
             ),
             onStart: _start,
@@ -375,27 +480,38 @@ class _SnakeGameState extends State<SnakeGame> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(18),
-                        child: CustomPaint(painter: _SnakePainter(_snake, _food, _w, _h)),
+                        child: CustomPaint(
+                          painter: _SnakePainter(
+                            _snake,
+                            _food,
+                            _w,
+                            _h,
+                            _walls,
+                            _banner > 0 ? 'STAGE $_stage · ${snakeStages[(_stage - 1) % snakeStages.length].$1}' : null,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
               );
               final tracker = _tracker;
-              final pad = tracker != null ? KidsMotionPanel(hands: tracker) : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _arrow(Icons.arrow_upward_rounded, 0, -1),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [_arrow(Icons.arrow_back_rounded, -1, 0), const SizedBox(width: 92), _arrow(Icons.arrow_forward_rounded, 1, 0)],
-                  ),
-                  const SizedBox(height: 10),
-                  _arrow(Icons.arrow_downward_rounded, 0, 1),
-                ],
-              );
+              final pad = tracker != null
+                  ? KidsMotionPanel(hands: tracker)
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _arrow(Icons.arrow_upward_rounded, 0, -1),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [_arrow(Icons.arrow_back_rounded, -1, 0), const SizedBox(width: 92), _arrow(Icons.arrow_forward_rounded, 1, 0)],
+                        ),
+                        const SizedBox(height: 10),
+                        _arrow(Icons.arrow_downward_rounded, 0, 1),
+                      ],
+                    );
               return Padding(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
                 child: wide
@@ -420,15 +536,22 @@ class _SnakeGameState extends State<SnakeGame> {
 }
 
 class _SnakePainter extends CustomPainter {
-  _SnakePainter(this.snake, this.food, this.w, this.h);
+  _SnakePainter(this.snake, this.food, this.w, this.h, this.walls, this.banner);
   final List<(int, int)> snake;
   final (int, int) food;
   final int w, h;
+  final Set<(int, int)> walls;
+  final String? banner;
 
   @override
   void paint(Canvas canvas, Size size) {
     final c = size.width / w;
     canvas.drawRRect(RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(16)), Paint()..color = const Color(0xFF0E3B24));
+    for (final (x, y) in walls) {
+      final r = Rect.fromLTWH(x * c + 1, y * c + 1, c - 2, c - 2);
+      canvas.drawRRect(RRect.fromRectAndRadius(r, Radius.circular(c * 0.15)), Paint()..color = const Color(0xFF8A6A4A));
+      canvas.drawRect(Rect.fromLTWH(r.left, r.top, r.width, r.height * 0.3), Paint()..color = const Color(0xFFB08A60));
+    }
     canvas.drawCircle(Offset((food.$1 + 0.5) * c, (food.$2 + 0.5) * c), c * 0.4, Paint()..color = const Color(0xFFFF4D4D));
     for (var i = 0; i < snake.length; i++) {
       final (x, y) = snake[i];
@@ -436,6 +559,14 @@ class _SnakePainter extends CustomPainter {
         RRect.fromRectAndRadius(Rect.fromLTWH(x * c + 1.5, y * c + 1.5, c - 3, c - 3), Radius.circular(c * 0.3)),
         Paint()..color = i == 0 ? const Color(0xFFFFD27A) : Color.lerp(const Color(0xFF52D69F), const Color(0xFF14A06B), i / snake.length)!,
       );
+    }
+    final b = banner;
+    if (b != null) {
+      final tp = TextPainter(
+        text: TextSpan(text: b, style: kidsText(c * 1.1)),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, Offset(size.width / 2 - tp.width / 2, size.height * 0.12));
     }
   }
 
@@ -1094,8 +1225,12 @@ class _SparkView extends StatelessWidget {
   final _Spark spark;
   final GlobalKey keyboard;
 
+  // It fills the keyboard's Stack and floats the note in a Stack of its own:
+  // a Positioned has to sit right inside a Stack.
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
+  Widget build(BuildContext context) => Positioned.fill(child: IgnorePointer(child: _note()));
+
+  Widget _note() => LayoutBuilder(
     builder: (context, box) {
       final whites = [
         for (var i = 0; i < kidsPianoNotes.length; i++)
@@ -1108,18 +1243,23 @@ class _SparkView extends StatelessWidget {
       return TweenAnimationBuilder<double>(
         tween: Tween(begin: 0, end: 1),
         duration: const Duration(milliseconds: 900),
-        builder: (context, t, _) => Positioned(
-          left: x - 14 + math.sin(t * 6 + spark.id) * 10,
-          top: box.maxHeight * 0.35 - t * box.maxHeight * 0.45,
-          child: IgnorePointer(
-            child: Opacity(
-              opacity: (1 - t).clamp(0.0, 1.0),
-              child: Text(
-                symbols[spark.id % symbols.length],
-                style: TextStyle(fontSize: 30, color: _KidsPianoState._keyColors[(k * 5) % 7], shadows: const [Shadow(blurRadius: 6)]),
+        builder: (context, t, _) => Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              left: x - 14 + math.sin(t * 6 + spark.id) * 10,
+              top: box.maxHeight * 0.35 - t * box.maxHeight * 0.45,
+              child: IgnorePointer(
+                child: Opacity(
+                  opacity: (1 - t).clamp(0.0, 1.0),
+                  child: Text(
+                    symbols[spark.id % symbols.length],
+                    style: TextStyle(fontSize: 30, color: _KidsPianoState._keyColors[(k * 5) % 7], shadows: const [Shadow(blurRadius: 6)]),
+                  ),
+                ),
               ),
             ),
-          ),
+          ],
         ),
       );
     },

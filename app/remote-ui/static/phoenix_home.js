@@ -267,7 +267,9 @@ function schoolSection() {
 
 const KIDS_GAMES = [
   ['Learn', [['math', 'Math Blitz'], ['times', 'Times Tables'], ['clock', 'Telling the Time'], ['flags', 'Flag Quiz'], ['words', 'Word Scramble'],
-    ['patterns', 'Patterns'], ['fractions', 'Fractions'], ['money', 'Money'], ['science', 'Science'], ['spelling', 'Spelling'], ['opposites', 'Opposites']]],
+    ['patterns', 'Patterns'], ['fractions', 'Fractions'], ['money', 'Money'], ['science', 'Science'], ['spelling', 'Spelling'], ['opposites', 'Opposites'],
+    ['count', 'Count It'], ['letters', 'Letter Sounds'], ['placevalue', 'Place Value'], ['story', 'Story Sums'], ['telugu', 'Telugu Words']]],
+  ['Maps', [['usamap', 'USA Map'], ['indiamap', 'India Map'], ['worldmap', 'World Map']]],
   ['Puzzles', [['sudoku', 'Sudoku'], ['maze', 'Maze'], ['wordsearch', 'Word Search'], ['guess', 'Word Guess'], ['memory', 'Memory Pro'], ['g2048', '2048'], ['lights', 'Lights Out']]],
   ['Play', [['snake', 'Snake'], ['mole', 'Whack-a-Mole'], ['simon', 'Simon Says'], ['ttt', 'Tic-Tac-Toe'], ['connect4', 'Connect Four']]],
   ['Arcade', [['munch', 'Munch Maze'], ['bricks', 'Brick Bash'], ['hop', 'Hop Across'], ['sky', 'Sky Glide'], ['run', 'Fox Run']]],

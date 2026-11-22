@@ -12,6 +12,8 @@ import 'kids_arcade.dart';
 import 'kids_arcade2.dart';
 import 'kids_games.dart';
 import 'kids_learn.dart';
+import 'kids_learn_more.dart';
+import 'kids_maps.dart';
 import 'kids_logic.dart';
 import 'kids_more_logic.dart';
 import 'kids_motion.dart';
@@ -88,6 +90,7 @@ const _shelfColors = <String, List<Color>>{
   'Play': [Color(0xFF13B88A), Color(0xFF1FA2C9), Color(0xFF3A7BFF)],
   'Move': [Color(0xFFFF9F1C), Color(0xFFFF5E62), Color(0xFFB04BFF)],
   'Arcade': [Color(0xFF1A1340), Color(0xFF3B5BFF), Color(0xFFFF4D9A)],
+  'Maps': [Color(0xFF14365A), Color(0xFF2F7B4A), Color(0xFF1C8ED6)],
   'Create': [Color(0xFFFF7A3D), Color(0xFFFF4D8D), Color(0xFFB04BFF)],
   'My apps': [Color(0xFF2B3A8F), Color(0xFF4A3FB8), Color(0xFF7A4CD9)],
 };
@@ -98,6 +101,7 @@ const _shelfIcons = <String, IconData>{
   'Play': Icons.sports_esports_rounded,
   'Move': Icons.back_hand_rounded,
   'Arcade': Icons.videogame_asset_rounded,
+  'Maps': Icons.public_rounded,
   'Create': Icons.palette_rounded,
   'My apps': Icons.apps_rounded,
 };
@@ -111,6 +115,8 @@ enum _Game {
   bubbles, catcher, fingermath, blaster,
   munch, bricks, hop, sky, run,
   walls, trace, dance,
+  count, letters, placevalue, story, telugu,
+  usamap, indiamap, worldmap,
 }
 
 /// The hub's cards: title, pitch, icon, colours, shelf and how the best
@@ -155,6 +161,16 @@ final _games = <_GameInfo>[
       const [Color(0xFFE08A00), Color(0xFF8C5BFF)], 'spelling', (b) => 'Best: $b of 10', shelf: 'Learn'),
   _GameInfo(_Game.opposites, 'Opposites', 'Hot and cold, up and down', Icons.compare_arrows_rounded,
       const [Color(0xFFE0446A), Color(0xFF1C8ED6)], 'opposites', (b) => 'Best: $b of 10', shelf: 'Learn'),
+  _GameInfo(_Game.count, 'Count It', 'Count the pictures', Icons.format_list_numbered_rounded,
+      const [Color(0xFFFF7A3D), Color(0xFFFFB627)], 'count', (b) => 'Best: $b of 10', shelf: 'Learn'),
+  _GameInfo(_Game.letters, 'Letter Sounds', 'Letters and phonics', Icons.abc_rounded,
+      const [Color(0xFF8E44FF), Color(0xFFFF6B9A)], 'letters', (b) => 'Best: $b of 10', shelf: 'Learn'),
+  _GameInfo(_Game.placevalue, 'Place Value', 'Ones, tens, hundreds', Icons.pin_rounded,
+      const [Color(0xFF1C8ED6), Color(0xFF6A4CFF)], 'placevalue', (b) => 'Best: $b of 10', shelf: 'Learn'),
+  _GameInfo(_Game.story, 'Story Sums', 'Word problems', Icons.menu_book_rounded,
+      const [Color(0xFF14A06B), Color(0xFF1C8ED6)], 'story', (b) => 'Best: $b of 10', shelf: 'Learn'),
+  _GameInfo(_Game.telugu, 'Telugu Words', 'Learn Telugu', Icons.translate_rounded,
+      const [Color(0xFFE0446A), Color(0xFFF5A623)], 'telugu', (b) => 'Best: $b of 10', shelf: 'Learn'),
   // Puzzles
   _GameInfo(_Game.sudoku, 'Sudoku', '4×4, 6×6 or 9×9', Icons.grid_on_rounded,
       const [Color(0xFF283066), Color(0xFF5B6CFF)], 'sudoku4', (b) => '4×4 best: ${_mmss(b)}', shelf: 'Puzzles'),
@@ -164,7 +180,7 @@ final _games = <_GameInfo>[
       const [Color(0xFFE08A00), Color(0xFFE0446A)], 'wordsearch', (b) => 'Fastest: ${_mmss(b)}', shelf: 'Puzzles'),
   _GameInfo(_Game.guess, 'Word Guess', 'Save the balloons', Icons.spellcheck_rounded,
       const [Color(0xFF7B5CFF), Color(0xFF1C8ED6)], 'guess', (b) => 'Best streak: $b', shelf: 'Puzzles'),
-  _GameInfo(_Game.memory, 'Memory Pro', 'Find all 8 pairs fast', Icons.psychology_rounded,
+  _GameInfo(_Game.memory, 'Memory Pro', 'Find the pairs fast', Icons.psychology_rounded,
       const [Color(0xFF5B6CFF), Color(0xFF9A6BFF)], 'memory', (b) => 'Best: ${b}s', shelf: 'Puzzles'),
   _GameInfo(_Game.g2048, '2048', 'Slide, merge, reach 2048', Icons.grid_4x4_rounded,
       const [Color(0xFF8C5BFF), Color(0xFF5B6CFF)], '2048', (b) => 'Best: $b', shelf: 'Puzzles'),
@@ -196,6 +212,13 @@ final _games = <_GameInfo>[
       const [Color(0xFF14365A), Color(0xFF2FB8A8)], 'trace1', (b) => 'Best: $b pictures', shelf: 'Move'),
   _GameInfo(_Game.dance, 'Freeze Dance', 'Dance, then freeze!', Icons.music_note_rounded,
       const [Color(0xFF5A1F6B), Color(0xFFFF6B9A)], 'freeze1', (b) => 'High score: $b', shelf: 'Move'),
+  // Maps: states, territories and countries.
+  _GameInfo(_Game.usamap, 'USA Map', 'All 50 states', Icons.flag_rounded,
+      const [Color(0xFF1C3D9E), Color(0xFFD42A1A)], null, null, shelf: 'Maps'),
+  _GameInfo(_Game.indiamap, 'India Map', 'States and territories', Icons.map_rounded,
+      const [Color(0xFFFF9933), Color(0xFF138808)], null, null, shelf: 'Maps'),
+  _GameInfo(_Game.worldmap, 'World Map', 'Countries, continents, flags', Icons.public_rounded,
+      const [Color(0xFF14365A), Color(0xFF1C8ED6)], null, null, shelf: 'Maps'),
   // Arcade: original retro games.
   _GameInfo(_Game.munch, 'Munch Maze', 'Eat the seeds, dodge the robots', Icons.grid_on_rounded,
       const [Color(0xFF1A1340), Color(0xFF3B5BFF)], 'munch1', (b) => 'High score: $b', shelf: 'Arcade'),
@@ -216,7 +239,7 @@ final _games = <_GameInfo>[
       [Color(0xFF1A1340), Color(0xFF5B6CFF)], null, null, shelf: 'Create'),
 ];
 
-const _shelves = ['Learn', 'Puzzles', 'Play', 'Arcade', 'Move', 'Create'];
+const _shelves = ['Learn', 'Maps', 'Puzzles', 'Play', 'Arcade', 'Move', 'Create'];
 
 class _KidsHome extends StatefulWidget {
   const _KidsHome({super.key, required this.container});
@@ -292,6 +315,14 @@ class _KidsHomeState extends State<_KidsHome> {
       _Game.munch => MunchMaze(key: const ValueKey('munch'), container: widget.container, onBack: _back),
       _Game.bricks => BrickBash(key: const ValueKey('bricks'), container: widget.container, onBack: _back),
       _Game.hop => HopAcross(key: const ValueKey('hop'), container: widget.container, onBack: _back),
+      _Game.usamap => MapQuest(key: const ValueKey('usamap'), mapKey: 'usa', onBack: _back),
+      _Game.indiamap => MapQuest(key: const ValueKey('indiamap'), mapKey: 'india', onBack: _back),
+      _Game.worldmap => MapQuest(key: const ValueKey('worldmap'), mapKey: 'world', onBack: _back),
+      _Game.count => CountIt(key: const ValueKey('count'), onBack: _back),
+      _Game.letters => LetterSounds(key: const ValueKey('letters'), onBack: _back),
+      _Game.placevalue => PlaceValue(key: const ValueKey('placevalue'), onBack: _back),
+      _Game.story => StorySums(key: const ValueKey('story'), onBack: _back),
+      _Game.telugu => TeluguQuiz(key: const ValueKey('telugu'), onBack: _back),
       _Game.walls => WallDodge(key: const ValueKey('walls'), container: widget.container, onBack: _back),
       _Game.trace => AirTrace(key: const ValueKey('trace'), container: widget.container, onBack: _back),
       _Game.dance => FreezeDance(key: const ValueKey('dance'), container: widget.container, onBack: _back, tones: _tones),

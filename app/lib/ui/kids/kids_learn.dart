@@ -56,6 +56,29 @@ class KidsQuiz extends StatefulWidget {
 
 enum _QuizPhase { ready, playing, over }
 
+/// Stars for [score] right out of [count]: 50%, 70%, 90%.
+int quizStars(int score, int count) {
+  final share = score / count;
+  return share >= 0.9 ? 3 : (share >= 0.7 ? 2 : (share >= 0.5 ? 1 : 0));
+}
+
+/// The high-score key for a quiz's level (the first level keeps the
+/// quiz's own key, so earlier bests stay).
+String quizLevelKey(String key, int mode) => mode == 0 ? key : '$key.$mode';
+
+final _decks = Expando<List<int>>();
+
+/// The [index]th question of a round from [bank]: shuffled, and no
+/// question again until every one has been asked.
+T fromBank<T>(List<T> bank, int index, math.Random rng) {
+  var order = _decks[bank];
+  if (order == null || order.length != bank.length || index % bank.length == 0) {
+    order = [for (var i = 0; i < bank.length; i++) i]..shuffle(rng);
+    _decks[bank] = order;
+  }
+  return bank[order[index % bank.length]];
+}
+
 class _KidsQuizState extends State<KidsQuiz> {
   final _rng = math.Random();
   _QuizPhase _phase = _QuizPhase.ready;
@@ -63,10 +86,41 @@ class _KidsQuizState extends State<KidsQuiz> {
   late QuizItem _item;
   String? _picked;
   bool _newBest = false;
+  final _seen = <String>{};
 
-  int get _stars {
-    final share = _score / widget.count;
-    return share >= 0.9 ? 3 : (share >= 0.7 ? 2 : (share >= 0.5 ? 1 : 0));
+  /// Stars already earned on each level (from its best round).
+  final _levelStars = <int, int>{};
+
+  int get _stars => quizStars(_score, widget.count);
+
+  @visibleForTesting
+  QuizItem get debugItem => _item;
+  @visibleForTesting
+  int get debugMode => _mode;
+
+  bool get _hasNext => _mode + 1 < widget.modes.length;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadStars());
+  }
+
+  Future<void> _loadStars() async {
+    for (var m = 0; m < widget.modes.length; m++) {
+      final best = await KidsScores.best(quizLevelKey(widget.scoreKey, m));
+      if (best != null) _levelStars[m] = quizStars(best, widget.count);
+    }
+    if (mounted) setState(() {});
+  }
+
+  /// The next question, not one already asked this round (when it can).
+  QuizItem _fresh(int index) {
+    var item = widget.next(_mode, index, _rng);
+    for (var guard = 0; guard < 8 && !_seen.add(item.explain ?? item.answer); guard++) {
+      item = widget.next(_mode, index, _rng);
+    }
+    return item;
   }
 
   void _start() => setState(() {
@@ -74,7 +128,8 @@ class _KidsQuizState extends State<KidsQuiz> {
     _index = 0;
     _score = 0;
     _picked = null;
-    _item = widget.next(_mode, 0, _rng);
+    _seen.clear();
+    _item = _fresh(0);
   });
 
   Future<void> _pick(String choice) async {
@@ -87,7 +142,8 @@ class _KidsQuizState extends State<KidsQuiz> {
     await Future<void>.delayed(Duration(milliseconds: right ? 650 : 1600));
     if (!mounted) return;
     if (_index + 1 >= widget.count) {
-      final best = await KidsScores.offer(widget.scoreKey, _score);
+      final best = await KidsScores.offer(quizLevelKey(widget.scoreKey, _mode), _score);
+      _levelStars[_mode] = math.max(_levelStars[_mode] ?? 0, _stars);
       await KidsScores.addStars(_stars);
       await KidsScores.offerChallenge(widget.scoreKey, _score);
       if (mounted) {
@@ -101,7 +157,7 @@ class _KidsQuizState extends State<KidsQuiz> {
     setState(() {
       _index++;
       _picked = null;
-      _item = widget.next(_mode, _index, _rng);
+      _item = _fresh(_index);
     });
   }
 
@@ -125,11 +181,18 @@ class _KidsQuizState extends State<KidsQuiz> {
       _QuizPhase.ready => _ready(),
       _QuizPhase.playing => _playing(),
       _QuizPhase.over => KidsResult(
-        title: _stars == 3 ? 'Superstar!' : (_stars >= 1 ? 'Nice work!' : 'Keep practising!'),
-        detail: '$_score of ${widget.count} right',
+        title: _stars >= 2 && _hasNext ? 'Level up!' : (_stars == 3 ? 'Superstar!' : (_stars >= 1 ? 'Nice work!' : 'Keep practising!')),
+        detail: '$_score of ${widget.count} right · ${widget.modes[_mode]}',
         stars: _stars,
         newBest: _newBest,
-        onAgain: () => setState(() => _phase = _QuizPhase.ready),
+        onAgain: _start,
+        onNext: _stars >= 2 && _hasNext
+            ? () {
+                _mode++;
+                _start();
+              }
+            : null,
+        nextLabel: _hasNext ? 'Next: ${widget.modes[_mode + 1]}' : null,
       ),
     },
   );
@@ -137,8 +200,17 @@ class _KidsQuizState extends State<KidsQuiz> {
   Widget _ready() => KidsStartPanel(
     icon: widget.icon,
     pitch: widget.pitch,
-    best: KidsScores.best(widget.scoreKey).then((b) => b == null ? null : 'Best: $b of ${widget.count}'),
-    options: widget.modes.length > 1 ? kidsLevelChips(widget.modes, _mode, (i) => setState(() => _mode = i)) : null,
+    best: KidsScores.best(quizLevelKey(widget.scoreKey, _mode)).then((b) => b == null ? null : 'Best: $b of ${widget.count}'),
+    options: widget.modes.length > 1
+        ? kidsLevelChips(
+            [
+              for (var m = 0; m < widget.modes.length; m++)
+                (_levelStars[m] ?? 0) > 0 ? '${widget.modes[m]} ${'★' * _levelStars[m]!}' : widget.modes[m],
+            ],
+            _mode,
+            (i) => setState(() => _mode = i),
+          )
+        : null,
     onStart: _start,
   );
 
@@ -335,7 +407,7 @@ class TellingTime extends StatelessWidget {
     scoreKey: 'clock',
     icon: Icons.schedule_rounded,
     pitch: 'Read the clock and pick the time',
-    modes: const ['Half hours', 'Quarters', '5 minutes'],
+    modes: const ['Half hours', 'Quarters', '5 minutes', 'Any minute'],
     onBack: onBack,
     next: (mode, _, rng) {
       final q = clockQuestion(mode + 1, rng);
@@ -630,11 +702,10 @@ class ScienceQuiz extends StatelessWidget {
     scoreKey: 'science',
     icon: Icons.science_rounded,
     pitch: 'Plants, animals, space and more',
-    modes: _levels,
+    modes: const ['Easy', 'Medium', 'Hard', 'Expert'],
     onBack: onBack,
     next: (mode, index, rng) {
-      final bank = kidsScience[mode + 1]!;
-      final (q, a, wrong) = bank[(index + rng.nextInt(bank.length)) % bank.length];
+      final (q, a, wrong) = fromBank(kidsScience[mode + 1]!, index, rng);
       return _bankItem(q, a, wrong, rng, size: 32);
     },
   );
@@ -651,11 +722,10 @@ class SpellingQuiz extends StatelessWidget {
     scoreKey: 'spelling',
     icon: Icons.spellcheck_rounded,
     pitch: 'Pick the word spelled right',
-    modes: _levels,
+    modes: const ['Starter', 'Easy', 'Medium', 'Hard'],
     onBack: onBack,
     next: (mode, index, rng) {
-      final bank = kidsSpelling[mode + 1]!;
-      final (word, wrong) = bank[(index + rng.nextInt(bank.length)) % bank.length];
+      final (word, wrong) = fromBank(kidsSpelling[mode]!, index, rng);
       return QuizItem(
         prompt: Column(
           mainAxisSize: MainAxisSize.min,
@@ -683,11 +753,10 @@ class OppositesQuiz extends StatelessWidget {
     scoreKey: 'opposites',
     icon: Icons.compare_arrows_rounded,
     pitch: 'Find the word that means the opposite',
-    modes: _levels,
+    modes: const ['Starter', 'Easy', 'Medium', 'Hard'],
     onBack: onBack,
     next: (mode, index, rng) {
-      final bank = kidsOpposites[mode + 1]!;
-      final (word, opposite, wrong) = bank[(index + rng.nextInt(bank.length)) % bank.length];
+      final (word, opposite, wrong) = fromBank(kidsOpposites[mode]!, index, rng);
       return _bankItem('The opposite of\n"$word" is…', opposite, wrong, rng, size: 40);
     },
   );

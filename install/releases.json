@@ -1,16 +1,16 @@
 [
   {
-    "tag_name": "2026.12.7",
-    "name": "Phoenix Portal 2026.12.7",
+    "tag_name": "2026.12.8",
+    "name": "Phoenix Portal 2026.12.8",
     "draft": false,
     "prerelease": false,
-    "body": "Arcade: three new games (Hop Across, Sky Glide, Fox Run). More levels: Munch Maze has 4 mazes, Brick Bash has 12 levels with steel bricks; both let you pick where to start.",
+    "body": "Maps shelf (USA, India, World map games), five new learning games, quiz levels with stars and Next level, bigger question banks, Snake stages, Memory sizes, Wall Dodge, Air Trace, Freeze Dance, hand and head steering. Fixes blank Bubble Pop and Fruit Catcher, piano notes error, Tic-Tac-Toe in portrait.",
     "html_url": "https://github.com/rayalavcp/phoenix-portal/tree/claude/fervent-hopper-25a7jk/install",
     "assets": [
       {
-        "name": "kiosk-satellite-2026.12.7.apk",
+        "name": "kiosk-satellite-2026.12.8.apk",
         "browser_download_url": "https://raw.githubusercontent.com/rayalavcp/phoenix-portal/claude/fervent-hopper-25a7jk/install/phoenix-portal.apk",
-        "size": 99952024,
+        "size": 100243502,
         "state": "uploaded"
       }
     ]

@@ -46,12 +46,25 @@ class KidsButton extends StatelessWidget {
 /// The end-of-round card: the result, a new-best badge, stars earned and
 /// Play again.
 class KidsResult extends StatelessWidget {
-  const KidsResult({super.key, required this.title, required this.detail, required this.stars, required this.newBest, required this.onAgain});
+  const KidsResult({
+    super.key,
+    required this.title,
+    required this.detail,
+    required this.stars,
+    required this.newBest,
+    required this.onAgain,
+    this.onNext,
+    this.nextLabel,
+  });
   final String title;
   final String detail;
   final int stars;
   final bool newBest;
   final VoidCallback onAgain;
+
+  /// Offered after a good round: on to the next level.
+  final VoidCallback? onNext;
+  final String? nextLabel;
 
   @override
   Widget build(BuildContext context) => Center(
@@ -89,7 +102,15 @@ class KidsResult extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 26),
-          KidsBigButton('Play again', icon: Icons.replay_rounded, onTap: onAgain),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 16,
+            runSpacing: 12,
+            children: [
+              if (onNext != null) KidsBigButton(nextLabel ?? 'Next level', icon: Icons.arrow_forward_rounded, onTap: onNext!),
+              KidsBigButton('Play again', icon: Icons.replay_rounded, onTap: onAgain),
+            ],
+          ),
         ],
       ),
     ),
@@ -950,7 +971,7 @@ class _ModeChip extends StatelessWidget {
 
 // ── Memory Pro ─────────────────────────────────────────────────────────
 
-/// Sixteen cards, eight pairs, against the clock.
+/// Pairs of cards against the clock: 6, 8, 10 or 12 pairs.
 class MemoryPro extends StatefulWidget {
   const MemoryPro({super.key, required this.onBack});
   final VoidCallback onBack;
@@ -981,6 +1002,12 @@ class _MemoryProState extends State<MemoryPro> {
   int _moves = 0, _seconds = 0;
   Timer? _clock;
 
+  /// 6, 8, 10 or 12 pairs (8 is the classic board and keeps its key).
+  static const _sizes = [6, 8, 10, 12];
+  int _size = 1;
+  int get _pairs => _sizes[_size];
+  String get _key => _pairs == 8 ? 'memory' : 'memory$_pairs';
+
   @override
   void initState() {
     super.initState();
@@ -988,7 +1015,7 @@ class _MemoryProState extends State<MemoryPro> {
   }
 
   void _deal() {
-    final picks = (List.of(_faces)..shuffle(_rng)).take(8).toList();
+    final picks = (List.of(_faces)..shuffle(_rng)).take(_pairs).toList();
     _cards = [...picks, ...picks]..shuffle(_rng);
     _open.clear();
     _matched.clear();
@@ -1013,8 +1040,8 @@ class _MemoryProState extends State<MemoryPro> {
       });
       if (_matched.length == _cards.length) {
         _clock?.cancel();
-        final best = await KidsScores.offer('memory', _seconds, lowerIsBetter: true);
-        await KidsScores.offerChallenge('memory', _seconds);
+        final best = await KidsScores.offer(_key, _seconds, lowerIsBetter: true);
+        if (_pairs == 8) await KidsScores.offerChallenge('memory', _seconds);
         await KidsScores.addStars(_stars);
         if (mounted) {
           setState(() {
@@ -1034,7 +1061,7 @@ class _MemoryProState extends State<MemoryPro> {
     });
   }
 
-  int get _stars => _moves <= 12 ? 3 : (_moves <= 18 ? 2 : 1);
+  int get _stars => _moves <= _pairs * 1.5 ? 3 : (_moves <= _pairs * 2.25 ? 2 : 1);
 
   @override
   void dispose() {
@@ -1062,39 +1089,63 @@ class _MemoryProState extends State<MemoryPro> {
           : Padding(
               key: const ValueKey('grid'),
               padding: const EdgeInsets.all(16),
-              child: LayoutBuilder(
-                builder: (context, box) {
-                  const n = 4, gap = 14.0;
-                  final side = math.min((box.maxWidth - gap * 3) / n, (box.maxHeight - gap * 3) / n);
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        for (var r = 0; r < n; r++) ...[
-                          if (r > 0) const SizedBox(height: gap),
-                          Row(
+              child: Column(
+                children: [
+                  // The board size, until the first card is turned.
+                  if (_moves == 0 && _open.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: kidsLevelChips(
+                        [for (final p in _sizes) '$p pairs'],
+                        _size,
+                        (i) => setState(() {
+                          _size = i;
+                          _deal();
+                        }),
+                      ),
+                    ),
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, box) {
+                        const gap = 12.0;
+                        // 12 cards 4×3, 16 4×4, 20 5×4, 24 6×4 (turned for portrait).
+                        final long = switch (_pairs) { 6 => 4, 8 => 4, 10 => 5, _ => 6 };
+                        final short = _pairs * 2 ~/ long;
+                        final wide = box.maxWidth >= box.maxHeight;
+                        final cols = wide ? long : short, rows = wide ? short : long;
+                        final side = math.min((box.maxWidth - gap * (cols - 1)) / cols, (box.maxHeight - gap * (rows - 1)) / rows);
+                        return Center(
+                          child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              for (var c = 0; c < n; c++) ...[
-                                if (c > 0) const SizedBox(width: gap),
-                                SizedBox(
-                                  width: side,
-                                  height: side,
-                                  child: _Card(
-                                    face: _cards[r * n + c],
-                                    open: _open.contains(r * n + c) || _matched.contains(r * n + c),
-                                    matched: _matched.contains(r * n + c),
-                                    onTap: () => _flip(r * n + c),
-                                  ),
+                              for (var r = 0; r < rows; r++) ...[
+                                if (r > 0) const SizedBox(height: gap),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    for (var c = 0; c < cols; c++) ...[
+                                      if (c > 0) const SizedBox(width: gap),
+                                      SizedBox(
+                                        width: side,
+                                        height: side,
+                                        child: _Card(
+                                          face: _cards[r * cols + c],
+                                          open: _open.contains(r * cols + c) || _matched.contains(r * cols + c),
+                                          matched: _matched.contains(r * cols + c),
+                                          onTap: () => _flip(r * cols + c),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                               ],
                             ],
                           ),
-                        ],
-                      ],
+                        );
+                      },
                     ),
-                  );
-                },
+                  ),
+                ],
               ),
             ),
     ),

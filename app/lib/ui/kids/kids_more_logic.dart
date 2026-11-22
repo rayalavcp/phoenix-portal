@@ -45,7 +45,8 @@ ClockQuestion clockQuestion(int level, math.Random rng) {
   final step = switch (level) {
     <= 1 => 30,
     2 => 15,
-    _ => 5,
+    3 => 5,
+    _ => 1,
   };
   int pickMinute() => rng.nextInt(60 ~/ step) * step;
   final hour = 1 + rng.nextInt(12);
@@ -556,6 +557,10 @@ const kidsScience = <int, List<(String, String, List<String>)>>{
     ('What gas do we need to breathe?', 'Oxygen', ['Helium', 'Smoke', 'Steam']),
     ('Which planet do we live on?', 'Earth', ['Mars', 'Venus', 'Jupiter']),
     ('What helps a fish breathe?', 'Gills', ['Lungs', 'Fins', 'Scales']),
+    ('What do caterpillars hatch from?', 'Eggs', ['Seeds', 'Flowers', 'Rocks']),
+    ('Which of these animals can fly?', 'Bat', ['Penguin', 'Ostrich', 'Whale']),
+    ('What falls from clouds when it is very cold?', 'Snow', ['Sand', 'Leaves', 'Dust']),
+    ('Which body part helps you see?', 'Eyes', ['Ears', 'Nose', 'Knees']),
   ],
   2: [
     ('Which planet is the largest?', 'Jupiter', ['Saturn', 'Earth', 'Neptune']),
@@ -570,6 +575,10 @@ const kidsScience = <int, List<(String, String, List<String>)>>{
     ('How many bones does an adult human have?', '206', ['106', '306', '26']),
     ('What do magnets attract?', 'Iron', ['Wood', 'Plastic', 'Glass']),
     ('Which layer of Earth do we live on?', 'Crust', ['Core', 'Mantle', 'Magma']),
+    ('Which planet has big, bright rings?', 'Saturn', ['Mars', 'Mercury', 'Venus']),
+    ('What makes a rainbow?', 'Sunlight and raindrops', ['Wind and dust', 'Moonlight', 'Snow']),
+    ('Which of these is a gas?', 'Steam', ['Ice', 'Milk', 'Stone']),
+    ('How many planets are in our solar system?', '8', ['9', '7', '10']),
   ],
   3: [
     ('What is H₂O?', 'Water', ['Salt', 'Oxygen', 'Hydrogen']),
@@ -584,17 +593,52 @@ const kidsScience = <int, List<(String, String, List<String>)>>{
     ('Which simple machine is a ramp?', 'Inclined plane', ['Lever', 'Pulley', 'Wheel']),
     ('A scientist who studies rocks is a…', 'Geologist', ['Biologist', 'Chemist', 'Astronomer']),
     ('What is the closest planet to the Sun?', 'Mercury', ['Venus', 'Earth', 'Mars']),
+    ('Animals with a backbone are called…', 'Vertebrates', ['Invertebrates', 'Insects', 'Mollusks']),
+    ('Which gas do plants give off?', 'Oxygen', ['Carbon dioxide', 'Helium', 'Smoke']),
+    ('What causes day and night?', 'Earth spinning', ['The Sun moving', 'Clouds', 'The Moon']),
+    ('How long does Earth take to go around the Sun?', 'One year', ['One day', 'One month', 'One week']),
+  ],
+  4: [
+    ('What is the chemical symbol for gold?', 'Au', ['Go', 'Gd', 'Ag']),
+    ('Which part of a cell makes its energy?', 'Mitochondria', ['Nucleus', 'Ribosome', 'Vacuole']),
+    ('Light travels at about…', '300,000 km a second', ['300 km a second', '3,000 km a second', '30 km a second']),
+    ('Which planet spins on its side?', 'Uranus', ['Neptune', 'Saturn', 'Mars']),
+    ('How plants make food from sunlight is called…', 'Photosynthesis', ['Respiration', 'Digestion', 'Evaporation']),
+    ('Water turning into vapor is called…', 'Evaporation', ['Condensation', 'Freezing', 'Melting']),
+    ('What is the largest organ of the human body?', 'Skin', ['Liver', 'Heart', 'Brain']),
+    ('Which force slows down a sliding box?', 'Friction', ['Gravity', 'Magnetism', 'Buoyancy']),
+    ('A scientist who studies stars is an…', 'Astronomer', ['Geologist', 'Botanist', 'Zoologist']),
+    ('What is the pH of pure water?', '7', ['0', '14', '1']),
+    ('Which blood vessels carry blood away from the heart?', 'Arteries', ['Veins', 'Nerves', 'Tendons']),
+    ('The energy of something moving is called…', 'Kinetic energy', ['Potential energy', 'Solar energy', 'Sound energy']),
+    ('Which galaxy do we live in?', 'The Milky Way', ['Andromeda', 'Whirlpool', 'Sombrero']),
+    ('What is the smallest unit of life?', 'Cell', ['Atom', 'Organ', 'Tissue']),
+    ('How many chambers does the human heart have?', '4', ['2', '3', '6']),
+    ('Water vapor turning back into drops is called…', 'Condensation', ['Evaporation', 'Melting', 'Boiling']),
   ],
 };
 
 /// (correct spelling, misspellings) by level.
 const kidsSpelling = <int, List<(String, List<String>)>>{
+  0: [
+    ('cat', ['kat', 'catt', 'cet']), ('dog', ['dogg', 'dag', 'dgo']),
+    ('the', ['teh', 'tha', 'thuh']), ('was', ['wuz', 'waz', 'wos']),
+    ('you', ['yu', 'yoo', 'uoy']), ('have', ['hav', 'haev', 'hafe']),
+    ('come', ['cum', 'comm', 'kome']), ('some', ['sum', 'somm', 'soem']),
+    ('play', ['plai', 'pley', 'plae']), ('blue', ['bloo', 'bleu', 'blu']),
+    ('green', ['grean', 'gren', 'greeen']), ('jump', ['jumpp', 'jomp', 'jupm']),
+    ('fish', ['fesh', 'fihs', 'phish']), ('tree', ['tre', 'trea', 'tri']),
+    ('look', ['lok', 'luk', 'loook']), ('what', ['wat', 'whut', 'wht']),
+  ],
   1: [
     ('because', ['becuase', 'becaus', 'beacause']), ('friend', ['freind', 'frend', 'friendd']),
     ('school', ['skool', 'shcool', 'scool']), ('said', ['sed', 'siad', 'sayd']),
     ('their', ['thier', 'theyr', 'thir']), ('people', ['poeple', 'peeple', 'pepole']),
     ('animal', ['animel', 'aminal', 'anemal']), ('water', ['watter', 'wator', 'warter']),
     ('little', ['littel', 'litle', 'lttle']), ('happy', ['hapy', 'happey', 'happie']),
+    ('again', ['agen', 'agian', 'agin']), ('would', ['wuold', 'woud', 'whould']),
+    ('there', ['thare', 'ther', 'theer']), ('could', ['cood', 'culd', 'coud']),
+    ('every', ['evry', 'evey', 'everey']), ('pretty', ['prety', 'pritty', 'purty']),
   ],
   2: [
     ('different', ['diffrent', 'diferent', 'differant']), ('beautiful', ['beutiful', 'beautifull', 'butiful']),
@@ -602,6 +646,9 @@ const kidsSpelling = <int, List<(String, List<String>)>>{
     ('separate', ['seperate', 'saparate', 'seprate']), ('surprise', ['suprise', 'surprize', 'serprise']),
     ('believe', ['beleive', 'belive', 'beleeve']), ('neighbor', ['nieghbor', 'nabor', 'naybor']),
     ('calendar', ['calender', 'calandar', 'callendar']), ('favorite', ['favrite', 'faverite', 'favorit']),
+    ('answer', ['anser', 'awnser', 'answar']), ('enough', ['enuf', 'enogh', 'inough']),
+    ('Wednesday', ['Wensday', 'Wednsday', 'Wendesday']), ('special', ['speshal', 'specal', 'speciel']),
+    ('probably', ['probly', 'probaly', 'probobly']), ('island', ['iland', 'ilund', 'islend']),
   ],
   3: [
     ('necessary', ['neccessary', 'necessery', 'nessecary']), ('definitely', ['definately', 'defiantly', 'definetly']),
@@ -609,28 +656,53 @@ const kidsSpelling = <int, List<(String, List<String>)>>{
     ('environment', ['enviroment', 'environmant', 'envirnment']), ('government', ['goverment', 'govermant', 'governmint']),
     ('restaurant', ['restaraunt', 'resturant', 'restarant']), ('conscience', ['concience', 'conscence', 'consience']),
     ('embarrass', ['embarass', 'embarras', 'embaress']), ('accommodate', ['accomodate', 'acommodate', 'accomadate']),
+    ('millennium', ['millenium', 'milennium', 'millenniun']), ('mischievous', ['mischievious', 'mischevous', 'mischivous']),
+    ('pronunciation', ['pronounciation', 'pronunciasion', 'prononciation']), ('questionnaire', ['questionaire', 'questionnair', 'qestionnaire']),
+    ('privilege', ['priviledge', 'privelege', 'privilage']), ('occurrence', ['occurence', 'ocurrence', 'occurrance']),
   ],
 };
 
 /// (word, opposite, three others) by level.
 const kidsOpposites = <int, List<(String, String, List<String>)>>{
+  0: [
+    ('in', 'out', ['inside', 'on', 'at']), ('on', 'off', ['up', 'in', 'at']),
+    ('wet', 'dry', ['damp', 'cold', 'soft']), ('old', 'new', ['used', 'big', 'tall']),
+    ('light', 'dark', ['bright', 'white', 'sunny']), ('left', 'right', ['side', 'back', 'first']),
+    ('push', 'pull', ['press', 'shove', 'lift']), ('come', 'go', ['arrive', 'walk', 'run']),
+    ('loud', 'quiet', ['noisy', 'big', 'fast']), ('clean', 'dirty', ['neat', 'wet', 'tidy']),
+    ('top', 'bottom', ['up', 'peak', 'high']), ('boy', 'girl', ['man', 'kid', 'son']),
+    ('sit', 'stand', ['seat', 'rest', 'nap']), ('hard', 'soft', ['firm', 'tough', 'solid']),
+    ('short', 'tall', ['small', 'little', 'tiny']), ('yes', 'no', ['okay', 'sure', 'yeah']),
+  ],
   1: [
     ('hot', 'cold', ['warm', 'big', 'wet']), ('up', 'down', ['over', 'top', 'high']),
     ('happy', 'sad', ['glad', 'funny', 'kind']), ('big', 'small', ['tall', 'huge', 'wide']),
     ('fast', 'slow', ['quick', 'far', 'loud']), ('day', 'night', ['noon', 'sun', 'week']),
     ('open', 'closed', ['wide', 'empty', 'free']), ('full', 'empty', ['heavy', 'whole', 'big']),
+    ('early', 'late', ['soon', 'first', 'ready']), ('thick', 'thin', ['wide', 'fat', 'heavy']),
+    ('awake', 'asleep', ['alert', 'tired', 'up']), ('heavy', 'light', ['big', 'strong', 'full']),
+    ('first', 'last', ['next', 'early', 'one']), ('give', 'take', ['share', 'hand', 'send']),
+    ('win', 'lose', ['play', 'beat', 'score']), ('laugh', 'cry', ['smile', 'giggle', 'talk']),
   ],
   2: [
     ('ancient', 'modern', ['old', 'early', 'past']), ('brave', 'afraid', ['bold', 'strong', 'calm']),
     ('generous', 'selfish', ['kind', 'giving', 'rich']), ('include', 'exclude', ['contain', 'add', 'invite']),
     ('arrive', 'depart', ['reach', 'enter', 'stay']), ('victory', 'defeat', ['win', 'trophy', 'game']),
     ('rough', 'smooth', ['hard', 'bumpy', 'tough']), ('increase', 'decrease', ['grow', 'raise', 'add']),
+    ('ascend', 'descend', ['climb', 'rise', 'mount']), ('accept', 'refuse', ['take', 'agree', 'allow']),
+    ('rapid', 'sluggish', ['quick', 'swift', 'fast']), ('expensive', 'cheap', ['costly', 'rich', 'pricey']),
+    ('polite', 'rude', ['kind', 'nice', 'calm']), ('shallow', 'deep', ['wide', 'low', 'thin']),
+    ('vacant', 'occupied', ['empty', 'free', 'open']), ('frequent', 'rare', ['often', 'common', 'usual']),
   ],
   3: [
     ('abundant', 'scarce', ['plenty', 'ample', 'large']), ('transparent', 'opaque', ['clear', 'shiny', 'thin']),
     ('optimistic', 'pessimistic', ['hopeful', 'cheerful', 'positive']), ('expand', 'contract', ['grow', 'stretch', 'swell']),
     ('voluntary', 'compulsory', ['optional', 'free', 'willing']), ('minimum', 'maximum', ['least', 'small', 'lowest']),
     ('humble', 'arrogant', ['modest', 'meek', 'shy']), ('temporary', 'permanent', ['brief', 'short', 'passing']),
+    ('benevolent', 'malevolent', ['kind', 'gentle', 'generous']), ('conceal', 'reveal', ['hide', 'cover', 'mask']),
+    ('diligent', 'lazy', ['busy', 'careful', 'hardworking']), ('ascent', 'descent', ['climb', 'rise', 'peak']),
+    ('genuine', 'fake', ['real', 'true', 'honest']), ('feeble', 'strong', ['weak', 'frail', 'faint']),
+    ('serene', 'agitated', ['calm', 'peaceful', 'quiet']), ('ally', 'enemy', ['friend', 'partner', 'helper']),
   ],
 };
 

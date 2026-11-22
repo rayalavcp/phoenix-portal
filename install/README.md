@@ -1,8 +1,26 @@
-# Phoenix Portal test build 2026.12.7 (382)
+# Phoenix Portal test build 2026.12.8 (383)
 
-- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 99952024 bytes.
-  SHA-256 `1e5a9acbafb2c1bda9861e9c4c99630f1de796ab4354bf1fea676e4236d0ac48`.
+- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 100243502 bytes.
+  SHA-256 `16a6769dd45b9e5a335291d4c3964158e2a42815103109467cd30517210a0c32`.
 - New in this build:
+  - **Maps** shelf in the Kids Portal: **USA Map** (50 states), **India
+    Map** (28 states and 8 union territories, India's official map) and
+    **World Map**. Find it, Name it, Capitals, Fill the map (colour the
+    whole map in), Shape memory (match shapes to names); the world map
+    adds Continents and Flags. Pinch to zoom for small places.
+  - **Five new learning games**: Count It, Letter Sounds (phonics), Place
+    Value, Story Sums (word problems) and Telugu Words.
+  - **Quizzes**: no repeated questions in a round, a best score and stars
+    for every level, a "Next level" button after a good round; bigger
+    question banks, a Starter level for Spelling and Opposites, Expert
+    Science, telling the time to the minute.
+  - **More stages**: Snake gets walls that change every 6 apples; Memory
+    Pro has 6, 8, 10 or 12 pairs.
+  - **Move** shelf: Wall Dodge, Air Trace and Freeze Dance; Munch Maze,
+    Hop Across and Snake can be steered by hand or head.
+  - Fixes: Bubble Pop and Fruit Catcher showed a blank play area; the
+    piano's floating notes caused an error; Tic-Tac-Toe overflowed in
+    portrait.
   - **Three more Arcade games**: **Hop Across** (hop a chick over the road
     and across the river on logs to fill five nests), **Sky Glide** (fly Pip
     between crystal spires through day, sunset, night and space; tap, or

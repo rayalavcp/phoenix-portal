@@ -29,6 +29,10 @@ remote administration. Home Assistant is optional.
 - Author shown in the app: **krayala**, linking to github.com/rayalavcp.
 - Ask before uninstalling, disabling or deleting anything on the device.
 - Default school: **Miller Elementary, Frisco ISD**.
+- India map: India's official boundaries (Ladakh and Jammu and Kashmir as
+  union territories, the whole of Jammu, Kashmir and Ladakh shown); the
+  world map uses Natural Earth's India point of view to match. Keep the
+  DataMeet credit (CC BY 4.0) shown under the map.
 - Kids Portal look: **calm** (blurred photo backgrounds, frosted glass), big
   readable text. Do not bring back loud gradients.
 - Wallpapers: real 4K photos (Wikimedia Commons, credited in
@@ -61,7 +65,7 @@ remote administration. Home Assistant is optional.
 | Telugu calendar (panchangam), word of the day | `managers/home/panchang.dart`, `managers/home/telugu_words.dart`, `ui/home/telugu_calendar_page.dart` |
 | Photos (Immich / folder), photo frame | `managers/home/photo_service.dart`, `ui/home/photo_frame.dart` |
 | Kids Portal hub and frame | `ui/kids/kids_overlay.dart`, `ui/kids/kids_activities.dart` |
-| Kids games | `kids_learn.dart` (quizzes), `kids_games.dart`, `kids_puzzles.dart`, `kids_play.dart` (incl. piano), `kids_motion.dart` (camera games), `kids_arcade.dart` (Munch Maze, Brick Bash), `kids_arcade2.dart` (Hop Across, Sky Glide, Fox Run) |
+| Kids games | `kids_learn.dart` (quizzes), `kids_games.dart`, `kids_puzzles.dart`, `kids_play.dart` (incl. piano), `kids_motion.dart` (camera games), `kids_arcade.dart` (Munch Maze, Brick Bash), `kids_arcade2.dart` (Hop Across, Sky Glide, Fox Run), `kids_motion2.dart` (Wall Dodge, Air Trace, Freeze Dance), `kids_learn_more.dart` (Count It, Letter Sounds, Place Value, Story Sums, Telugu Words), `kids_maps.dart` (USA, India, World maps; data in `assets/maps`, rebuilt with `tool/kids_maps`) |
 | Hand/head tracking for games | native `HandTracker.kt`, `FaceDetector.kt`, `CameraMotion.kt`; Dart `managers/motion/motion_manager.dart` (`startHandTest`, `startHeadTracking`) |
 | Updates from GitHub | `managers/update/update_manager.dart` (`_releasesUrl` = this repo's `install/releases.json`) |
 | Admin Phoenix Home page | `remote-ui/static/phoenix_home.js` (+ CSS in `app.css`, `#tab-phoenix`) |
@@ -78,11 +82,13 @@ cd app && flutter build apk --release --split-per-abi --target-platform android-
 
 The APK is debug-signed with the same key every time (certificate SHA-256
 starts `47fff989d4`), so builds install over each other and keep settings.
-Keep the APK under 100 MB (GitHub's file limit, 104,857,600 bytes; 2026.12.7 is
-99,952,024, so about 4.9 MB of room is left): large assets go in
+Keep the APK under 100 MB (GitHub's file limit, 104,857,600 bytes; 2026.12.8 is
+100,243,502, so about 4.6 MB of room is left): large assets go in
 `wallpapers/` and download at run time.
 
-Before shipping, run the analyzer and the tests that cover what changed:
+Before shipping, run the analyzer and the tests that cover what changed.
+`test/kids_all_games_test.dart` opens every Kids game at 1280×800,
+800×1280 and 1024×600 and plays it a little: add new games to it.
 
 ```bash
 cd app && flutter analyze lib test
@@ -96,7 +102,7 @@ pre-existing problem); it passes on its own.
 ## Shipping a build
 
 1. Give it a **new version name** in `app/pubspec.yaml` (e.g.
-   `2026.12.8+383`). The Portal's update check compares names.
+   `2026.12.9+384`). The Portal's update check compares names.
 2. Build, then check: version, signing key, size under 100 MB.
 3. Copy to `install/phoenix-portal.apk`.
 4. `python3 install/make_releases.py <version> "notes"` writes
