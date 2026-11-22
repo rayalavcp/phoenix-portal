@@ -1,7 +1,7 @@
-# Phoenix Portal test build 2026.11.28 (371)
+# Phoenix Portal test build 2026.11.29 (373)
 
-- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 99636484 bytes.
-  SHA-256 `602f81305f01714198d9a9664bd8de24614821a52ebb80f6f91e6262d26fd759`.
+- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 99654736 bytes.
+  SHA-256 `7305795e7431b5027f5d6b1efb1d171feb815119859d1fcfbde188a9185e4b03`.
 - New in this build:
   - **Today home screen** (the default): the time and weather right on a
     4K wallpaper with live weather effects (rain, storms, snow, fog, sun,
@@ -15,6 +15,11 @@
   - **Glass** cards and tiles everywhere, with a transparency slider.
   - **Smart Home** opens your Home Assistant dashboard (the page is
     configurable), or Phoenix's own controls if you prefer.
+  - **Kids Portal redesign**: calm photo backgrounds (the home wallpaper,
+    softly blurred), frosted glass cards, a big start screen for every game,
+    quiz answers as big readable tiles, portrait fixes for 2048 and Connect
+    Four, and a Kids Portal section in the remote admin (profile, name,
+    daily time, bedtime, PIN, which activities show, reset scores).
   - **Kids piano**: instant notes, a real keyboard with black keys, piano,
     xylophone and music box, seven songs with Listen and follow the
     glowing key.
