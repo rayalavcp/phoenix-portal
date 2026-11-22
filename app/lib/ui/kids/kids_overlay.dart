@@ -12,6 +12,7 @@ import 'kids_games.dart';
 import 'kids_learn.dart';
 import 'kids_logic.dart';
 import 'kids_more_logic.dart';
+import 'kids_motion.dart';
 import 'kids_play.dart';
 import 'kids_puzzles.dart';
 
@@ -82,6 +83,7 @@ const _shelfColors = <String, List<Color>>{
   'Learn': [Color(0xFF3A7BFF), Color(0xFF6A4CFF), Color(0xFF9B5CFF)],
   'Puzzles': [Color(0xFF8E44FF), Color(0xFFD94BC8), Color(0xFFFF6B9A)],
   'Play': [Color(0xFF13B88A), Color(0xFF1FA2C9), Color(0xFF3A7BFF)],
+  'Move': [Color(0xFFFF9F1C), Color(0xFFFF5E62), Color(0xFFB04BFF)],
   'Create': [Color(0xFFFF7A3D), Color(0xFFFF4D8D), Color(0xFFB04BFF)],
   'My apps': [Color(0xFF2B3A8F), Color(0xFF4A3FB8), Color(0xFF7A4CD9)],
 };
@@ -90,6 +92,7 @@ const _shelfIcons = <String, IconData>{
   'Learn': Icons.menu_book_rounded,
   'Puzzles': Icons.extension_rounded,
   'Play': Icons.sports_esports_rounded,
+  'Move': Icons.back_hand_rounded,
   'Create': Icons.palette_rounded,
   'My apps': Icons.apps_rounded,
 };
@@ -100,6 +103,7 @@ enum _Game {
   sudoku, maze, wordsearch, guess,
   ttt, snake, simon, pixel, piano,
   fractions, money, science, spelling, opposites, mole, lights,
+  bubbles, catcher, fingermath, blaster,
 }
 
 /// The hub's cards: title, pitch, icon, colours, shelf and how the best
@@ -170,6 +174,15 @@ final _games = <_GameInfo>[
       const [Color(0xFFE0446A), Color(0xFF8C5BFF)], 'ttthard', (b) => 'Hard wins: $b'),
   _GameInfo(_Game.connect4, 'Connect Four', 'Outsmart the computer', Icons.blur_circular_rounded,
       const [Color(0xFF1C8ED6), Color(0xFF283066)], 'c4hard', (b) => 'Hard wins: $b'),
+  // Move: played with a hand in front of the camera.
+  _GameInfo(_Game.blaster, 'Space Blaster', 'Fly with your hand, blast rocks', Icons.rocket_launch_rounded,
+      const [Color(0xFF3A2F7A), Color(0xFFFF3D6E)], null, null, shelf: 'Move'),
+  _GameInfo(_Game.bubbles, 'Bubble Pop', 'Wave to pop bubbles', Icons.bubble_chart_rounded,
+      const [Color(0xFF2F7BD6), Color(0xFF6A4CFF)], null, null, shelf: 'Move'),
+  _GameInfo(_Game.catcher, 'Fruit Catcher', 'Your hand moves the basket', Icons.shopping_basket_rounded,
+      const [Color(0xFF13B88A), Color(0xFF2F7BD6)], null, null, shelf: 'Move'),
+  _GameInfo(_Game.fingermath, 'Finger Math', 'Answer with your fingers', Icons.front_hand_rounded,
+      const [Color(0xFFFF7A3D), Color(0xFFB04BFF)], null, null, shelf: 'Move'),
   // Create
   const _GameInfo(_Game.draw, 'Draw Studio', 'Paint whatever you like', Icons.brush_rounded,
       [Color(0xFFD42A1A), Color(0xFFFF4D8D)], null, null, shelf: 'Create'),
@@ -179,7 +192,7 @@ final _games = <_GameInfo>[
       [Color(0xFF1A1340), Color(0xFF5B6CFF)], null, null, shelf: 'Create'),
 ];
 
-const _shelves = ['Learn', 'Puzzles', 'Play', 'Create'];
+const _shelves = ['Learn', 'Puzzles', 'Play', 'Move', 'Create'];
 
 class _KidsHome extends StatefulWidget {
   const _KidsHome({super.key, required this.container});
@@ -248,6 +261,10 @@ class _KidsHomeState extends State<_KidsHome> {
       _Game.opposites => OppositesQuiz(key: const ValueKey('opposites'), onBack: _back),
       _Game.mole => WhackAMole(key: const ValueKey('mole'), onBack: _back),
       _Game.lights => LightsOut(key: const ValueKey('lights'), onBack: _back),
+      _Game.blaster => SpaceBlaster(key: const ValueKey('blaster'), container: widget.container, onBack: _back),
+      _Game.bubbles => BubblePop(key: const ValueKey('bubbles'), container: widget.container, onBack: _back),
+      _Game.catcher => FruitCatcher(key: const ValueKey('catcher'), container: widget.container, onBack: _back),
+      _Game.fingermath => FingerMath(key: const ValueKey('fingermath'), container: widget.container, onBack: _back),
       null => ListenableBuilder(
         key: const ValueKey('home'),
         listenable: widget.container.phoenixHome.kidsHiddenGames,

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart' show Offset;
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:permission_handler/permission_handler.dart';
 
@@ -332,6 +333,10 @@ class MotionManager extends Manager {
   final handTest = ValueNotifier<HandTestReading?>(null);
   bool _handTesting = false;
   bool get handTesting => _handTesting;
+
+  /// Whether hand tracking can run at all: the camera is on and the hand
+  /// model loads on this device.
+  bool get handsAvailable => _vision.hands && _settings.get(defs.cameraEnabled);
   bool get _handTestWanted =>
       _handTesting && _vision.hands && _settings.get(defs.cameraEnabled);
   bool get _wantPalms => (palmEnabled || _handTestWanted) && _screenOn;
@@ -806,6 +811,7 @@ class MotionManager extends Manager {
           _plugin != null ||
           _sensorEnabled ||
           _wantPalms ||
+          _wantHeads ||
           _previewHolding ||
           (_screensaverActive
               ? enabled || faceEnabled
@@ -833,6 +839,7 @@ class MotionManager extends Manager {
         (_streamMotion != _wantMotion ||
             _streamFaces != _wantFaces ||
             _streamPalms != _wantPalms ||
+            _streamHeads != _wantHeads ||
             _streamPreview != _wantPreview ||
             _streamRtsp != _rtspDemand ||
             !mapEquals(_streamIntercom, _intercomVideo) ||
@@ -880,6 +887,7 @@ class MotionManager extends Manager {
       final motion = _wantMotion;
       final faces = _wantFaces;
       final palms = _wantPalms;
+      final heads = _wantHeads;
       final preview = _wantPreview;
       final faceMinWidth = faceMinWidthFor(
         _settings.get(defs.faceSensitivity).toInt(),
@@ -887,6 +895,7 @@ class MotionManager extends Manager {
       _streamMotion = motion;
       _streamFaces = faces;
       _streamPalms = palms;
+      _streamHeads = heads;
       _streamPreview = preview;
       _streamRtsp = _rtspDemand;
       _streamIntercom = _intercomVideo;
@@ -915,6 +924,7 @@ class MotionManager extends Manager {
             faces: faces,
             faceMinWidth: faceMinWidth,
             fingers: palms,
+            heads: heads,
             paused: _voiceTurn,
             preview: preview,
             rtsp: _streamRtsp,
@@ -954,6 +964,11 @@ class MotionManager extends Manager {
               }
               // Hands are not a lighting change either. A count of 0 is the
               // hand gone, which the gestures manager needs to re-arm.
+              if (tick.isHead) {
+                final x = tick.handX, y = tick.handY;
+                headTest.value = tick.head! && x != null && y != null ? Offset(x, y) : null;
+                return;
+              }
               if (tick.isPalms) {
                 if (tick.palms! > 0) {
                   log.debug(
@@ -968,6 +983,8 @@ class MotionManager extends Manager {
                           hands: tick.palms!,
                           fingers: tick.fingers,
                           fingersUp: tick.fingersUp,
+                          x: tick.handX,
+                          y: tick.handY,
                         )
                       : null;
                   return;
@@ -1098,6 +1115,33 @@ class MotionManager extends Manager {
 
   /// Open the hand gesture tester: see [handTest]. A session already up
   /// without hands restarts with them, the way a first mapping does.
+  /// Head tracking for the Kids Portal's games: while a game holds it the
+  /// camera reports where the face is, about ten times a second, on
+  /// [headTest]. Nothing is recorded or identified.
+  final headTest = ValueNotifier<Offset?>(null);
+  bool _headTracking = false;
+  bool get _wantHeads => _headTracking && _vision.faces && _settings.get(defs.cameraEnabled) && _screenOn;
+  bool _streamHeads = false;
+
+  /// Whether head tracking can run: the camera is on and the face model
+  /// loads on this device.
+  bool get headsAvailable => _vision.faces && _settings.get(defs.cameraEnabled);
+
+  void startHeadTracking() {
+    if (_headTracking) return;
+    _headTracking = true;
+    log.info(name, 'head tracking on (kids game)');
+    _sync();
+  }
+
+  void stopHeadTracking() {
+    if (!_headTracking) return;
+    _headTracking = false;
+    headTest.value = null;
+    log.info(name, 'head tracking off');
+    _sync();
+  }
+
   void startHandTest() {
     if (_handTesting) return;
     _handTesting = true;
@@ -1137,6 +1181,7 @@ class MotionManager extends Manager {
     _stop();
     facePreview.dispose();
     handTest.dispose();
+    headTest.dispose();
   }
 }
 
@@ -1148,8 +1193,13 @@ typedef PluginCameraClaim = ({int width, int height, String? facing});
 /// largest, the count and which digits are up (thumb, index, middle,
 /// ring, pinky; the thumb only when it counts, on an open hand).
 class HandTestReading {
-  const HandTestReading({required this.hands, this.fingers, this.fingersUp});
+  const HandTestReading({required this.hands, this.fingers, this.fingersUp, this.x, this.y});
   final int hands;
   final int? fingers;
   final List<bool>? fingersUp;
+
+  /// The palm, 0..1 across and down as the person sees it (null unknown):
+  /// what the Kids Portal's hand games steer by.
+  final double? x;
+  final double? y;
 }

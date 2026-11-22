@@ -46,6 +46,7 @@ class NativeMotion {
     bool faces = false,
     double faceMinWidth = 0.1,
     bool fingers = false,
+    bool heads = false,
     bool paused = false,
     bool preview = false,
     bool rtsp = false,
@@ -77,6 +78,9 @@ class NativeMotion {
           // Hands (the Show fingers gesture): found, confirmed and counted
           // natively, reported as a hand count and a finger count.
           'fingers': fingers,
+          // The Kids Portal's head-steered games: the face's position,
+          // about ten times a second, while a game is open.
+          'heads': heads,
           // Whether a voice interaction is running as the session starts
           // (see [setPaused]): the flag rides the bind too, so a session
           // rebound mid-turn, on a native side recreated with the
@@ -109,7 +113,20 @@ class NativeMotionTick {
     this.fingers, {
     this.fingersUp,
     this.preview,
+    this.handX,
+    this.handY,
+    this.head,
   });
+
+  /// A head-tracking report: whether a face is in view (its position in
+  /// [handX], [handY] as the person sees it). Null for other events.
+  final bool? head;
+  bool get isHead => head != null;
+
+  /// Where that hand's palm is, 0..1 across and down the picture as the
+  /// person in front of the camera sees it (null when unknown).
+  final double? handX;
+  final double? handY;
 
   /// Extended fingers on the largest hand, when the landmark stage judged
   /// it (null otherwise).
@@ -135,6 +152,17 @@ class NativeMotionTick {
   /// original null events.
   static NativeMotionTick fromNative(Object? raw) {
     if (raw is Map) {
+      final head = raw['head'];
+      if (head is bool) {
+        return NativeMotionTick._(
+          null,
+          null,
+          null,
+          head: head,
+          handX: raw['x'] is num ? (raw['x'] as num).toDouble() : null,
+          handY: raw['y'] is num ? (raw['y'] as num).toDouble() : null,
+        );
+      }
       final face = raw['face'];
       if (face is num) {
         return NativeMotionTick._(face.toDouble(), null, null);
@@ -150,6 +178,8 @@ class NativeMotionTick {
           fingersUp: up is List && up.length == 5 && up.every((b) => b is bool)
               ? up.cast<bool>()
               : null,
+          handX: raw['x'] is num ? (raw['x'] as num).toDouble() : null,
+          handY: raw['y'] is num ? (raw['y'] as num).toDouble() : null,
         );
       }
       final preview = raw['preview'];

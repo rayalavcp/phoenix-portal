@@ -90,7 +90,7 @@ class FaceDetector(private val context: Context) {
     /** The largest camera-facing face in a frame. [width] is relative to
      *  the frame's longer side; [turn] is the frontal measure (see
      *  [FRONTAL_MAX]), for the log. */
-    class Face(val width: Float, val score: Float, val turn: Float)
+    class Face(val width: Float, val score: Float, val turn: Float, val x: Float = -1f, val y: Float = -1f)
 
     private var interpreter: Interpreter? = null
     private var regIndex = 0
@@ -159,6 +159,9 @@ class FaceDetector(private val context: Context) {
             val ay = ((i / GRID) + 0.5f) / GRID
             val width = reg.get(base + 2) / INPUT
             if (best != null && width <= best.width) continue
+            // The box centre, in the upright frame (0..1 each way).
+            val cx = (reg.get(base) / INPUT + ax).coerceIn(0f, 1f)
+            val cy = (reg.get(base + 1) / INPUT + ay).coerceIn(0f, 1f)
             val rex = reg.get(base + KP_RIGHT_EYE) / INPUT + ax
             val rey = reg.get(base + KP_RIGHT_EYE + 1) / INPUT + ay
             val lex = reg.get(base + KP_LEFT_EYE) / INPUT + ax
@@ -173,7 +176,7 @@ class FaceDetector(private val context: Context) {
             val my = (ley + rey) / 2f
             val turn = ((nx - mx) * ex + (ny - my) * ey) / eyeDist2
             if (abs(turn) > FRONTAL_MAX) continue
-            best = Face(width, score, turn)
+            best = Face(width, score, turn, cx, cy)
         }
         // Debug-level trace of the strongest candidate even when nothing
         // passes: the way to tell "no face in frame" from "the frame is not

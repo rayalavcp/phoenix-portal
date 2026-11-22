@@ -94,6 +94,8 @@ class CameraMotion(
     private val deviceCamera: DeviceCamera? = null,
 ) : EventChannel.StreamHandler {
     companion object {
+        /** How often the head games look for the face: ~10 a second. */
+        private const val HEAD_INTERVAL_NS = 90_000_000L
         const val CHANNEL = "kiosk_satellite/motion"
         const val CONTROL_CHANNEL = "kiosk_satellite/motion/control"
         private const val TAG = "CameraMotion"
@@ -488,6 +490,9 @@ class CameraMotion(
     /** Whether hands are judged by the landmark stage and reported with
      *  their finger count (the Show N fingers gesture). Implies palms. */
     @Volatile private var fingersWanted = false
+    /** The Kids Portal's head-steered games: the face's position, fast. */
+    @Volatile private var headsWanted = false
+    private var lastHeadNs = 0L
 
     /** Bumped per presence, so a hold timer from an ended presence
      *  reports nothing. Analyzer state, read on the main thread. */
@@ -926,6 +931,7 @@ class CameraMotion(
             facesWanted = allowAnalysis && args?.get("faces") == true
             fingersWanted = allowAnalysis && args?.get("fingers") == true
             palmsWanted = fingersWanted
+            headsWanted = allowAnalysis && args?.get("heads") == true
             faceMinWidth =
                 ((args?.get("faceMinWidth") as? Number)?.toFloat() ?: 0.1f).coerceIn(0.01f, 1f)
             lastFaceEmitNs = 0L
@@ -1507,7 +1513,7 @@ class CameraMotion(
             if (session != boundSession) return
             lastFrameAtMs = SystemClock.elapsedRealtime()
             deviceCamera?.captureAnalysisFrame(image)
-            if (!motionWanted && !facesWanted && !fingersWanted && !previewWanted && pluginFrames == null) return
+            if (!motionWanted && !facesWanted && !fingersWanted && !headsWanted && !previewWanted && pluginFrames == null) return
             val now = System.nanoTime()
             // A plugin holding the camera is offered every frame, never
             // during a voice turn. The bridge paces and copies them.
@@ -1616,6 +1622,21 @@ class CameraMotion(
             // ... and not at all while a voice interaction runs (see
             // [paused]): the turn needs the cores, and nothing the
             // detectors could find matters until it ends.
+            // Head tracking for the Kids Portal's games: where the face is,
+            // about ten times a second, mirrored like the hand reports. A
+            // game asks for it only while it is open.
+            if (headsWanted && !paused && now - lastHeadNs >= HEAD_INTERVAL_NS) {
+                lastHeadNs = now
+                val detector = faceDetector ?: FaceDetector(context).also { faceDetector = it }
+                val head = detector.detect(image, image.imageInfo.rotationDegrees)
+                val sink = activeSink
+                if (sink != null) {
+                    val hx = head?.x?.takeIf { it >= 0f }?.let { (if (boundFront) 1f - it else it).toDouble() }
+                    val hy = head?.y?.takeIf { it >= 0f }?.toDouble()
+                    val hw = head?.width?.toDouble()
+                    mainHandler.post { sink.success(mapOf("head" to (head != null), "x" to hx, "y" to hy, "w" to hw)) }
+                }
+            }
             if ((facesWanted || palmsWanted) && !paused) {
                 val face = if (facesWanted) {
                     faceDetector ?: FaceDetector(context).also { faceDetector = it }
@@ -1874,8 +1895,12 @@ class CameraMotion(
             val count = palmCount
             val fingerCount = fingers
             val up = read?.up
+            // Where the palm is, as the child sees it: the front camera's
+            // picture is the mirror of what faces it.
+            val hx = read?.x?.takeIf { it >= 0f }?.let { if (boundFront) 1f - it else it }
+            val hy = read?.y?.takeIf { it >= 0f }
             mainHandler.post {
-                sink.success(mapOf("palms" to count, "fingers" to fingerCount, "up" to up))
+                sink.success(mapOf("palms" to count, "fingers" to fingerCount, "up" to up, "x" to hx, "y" to hy))
             }
         } else if (palmCount > 0 && now - lastPalmSeenNs > PALM_GRACE_NS) {
             palmCount = 0

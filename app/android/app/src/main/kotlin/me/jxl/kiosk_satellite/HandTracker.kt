@@ -140,7 +140,12 @@ class HandTracker(
         }
         val h = hands[best]
         // Square units: y is a fraction of the height.
-        onResult(hands.size, readHand({ i -> h[i].x() }, { i -> h[i].y() * aspect }), atNs)
+        val read = readHand({ i -> h[i].x() }, { i -> h[i].y() * aspect })
+        // The palm: the wrist and the four finger roots, averaged.
+        val palm = intArrayOf(WRIST, 5, MIDDLE_MCP, 13, PINKY_MCP)
+        val px = palm.map { h[it].x() }.average().toFloat().coerceIn(0f, 1f)
+        val py = palm.map { h[it].y() }.average().toFloat().coerceIn(0f, 1f)
+        onResult(hands.size, HandRead(read.fingers, read.up, read.tilt, read.detail, px, py), atNs)
     }
 
     private fun load(): HandLandmarker? {
@@ -186,7 +191,16 @@ class HandTracker(
  * (thumb, index, middle, ring, pinky, the thumb only when it counts), the
  * tilt and the leads behind the count.
  */
-class HandRead(val fingers: Int, val up: List<Boolean>, val tilt: Float, val detail: String)
+class HandRead(
+    val fingers: Int,
+    val up: List<Boolean>,
+    val tilt: Float,
+    val detail: String,
+    /** The palm's centre in the analysed frame, 0..1 each way (-1 unknown),
+     *  for the Kids Portal's hand games. */
+    val x: Float = -1f,
+    val y: Float = -1f,
+)
 
 private const val WRIST = 0
 private const val THUMB_IP = 3
