@@ -213,6 +213,26 @@ pages stand on the wallpaper in glass like the Today screen
 (`PhoenixPageBackdrop`, `phoenixGlassTheme` and the `glassFill` colours in
 `home_glass.dart`; the calendar takes the home theme's accent).
 
+## 2026.12.18 features (where they live)
+
+- Kids leaderboards: `kids_logic.dart` (`KidsScores.offer` sets
+  `pendingEntry` for a top-ten score; `leaderboard`, `addToBoard`,
+  `boardPlace`, `boardInsert`; prefs `phx.kids.board.<key>`,
+  `phx.kids.names`), `kids_leaderboard.dart` (name dialog, Top 10 page,
+  `boardTitle`/`boardScore` for every score key). The hub wraps itself in
+  `KidsHighScoreListener`, so every game gets it without changes.
+- Shopping list: `managers/home/todo_service.dart` (todo.get_items through
+  `haCallService` with `response: true`), `ui/home/shopping_page.dart`,
+  tile id `shopping`.
+- Quick-start timers: `TimerQuickStart` in `timers_overlay.dart`.
+- From wallpaper theme: `themeFromPixels` / `autoHomeTheme` in
+  `home_themes.dart`, fed by `HomeWallpaper`.
+- Random layouts: `randomMunchMaze` / `munchMazeIsGood` and
+  `randomBrickLayout` in `kids_arcade.dart` (the fixed `munchMazes` and
+  `brickLevels` stay as fallbacks and occasional classics).
+- Home screens: `HomeTileSpec.page` (`p` in JSON), `homePages`, the
+  `PageView` in `HomeTileGrid`, the move handle in `_EditFrame`.
+
 ## License and credits
 
 `LICENSE` (2026.12.17): Phoenix Portal under CC BY-NC-ND 4.0, as Kiosk

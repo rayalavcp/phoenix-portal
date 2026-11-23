@@ -90,8 +90,9 @@ class HomeWallpaper extends StatelessWidget {
     return ListenableBuilder(
       listenable: Listenable.merge([home.theme, home.backdrop]),
       builder: (context, _) {
-        final theme = homeTheme(home.theme.value);
         final photo = home.backdrop.value;
+        updateAutoHomeTheme(photo);
+        final theme = homeTheme(home.theme.value);
         final mq = MediaQuery.of(context);
         // Decode at the screen's real resolution: full detail, a fraction of
         // the memory of a 4K bitmap.

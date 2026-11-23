@@ -9,9 +9,9 @@ import { openDrawerItemsPicker } from './drawer_items.js';
 const TILE_NAMES = {
   telugu: 'Telugu calendar', kids: 'Kids Portal', photos: 'Photos', school: 'School', apps: 'All apps',
   smart: 'Smart Home', timers: 'Timers', alarms: 'Alarms', store: 'App Store', settings: 'Settings',
-  calendar: 'Calendar (Home Assistant)', cameras: 'Cameras',
+  calendar: 'Calendar (Home Assistant)', cameras: 'Cameras', shopping: 'Shopping list (Home Assistant)',
 };
-const THEME_NAMES = { ember: 'Ember', ocean: 'Ocean', forest: 'Forest', midnight: 'Midnight', sunset: 'Sunset', graphite: 'Graphite' };
+const THEME_NAMES = { auto: 'From wallpaper', ember: 'Ember', ocean: 'Ocean', forest: 'Forest', midnight: 'Midnight', sunset: 'Sunset', graphite: 'Graphite' };
 
 let model = null;
 
@@ -78,6 +78,7 @@ function tilesSection() {
         el('label', {}, checkbox(!t.hidden, (on) => { t.hidden = !on; }), ' Shown'),
         el('span', { text: ' Width ' }), size(t.w, 6, 'w'),
         el('span', { text: ' Height ' }), size(t.h, 4, 'h'),
+        el('span', { text: ' Screen ' }), select(Array.from({ length: 5 }, (_, k) => [k, k === 0 ? 'Home' : `Home ${k + 1}`]), t.p || 0, (v) => { t.p = Number(v); }),
         up, down));
     }));
   };
@@ -85,20 +86,20 @@ function tilesSection() {
   const saveBtn = el('button', {
     class: 'btn-primary', type: 'button', text: 'Save tiles',
     onclick: () => save({
-      tiles: tiles.map(({ id, w, h }) => ({ id, w, h })),
+      tiles: tiles.map(({ id, w, h, p }) => ({ id, w, h, p: p || 0 })),
       hiddenTiles: tiles.filter((t) => t.hidden).map((t) => t.id),
     }, 'Tiles'),
   });
   const reset = el('button', {
     class: 'btn-ghost', type: 'button', text: 'Reset layout',
     onclick: () => save({
-      tiles: ['telugu', 'kids', 'photos', 'school', 'apps', 'smart', 'timers', 'alarms', 'store', 'settings', 'calendar', 'cameras']
+      tiles: ['telugu', 'kids', 'photos', 'school', 'apps', 'smart', 'timers', 'alarms', 'store', 'settings', 'calendar', 'cameras', 'shopping']
         .map((id) => ({ id, w: ['telugu', 'school', 'kids', 'photos'].includes(id) ? 2 : 1, h: ['kids', 'photos'].includes(id) ? 2 : 1 })),
       hiddenTiles: [],
     }, 'Layout'),
   });
   return card('Tiles',
-    el('div', { class: 'desc', text: 'Order, size (in grid cells: six columns wide on a landscape Portal) and which tiles show.' }),
+    el('div', { class: 'desc', text: 'Order, size (in grid cells: six columns wide on a landscape Portal), which home screen (swipe between them) and which tiles show.' }),
     list,
     el('div', { class: 'phx-actions' }, saveBtn, reset));
 }

@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 
 /// Phoenix Home's colour themes: the background and the tile colours. The
@@ -18,6 +22,13 @@ class HomeTheme {
 }
 
 const homeThemes = <HomeTheme>[
+  // Colours picked from the wallpaper (see [autoHomeTheme]); until they
+  // are worked out, Ember's.
+  HomeTheme('auto', 'From wallpaper', [Color(0xFF3A1A0E), Color(0xFF14161C), Color(0xFF0B0D10)], [
+    [Color(0xFF7B5CFF), Color(0xFFB06BFF)],
+    [Color(0xFFD42A1A), Color(0xFFF07A1A)],
+    [Color(0xFF14A06B), Color(0xFF52D69F)],
+  ], Color(0xFFF26A1B)),
   HomeTheme('ember', 'Ember', [Color(0xFF3A1A0E), Color(0xFF14161C), Color(0xFF0B0D10)], [
     [Color(0xFF7B5CFF), Color(0xFFB06BFF)],
     [Color(0xFFD42A1A), Color(0xFFF07A1A)],
@@ -68,4 +79,85 @@ const homeThemes = <HomeTheme>[
   ], Color(0xFFF26A1B)),
 ];
 
-HomeTheme homeTheme(String id) => homeThemes.firstWhere((t) => t.id == id, orElse: () => homeThemes.first);
+HomeTheme homeTheme(String id) {
+  if (id == 'auto') return autoHomeTheme.value ?? homeThemes.first;
+  return homeThemes.firstWhere((t) => t.id == id, orElse: () => homeThemes[1]);
+}
+
+/// The From wallpaper theme for the wallpaper on screen (null until one
+/// has been read). Widgets that colour by the theme listen to it.
+final autoHomeTheme = ValueNotifier<HomeTheme?>(null);
+
+int? _autoFor;
+
+/// Works out [autoHomeTheme] from [wallpaper]'s bytes, once per picture.
+void updateAutoHomeTheme(Uint8List? wallpaper) {
+  if (wallpaper == null) return;
+  final id = identityHashCode(wallpaper);
+  if (_autoFor == id) return;
+  _autoFor = id;
+  unawaited(() async {
+    try {
+      final codec = await ui.instantiateImageCodec(wallpaper, targetWidth: 48);
+      final frame = await codec.getNextFrame();
+      final data = await frame.image.toByteData(format: ui.ImageByteFormat.rawRgba);
+      frame.image.dispose();
+      codec.dispose();
+      if (data == null || _autoFor != id) return;
+      autoHomeTheme.value = themeFromPixels(data.buffer.asUint8List());
+    } catch (_) {
+      // Not a picture Flutter can read: keep the colours there are.
+    }
+  }());
+}
+
+/// A theme from RGBA [pixels]: the picture's most colourful hues, each
+/// as a tile gradient (deep to bright), the strongest one the accent, and
+/// a dark background tinted by the picture's overall tone.
+HomeTheme themeFromPixels(Uint8List pixels) {
+  // Twelve hue buckets, weighted by how colourful and how bright a pixel is.
+  final weight = List<double>.filled(12, 0);
+  final satSum = List<double>.filled(12, 0);
+  var r0 = 0.0, g0 = 0.0, b0 = 0.0, n = 0;
+  for (var i = 0; i + 3 < pixels.length; i += 4) {
+    final c = Color.fromARGB(255, pixels[i], pixels[i + 1], pixels[i + 2]);
+    final hsv = HSVColor.fromColor(c);
+    r0 += pixels[i];
+    g0 += pixels[i + 1];
+    b0 += pixels[i + 2];
+    n++;
+    if (hsv.saturation < 0.18 || hsv.value < 0.18) continue;
+    final bucket = (hsv.hue / 30).floor() % 12;
+    final w = hsv.saturation * hsv.value;
+    weight[bucket] += w;
+    satSum[bucket] += hsv.saturation * w;
+  }
+  final ranked = [for (var b = 0; b < 12; b++) b]..sort((a, b) => weight[b].compareTo(weight[a]));
+  final hues = <(double, double)>[
+    for (final b in ranked)
+      if (weight[b] > 0) (b * 30.0 + 15, (satSum[b] / weight[b]).clamp(0.45, 0.85)),
+  ];
+  // A grey picture: soft blues and slates, so the tiles still differ.
+  if (hues.isEmpty) hues.addAll(const [(215.0, 0.45), (200.0, 0.35), (230.0, 0.4)]);
+  while (hues.length < 4) {
+    final (h, sat) = hues[hues.length % hues.length];
+    hues.add(((h + 40 * hues.length) % 360, sat));
+  }
+  List<Color> gradient((double, double) hs) => [
+    HSVColor.fromAHSV(1, hs.$1, hs.$2, 0.55).toColor(),
+    HSVColor.fromAHSV(1, hs.$1, (hs.$2 * 0.85).clamp(0.0, 1.0), 0.92).toColor(),
+  ];
+  final avg = n == 0 ? const Color(0xFF14161C) : Color.fromARGB(255, (r0 / n).round(), (g0 / n).round(), (b0 / n).round());
+  final tone = HSVColor.fromColor(avg);
+  return HomeTheme(
+    'auto',
+    'From wallpaper',
+    [
+      tone.withSaturation((tone.saturation * 0.8).clamp(0.0, 0.6)).withValue(0.22).toColor(),
+      tone.withSaturation((tone.saturation * 0.5).clamp(0.0, 0.4)).withValue(0.10).toColor(),
+      const Color(0xFF0B0D10),
+    ],
+    [for (final hs in hues.take(6)) gradient(hs)],
+    HSVColor.fromAHSV(1, hues.first.$1, hues.first.$2.clamp(0.6, 0.9), 0.95).toColor(),
+  );
+}

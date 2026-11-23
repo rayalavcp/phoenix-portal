@@ -120,6 +120,88 @@ const munchMazes = [
 /// The first maze (kept for the tests and as the classic layout).
 List<String> get munchMaze => munchMazes.first;
 
+/// A new maze for every stage: the robots' house and the rows round it
+/// stay, the top and bottom are new walls each time, mirrored left to
+/// right. Every path is reachable from Munchie's start and none is a dead
+/// end; when no such maze turns up quickly, one of [munchMazes] instead.
+List<String> randomMunchMaze(math.Random rng) {
+  final base = munchMazes.first;
+  final w = base.first.length, mid = w ~/ 2;
+  for (var attempt = 0; attempt < 80; attempt++) {
+    final rows = [for (final r in base) r.split('')];
+    // Top: corridors on rows 1, 3, 5, walls on 2 and 4. Bottom: Munchie's
+    // row 11 stays, then walls on 12, 14, 16 and corridors 13, 15, 17.
+    for (final (corridors, walls) in const [([1, 3, 5], [2, 4]), ([13, 15, 17], [12, 14, 16])]) {
+      for (final y in [...corridors, ...walls]) {
+        for (var x = 1; x < w - 1; x++) {
+          rows[y][x] = '.';
+        }
+      }
+      for (final y in walls) {
+        // Column 1 stays open, so a corridor's end is never a dead end.
+        var x = 2 + rng.nextInt(2);
+        while (x <= mid) {
+          final len = 1 + rng.nextInt(3);
+          for (var k = 0; k < len && x + k <= mid; k++) {
+            rows[y][x + k] = '#';
+          }
+          x += len + 1 + rng.nextInt(2);
+        }
+      }
+      // Now and then a pillar joins two walls across a corridor.
+      for (final y in corridors) {
+        if (y == corridors.first || y == corridors.last) continue;
+        for (var x = 2; x < mid; x++) {
+          if (rows[y - 1][x] == '#' && rows[y + 1][x] == '#' && rng.nextDouble() < 0.3) rows[y][x] = '#';
+        }
+      }
+      for (final y in [...corridors, ...walls]) {
+        for (var x = 1; x < mid; x++) {
+          rows[y][w - 1 - x] = rows[y][x];
+        }
+      }
+    }
+    for (final (x, y) in [(1, 1), (w - 2, 1), (1, 17), (w - 2, 17)]) {
+      rows[y][x] = 'o';
+    }
+    final maze = [for (final r in rows) r.join()];
+    if (munchMazeIsGood(maze)) return maze;
+  }
+  return munchMazes[rng.nextInt(munchMazes.length)];
+}
+
+/// Whether every seed in [maze] can be reached from Munchie's start and
+/// no path is a dead end (a robot could corner Munchie there).
+bool munchMazeIsGood(List<String> maze, {bool deadEndsOk = false}) {
+  final h = maze.length, w = maze.first.length;
+  bool walk(int x, int y) => y >= 0 && y < h && '. oP'.contains(maze[y][(x + w) % w]);
+  (int, int)? start;
+  var open = 0;
+  for (var y = 0; y < h; y++) {
+    for (var x = 0; x < w; x++) {
+      if (!walk(x, y)) continue;
+      // Spaces outside the walls are scenery; only the paths count.
+      if (maze[y][x] == ' ') continue;
+      open++;
+      if (maze[y][x] == 'P') start = (x, y);
+      final exits = [(1, 0), (-1, 0), (0, 1), (0, -1)].where((d) => walk(x + d.$1, y + d.$2)).length;
+      // The robots' doorway row is the one place a single exit is fine.
+      if (!deadEndsOk && exits < 2 && maze[y + 1 < h ? y + 1 : y][x] != '-' && maze[y > 0 ? y - 1 : y][x] != '-') return false;
+    }
+  }
+  if (start == null) return false;
+  final seen = <(int, int)>{start};
+  final queue = [start];
+  while (queue.isNotEmpty) {
+    final (x, y) = queue.removeLast();
+    for (final (dx, dy) in const [(1, 0), (-1, 0), (0, 1), (0, -1)]) {
+      final next = ((x + dx + w) % w, y + dy);
+      if (walk(next.$1, next.$2) && seen.add(next)) queue.add(next);
+    }
+  }
+  return seen.where((c) => maze[c.$2][c.$1] != ' ').length == open;
+}
+
 /// Each maze's wall colours: fill and edge.
 const munchWallColors = [
   (Color(0xFF1E3FA8), Color(0xFF5B8CFF)),
@@ -288,7 +370,8 @@ class _MunchMazeState extends State<MunchMaze> with SingleTickerProviderStateMix
   }
 
   void _newBoard() {
-    _board = MunchBoard(munchMazes[_mazeIndex]);
+    // A new maze every stage (the wall colours still go round).
+    _board = MunchBoard(randomMunchMaze(_rng));
     _resetPositions();
   }
 
@@ -707,8 +790,36 @@ const brickLevels = [
 /// Where Brick Bash can start: its first level and every fourth after.
 const brickStarts = [1, 5, 9];
 
-List<_Brick> _bricksFor(int stage) {
-  final layout = brickLevels[(stage - 1) % brickLevels.length];
+/// A new wall of bricks for [stage], mirrored left to right: more rows,
+/// fuller and tougher as the stages go up ('2' from stage 2, steel '3'
+/// from stage 6). Now and then one of the [brickLevels] shapes instead.
+List<String> randomBrickLayout(int stage, math.Random rng) {
+  if (rng.nextDouble() < 0.25) {
+    final classic = [for (var i = 0; i < brickLevels.length && i < stage + 2; i++) brickLevels[i]];
+    return classic[rng.nextInt(classic.length)];
+  }
+  final rows = math.min(4 + (stage - 1) ~/ 2, 7);
+  final fill = math.min(0.5 + stage * 0.04, 0.88);
+  final maxHp = stage < 2 ? 1 : (stage < 6 ? 2 : 3);
+  for (var attempt = 0; ; attempt++) {
+    final out = <String>[];
+    var bricks = 0;
+    for (var r = 0; r < rows; r++) {
+      // Whole rows sometimes share one strength, for stripes.
+      final rowHp = rng.nextDouble() < 0.4 ? 1 + rng.nextInt(maxHp) : null;
+      final half = [
+        for (var c = 0; c < 5; c++)
+          if (rng.nextDouble() < fill) '${rowHp ?? 1 + rng.nextInt(maxHp)}' else '.',
+      ];
+      bricks += 2 * half.where((k) => k != '.').length;
+      out.add([...half, ...half.reversed].join());
+    }
+    if (bricks >= 14 || attempt > 20) return out;
+  }
+}
+
+List<_Brick> _bricksFor(int stage, math.Random rng) {
+  final layout = randomBrickLayout(stage, rng);
   const colors = [Color(0xFFFF4D6D), Color(0xFFFF9F1C), Color(0xFFFFE066), Color(0xFF7CFF6B), Color(0xFF39D0FF)];
   final out = <_Brick>[];
   const w = _fieldW / 10, h = 3.6;
@@ -770,7 +881,7 @@ class _BrickBashState extends State<BrickBash> with SingleTickerProviderStateMix
       _score = 0;
       _lives = 3;
       _stage = brickStarts[_firstStage];
-      _bricks = _bricksFor(_stage);
+      _bricks = _bricksFor(_stage, _rng);
       _playing = true;
       _over = false;
       _last = Duration.zero;
@@ -902,7 +1013,7 @@ class _BrickBashState extends State<BrickBash> with SingleTickerProviderStateMix
     if (_bricks.isEmpty) {
       _stage++;
       _score += 300;
-      _bricks = _bricksFor(_stage);
+      _bricks = _bricksFor(_stage, _rng);
       _serveBall();
     }
     setState(() {});

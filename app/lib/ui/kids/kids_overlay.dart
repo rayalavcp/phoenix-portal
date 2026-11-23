@@ -11,6 +11,7 @@ import 'kids_activities.dart';
 import 'kids_arcade.dart';
 import 'kids_arcade2.dart';
 import 'kids_games.dart';
+import 'kids_leaderboard.dart';
 import 'kids_learn.dart';
 import 'kids_learn_more.dart';
 import 'kids_maps.dart';
@@ -251,11 +252,17 @@ class _KidsHome extends StatefulWidget {
 
 class _KidsHomeState extends State<_KidsHome> {
   _Game? _game;
+
+  /// The Leaderboard page is open (over the hub).
+  bool _board = false;
   late final _tones = KidsTones(widget.container.sound.playFile);
 
   KidsManager get kids => widget.container.kids;
 
-  void _back() => setState(() => _game = null);
+  void _back() => setState(() {
+    _game = null;
+    _board = false;
+  });
 
   // A parent reset the scores from the admin portal: show it at once.
   void _scoresReset() => KidsScores.changes.value++;
@@ -272,8 +279,11 @@ class _KidsHomeState extends State<_KidsHome> {
     super.dispose();
   }
 
+  // A score that makes a game's top ten asks for a name, over any game.
   @override
-  Widget build(BuildContext context) => AnimatedSwitcher(
+  Widget build(BuildContext context) => KidsHighScoreListener(child: _switcher(context));
+
+  Widget _switcher(BuildContext context) => AnimatedSwitcher(
     duration: const Duration(milliseconds: 360),
     switchInCurve: Curves.easeOutCubic,
     switchOutCurve: Curves.easeInCubic,
@@ -328,6 +338,7 @@ class _KidsHomeState extends State<_KidsHome> {
       _Game.dance => FreezeDance(key: const ValueKey('dance'), container: widget.container, onBack: _back, tones: _tones),
       _Game.sky => SkyGlide(key: const ValueKey('sky'), container: widget.container, onBack: _back),
       _Game.run => FoxRun(key: const ValueKey('run'), container: widget.container, onBack: _back),
+      null when _board => KidsLeaderboard(key: const ValueKey('board'), onBack: _back),
       null => ListenableBuilder(
         key: const ValueKey('home'),
         listenable: widget.container.phoenixHome.kidsHiddenGames,
@@ -416,6 +427,8 @@ class _KidsHomeState extends State<_KidsHome> {
                       ],
                     ),
                   ),
+                  KidsLeaderboardButton(onTap: () => setState(() => _board = true)),
+                  const SizedBox(width: 10),
                   const _StarsPill(),
                   const SizedBox(width: 10),
                   _TimeLeftPill(kids: kids),

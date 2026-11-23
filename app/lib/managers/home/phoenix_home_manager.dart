@@ -20,6 +20,7 @@ import '../screensaver/immich_manager.dart';
 import 'panchang.dart';
 import 'photo_service.dart';
 import 'school_service.dart';
+import 'todo_service.dart';
 
 /// The 4K wallpapers built into the app (assets/wallpapers): id, name and,
 /// for photos, the credit their licence asks for (see CREDITS.md there).
@@ -144,14 +145,31 @@ class HomeEntity {
 /// One tile on Phoenix Home: which, and how many grid cells it spans.
 @immutable
 class HomeTileSpec {
-  const HomeTileSpec(this.id, this.w, this.h);
+  const HomeTileSpec(this.id, this.w, this.h, {this.page = 0});
   final String id;
   final int w;
   final int h;
 
-  HomeTileSpec sized(int w, int h) => HomeTileSpec(id, w.clamp(1, 6), h.clamp(1, 4));
+  /// Which home screen the tile is on: 0 is the first (Home), 1 Home 2, ...
+  final int page;
 
-  Map<String, Object?> toJson() => {'id': id, 'w': w, 'h': h};
+  HomeTileSpec sized(int w, int h) => HomeTileSpec(id, w.clamp(1, 6), h.clamp(1, 4), page: page);
+
+  HomeTileSpec onPage(int page) => HomeTileSpec(id, w, h, page: page.clamp(0, maxHomePages - 1));
+
+  Map<String, Object?> toJson() => {'id': id, 'w': w, 'h': h, if (page > 0) 'p': page};
+}
+
+/// The most home screens there can be.
+const maxHomePages = 5;
+
+/// The home screens [tiles] are on, in order, without gaps: a page whose
+/// tiles all moved away is gone. Answers each tile's page in that run
+/// (0, 1, ...) and how many pages there are.
+({List<int> pages, int count}) homePages(List<HomeTileSpec> tiles) {
+  final used = {for (final t in tiles) t.page}.toList()..sort();
+  final index = {for (var i = 0; i < used.length; i++) used[i]: i};
+  return (pages: [for (final t in tiles) index[t.page]!], count: used.isEmpty ? 1 : used.length);
 }
 
 /// Every tile Phoenix Home knows, in the default order and size (a six
@@ -170,6 +188,7 @@ const defaultHomeTiles = [
   HomeTileSpec('settings', 1, 1),
   HomeTileSpec('calendar', 1, 1),
   HomeTileSpec('cameras', 1, 1),
+  HomeTileSpec('shopping', 1, 1),
 ];
 
 /// The stored layout: known tiles in the stored order and size, then any
@@ -182,7 +201,11 @@ List<HomeTileSpec> decodeTileLayout(String? raw) {
     if (data is List) {
       for (final t in data) {
         if (t is! Map || !known.containsKey(t['id']) || out.any((o) => o.id == t['id'])) continue;
-        out.add(known[t['id']]!.sized(t['w'] is int ? t['w'] as int : 1, t['h'] is int ? t['h'] as int : 1));
+        out.add(
+          known[t['id']]!
+              .sized(t['w'] is int ? t['w'] as int : 1, t['h'] is int ? t['h'] as int : 1)
+              .onPage(t['p'] is int ? t['p'] as int : 0),
+        );
       }
     }
   } catch (_) {}
@@ -291,7 +314,8 @@ class PhoenixHomeManager extends Manager {
       smartHomeOpen.value ||
       appsOpen.value ||
       schoolOpen.value ||
-      teluguOpen.value;
+      teluguOpen.value ||
+      shoppingOpen.value;
 
   /// The Home Assistant dashboard is on screen over Phoenix Home. The
   /// dashboard page is only loaded while this holds (dashboard_page.dart).
@@ -305,6 +329,12 @@ class PhoenixHomeManager extends Manager {
 
   /// The Telugu calendar page is on screen.
   final teluguOpen = ValueNotifier<bool>(false);
+
+  /// The Shopping list page is on screen.
+  final shoppingOpen = ValueNotifier<bool>(false);
+
+  /// The Home Assistant to-do list the Shopping tile and page show.
+  late final todo = TodoService(commands, configured: () => homeAssistantConfigured);
 
   /// The Telugu calendar for the weather's place (Frisco, Texas until a
   /// city is set): computed here, no network.
@@ -365,7 +395,7 @@ class PhoenixHomeManager extends Manager {
   Future<void> resetKidsScores() async {
     final prefs = await _prefs();
     for (final k in prefs.getKeys().toList()) {
-      if (k.startsWith('phx.kids.best.') || k == 'phx.kids.stars' || k == 'phx.kids.challenge_done') {
+      if (k.startsWith('phx.kids.best.') || k.startsWith('phx.kids.board.') || k == 'phx.kids.names' || k == 'phx.kids.stars' || k == 'phx.kids.challenge_done') {
         await prefs.remove(k);
       }
     }
@@ -958,12 +988,12 @@ class PhoenixHomeManager extends Manager {
 
   // ── Remote admin ────────────────────────────────────────────────────────
 
-  static const themeIds = ['ember', 'ocean', 'forest', 'midnight', 'sunset', 'graphite'];
+  static const themeIds = ['auto', 'ember', 'ocean', 'forest', 'midnight', 'sunset', 'graphite'];
 
   /// Everything the remote admin's Phoenix Home page shows.
   Map<String, Object?> remoteState() => {
     'tiles': [
-      for (final t in tiles.value) {'id': t.id, 'w': t.w, 'h': t.h, 'hidden': hiddenTiles.value.contains(t.id)},
+      for (final t in tiles.value) {'id': t.id, 'w': t.w, 'h': t.h, 'p': t.page, 'hidden': hiddenTiles.value.contains(t.id)},
     ],
     'theme': theme.value,
     'themes': themeIds,
@@ -1012,10 +1042,12 @@ class PhoenixHomeManager extends Manager {
       final next = <HomeTileSpec>[
         for (final t in p['tiles'] as List)
           if (t is Map && known.contains(t['id']))
-            HomeTileSpec('${t['id']}', 1, 1).sized(
-              t['w'] is num ? (t['w'] as num).toInt() : 1,
-              t['h'] is num ? (t['h'] as num).toInt() : 1,
-            ),
+            HomeTileSpec('${t['id']}', 1, 1)
+                .sized(
+                  t['w'] is num ? (t['w'] as num).toInt() : 1,
+                  t['h'] is num ? (t['h'] as num).toInt() : 1,
+                )
+                .onPage(t['p'] is num ? (t['p'] as num).toInt() : 0),
       ];
       // Tiles the admin left out keep their place at the end.
       for (final t in tiles.value) {
@@ -1096,6 +1128,13 @@ class PhoenixHomeManager extends Manager {
     appsOpen.value = false;
     schoolOpen.value = false;
     teluguOpen.value = false;
+    shoppingOpen.value = false;
+  }
+
+  void openShopping() {
+    goHome();
+    shoppingOpen.value = true;
+    unawaited(todo.refresh());
   }
 
   void openTelugu() {
@@ -1473,6 +1512,8 @@ class PhoenixHomeManager extends Manager {
     appsOpen.dispose();
     schoolOpen.dispose();
     teluguOpen.dispose();
+    shoppingOpen.dispose();
+    todo.dispose();
     school.dispose();
     photos.dispose();
     weather.dispose();

@@ -14,6 +14,7 @@ import '../../managers/settings/definitions.dart' as defs;
 import '../kids/kids_logic.dart';
 import '../kids/kids_more_logic.dart';
 import '../toast.dart';
+import '../timers_overlay.dart' show TimerQuickStart;
 import 'home_apps.dart';
 import 'home_glass.dart';
 import 'home_themes.dart';
@@ -28,7 +29,11 @@ import 'telugu_calendar_page.dart';
 /// (hold any tile) they work like widgets on an Android home screen: drag a
 /// tile to move it, drag its corner handle to resize it, tap × to hide it.
 class HomeTileGrid extends StatefulWidget {
-  const HomeTileGrid({super.key, required this.container, required this.onOpenSettings});
+  const HomeTileGrid({
+    super.key,
+    required this.container,
+    required this.onOpenSettings,
+  });
 
   final AppContainer container;
   final VoidCallback onOpenSettings;
@@ -48,11 +53,49 @@ class _HomeTileGridState extends State<HomeTileGrid> {
   /// The tile being moved and how far the finger has dragged it.
   ({String id, Offset by})? _moving;
 
+  /// The home screens, when there is more than one.
+  final _pager = PageController();
+  int _page = 0;
+
+  /// One right-swipe past the first page opens Smart Home (as on the Today
+  /// screen without pages); this keeps it to once per swipe.
+  bool _overscrolled = false;
+
+  /// Moves [id] to home screen [page] (a new one when past the last).
+  Future<void> _toPage(String id, int page) async {
+    final home = c.phoenixHome;
+    final pages = homePages(home.tiles.value);
+    final used = {for (final t in home.tiles.value) t.page}.toList()..sort();
+    // Back to stored numbers: page n of the run is used[n]; a new page
+    // goes after the last one used.
+    final stored = page < used.length
+        ? used[page]
+        : (used.isEmpty ? 0 : used.last + 1);
+    await home.setTiles([
+      for (final t in home.tiles.value) t.id == id ? t.onPage(stored) : t,
+    ]);
+    if (pages.count != homePages(home.tiles.value).count || page != _page) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_pager.hasClients) {
+          unawaited(
+            _pager.animateToPage(
+              page,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
+            ),
+          );
+        }
+      });
+    }
+  }
+
   Future<void> _commitResize() async {
     final r = _resizing;
     if (r == null) return;
     final home = c.phoenixHome;
-    await home.setTiles([for (final t in home.tiles.value) t.id == r.id ? t.sized(r.w, r.h) : t]);
+    await home.setTiles([
+      for (final t in home.tiles.value) t.id == r.id ? t.sized(r.w, r.h) : t,
+    ]);
     if (mounted) setState(() => _resizing = null);
   }
 
@@ -72,7 +115,10 @@ class _HomeTileGridState extends State<HomeTileGrid> {
     final home = c.phoenixHome;
     final list = [...home.tiles.value];
     final moved = list.removeAt(list.indexWhere((t) => t.id == m.id));
-    list.insert(list.indexWhere((t) => t.id == specs[to].id) + (to > from ? 1 : 0), moved);
+    list.insert(
+      list.indexWhere((t) => t.id == specs[to].id) + (to > from ? 1 : 0),
+      moved,
+    );
     await home.setTiles(list);
   }
 
@@ -83,12 +129,16 @@ class _HomeTileGridState extends State<HomeTileGrid> {
     _tick = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted) setState(() {});
     });
-    if (c.phoenixHome.homeAssistantConfigured) unawaited(c.phoenixHome.loadEntities());
+    if (c.phoenixHome.homeAssistantConfigured) {
+      unawaited(c.phoenixHome.loadEntities());
+      unawaited(c.phoenixHome.todo.load());
+    }
   }
 
   @override
   void dispose() {
     _tick.cancel();
+    _pager.dispose();
     super.dispose();
   }
 
@@ -97,6 +147,7 @@ class _HomeTileGridState extends State<HomeTileGrid> {
     'kids' => c.settings.get(defs.kidsEnabled),
     'calendar' => c.phoenixHome.homeAssistantConfigured,
     'cameras' => c.camera.config.defaultView != null,
+    'shopping' => c.phoenixHome.homeAssistantConfigured,
     _ => true,
   };
 
@@ -108,6 +159,7 @@ class _HomeTileGridState extends State<HomeTileGrid> {
         home.tiles,
         home.hiddenTiles,
         home.theme,
+        autoHomeTheme,
         home.editing,
         home.school.menus,
         home.school.config,
@@ -118,103 +170,213 @@ class _HomeTileGridState extends State<HomeTileGrid> {
         c.alarms.alarms,
         c.launcher.installedRevision,
         home.usage,
+        home.todo.items,
         KidsScores.changes,
       ]),
       builder: (context, _) {
         final theme = homeTheme(home.theme.value);
         final editing = home.editing.value;
         final r = editing ? _resizing : null;
-        final specs = [
+        final all = [
           for (final t in home.tiles.value)
             if (_available(t.id) && !home.hiddenTiles.value.contains(t.id))
               r != null && r.id == t.id ? t.sized(r.w, r.h) : t,
         ];
-        return LayoutBuilder(
-          builder: (context, box) {
-            final columns = box.maxWidth > box.maxHeight ? 6 : 4;
-            const gap = 14.0;
-            final cell = (box.maxWidth - gap * (columns - 1)) / columns;
-            final spots = packTiles([for (final t in specs) (t.w, t.h)], columns);
-            final rows = spots.isEmpty
-                ? 1
-                : [for (var i = 0; i < specs.length; i++) spots[i].$2 + specs[i].h].reduce(math.max);
-            // Rows share the height when they fit; tall layouts scroll.
-            final rowH = math.max(104.0, math.min(cell, (box.maxHeight - gap * (rows - 1)) / rows));
-            final height = rows * rowH + (rows - 1) * gap;
-            final rects = [
-              for (var i = 0; i < specs.length; i++)
-                Rect.fromLTWH(
-                  spots[i].$1 * (cell + gap),
-                  spots[i].$2 * (rowH + gap),
-                  math.min(specs[i].w, columns) * cell + (math.min(specs[i].w, columns) - 1) * gap,
-                  specs[i].h * rowH + (specs[i].h - 1) * gap,
-                ),
-            ];
-            Widget tile(int i) {
-              final spec = specs[i];
-              final child = _Tile(
-                container: c,
-                spec: spec,
-                colors: theme.tile(i),
-                editing: editing,
-                onOpenSettings: widget.onOpenSettings,
-              );
-              if (!editing) return child;
-              return _EditFrame(
-                spec: spec,
-                resizing: _resizing?.id == spec.id,
-                onHide: () => unawaited(c.phoenixHome.setTileHidden(spec.id, true)),
-                onMove: (by) => setState(() => _moving = (id: spec.id, by: by)),
-                onMoveEnd: () => unawaited(_commitMove(specs, rects)),
-                onResize: (target) {
-                  // Snap to whole cells, as an Android widget does.
-                  final w = ((target.width + gap) / (cell + gap)).round().clamp(1, columns);
-                  final h = ((target.height + gap) / (rowH + gap)).round().clamp(1, 4);
-                  final now = _resizing;
-                  if (now == null || now.w != w || now.h != h) setState(() => _resizing = (id: spec.id, w: w, h: h));
+        final paging = homePages(all);
+        final count = paging.count;
+        Widget grid(int page) => _grid(
+          [
+            for (var i = 0; i < all.length; i++)
+              if (paging.pages[i] == page) all[i],
+          ],
+          theme,
+          editing,
+          page,
+          count,
+          // Tiles keep their colour across pages.
+          colorOffset: paging.pages.where((p) => p < page).length,
+        );
+        if (count == 1) return grid(0);
+        if (_page >= count) _page = count - 1;
+        return Column(
+          children: [
+            Expanded(
+              child: NotificationListener<OverscrollNotification>(
+                onNotification: (n) {
+                  if (!editing &&
+                      _page == 0 &&
+                      n.overscroll < -12 &&
+                      !_overscrolled) {
+                    _overscrolled = true;
+                    home.openSmartHomeButton();
+                  }
+                  return false;
                 },
-                onResizeStart: () => setState(() => _resizing = (id: spec.id, w: spec.w, h: spec.h)),
-                onResizeEnd: () => unawaited(_commitResize()),
-                child: child,
-              );
-            }
-
-            final movingAt = specs.indexWhere((t) => t.id == _moving?.id);
-            return SingleChildScrollView(
-              physics: _moving != null || _resizing != null ? const NeverScrollableScrollPhysics() : const BouncingScrollPhysics(),
-              child: SizedBox(
-                height: height,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    for (var i = 0; i < specs.length; i++)
-                      if (i != movingAt)
-                        AnimatedPositioned(
-                          key: ValueKey(specs[i].id),
-                          duration: Duration(milliseconds: _resizing?.id == specs[i].id ? 90 : 260),
-                          curve: Curves.easeOutCubic,
-                          left: rects[i].left,
-                          top: rects[i].top,
-                          width: rects[i].width,
-                          height: rects[i].height,
-                          child: tile(i),
-                        ),
-                    // The tile being moved floats over the others.
-                    if (movingAt >= 0)
-                      AnimatedPositioned(
-                        key: ValueKey(specs[movingAt].id),
-                        duration: Duration.zero,
-                        left: rects[movingAt].left + _moving!.by.dx,
-                        top: rects[movingAt].top + _moving!.by.dy,
-                        width: rects[movingAt].width,
-                        height: rects[movingAt].height,
-                        child: tile(movingAt),
-                      ),
-                  ],
+                child: NotificationListener<ScrollEndNotification>(
+                  onNotification: (_) {
+                    _overscrolled = false;
+                    return false;
+                  },
+                  child: PageView(
+                    controller: _pager,
+                    physics: _moving != null || _resizing != null
+                        ? const NeverScrollableScrollPhysics()
+                        : const ClampingScrollPhysics(),
+                    onPageChanged: (p) => setState(() => _page = p),
+                    children: [for (var p = 0; p < count; p++) grid(p)],
+                  ),
                 ),
               ),
-            );
-          },
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (var p = 0; p < count; p++)
+                  GestureDetector(
+                    onTap: () => unawaited(
+                      _pager.animateToPage(
+                        p,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOutCubic,
+                      ),
+                    ),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      width: p == _page ? 22 : 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(
+                          alpha: p == _page ? 0.9 : 0.4,
+                        ),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// One home screen's tiles, packed into the grid.
+  Widget _grid(
+    List<HomeTileSpec> specs,
+    HomeTheme theme,
+    bool editing,
+    int page,
+    int pageCount, {
+    int colorOffset = 0,
+  }) {
+    return LayoutBuilder(
+      builder: (context, box) {
+        final columns = box.maxWidth > box.maxHeight ? 6 : 4;
+        const gap = 14.0;
+        final cell = (box.maxWidth - gap * (columns - 1)) / columns;
+        final spots = packTiles([for (final t in specs) (t.w, t.h)], columns);
+        final rows = spots.isEmpty
+            ? 1
+            : [
+                for (var i = 0; i < specs.length; i++) spots[i].$2 + specs[i].h,
+              ].reduce(math.max);
+        // Rows share the height when they fit; tall layouts scroll.
+        final rowH = math.max(
+          104.0,
+          math.min(cell, (box.maxHeight - gap * (rows - 1)) / rows),
+        );
+        final height = rows * rowH + (rows - 1) * gap;
+        final rects = [
+          for (var i = 0; i < specs.length; i++)
+            Rect.fromLTWH(
+              spots[i].$1 * (cell + gap),
+              spots[i].$2 * (rowH + gap),
+              math.min(specs[i].w, columns) * cell +
+                  (math.min(specs[i].w, columns) - 1) * gap,
+              specs[i].h * rowH + (specs[i].h - 1) * gap,
+            ),
+        ];
+        Widget tile(int i) {
+          final spec = specs[i];
+          final child = _Tile(
+            container: c,
+            spec: spec,
+            colors: theme.tile(i + colorOffset),
+            editing: editing,
+            onOpenSettings: widget.onOpenSettings,
+          );
+          if (!editing) return child;
+          return _EditFrame(
+            spec: spec,
+            resizing: _resizing?.id == spec.id,
+            onHide: () => unawaited(c.phoenixHome.setTileHidden(spec.id, true)),
+            page: page,
+            pageCount: pageCount,
+            onToPage: (p) => unawaited(_toPage(spec.id, p)),
+            onMove: (by) => setState(() => _moving = (id: spec.id, by: by)),
+            onMoveEnd: () => unawaited(_commitMove(specs, rects)),
+            onResize: (target) {
+              // Snap to whole cells, as an Android widget does.
+              final w = ((target.width + gap) / (cell + gap)).round().clamp(
+                1,
+                columns,
+              );
+              final h = ((target.height + gap) / (rowH + gap)).round().clamp(
+                1,
+                4,
+              );
+              final now = _resizing;
+              if (now == null || now.w != w || now.h != h) {
+                setState(() => _resizing = (id: spec.id, w: w, h: h));
+              }
+            },
+            onResizeStart: () =>
+                setState(() => _resizing = (id: spec.id, w: spec.w, h: spec.h)),
+            onResizeEnd: () => unawaited(_commitResize()),
+            child: child,
+          );
+        }
+
+        final movingAt = specs.indexWhere((t) => t.id == _moving?.id);
+        return SingleChildScrollView(
+          physics: _moving != null || _resizing != null
+              ? const NeverScrollableScrollPhysics()
+              : const BouncingScrollPhysics(),
+          child: SizedBox(
+            height: height,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                for (var i = 0; i < specs.length; i++)
+                  if (i != movingAt)
+                    AnimatedPositioned(
+                      key: ValueKey(specs[i].id),
+                      duration: Duration(
+                        milliseconds: _resizing?.id == specs[i].id ? 90 : 260,
+                      ),
+                      curve: Curves.easeOutCubic,
+                      left: rects[i].left,
+                      top: rects[i].top,
+                      width: rects[i].width,
+                      height: rects[i].height,
+                      child: tile(i),
+                    ),
+                // The tile being moved floats over the others.
+                if (movingAt >= 0)
+                  AnimatedPositioned(
+                    key: ValueKey(specs[movingAt].id),
+                    duration: Duration.zero,
+                    left: rects[movingAt].left + _moving!.by.dx,
+                    top: rects[movingAt].top + _moving!.by.dy,
+                    width: rects[movingAt].width,
+                    height: rects[movingAt].height,
+                    child: tile(movingAt),
+                  ),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -242,7 +404,12 @@ class _Tile extends StatelessWidget {
     final overlay = Overlay.maybeOf(context);
     final CommandResult result = await c.commands.execute(name, const {});
     if (!result.ok && overlay != null && overlay.mounted) {
-      showToastIn(overlay, title: "Couldn't open $what", message: result.error, kind: ToastKind.error);
+      showToastIn(
+        overlay,
+        title: "Couldn't open $what",
+        message: result.error,
+        kind: ToastKind.error,
+      );
     }
   }
 
@@ -274,6 +441,8 @@ class _Tile extends StatelessWidget {
         }
       case 'timers':
         await _command(context, 'openTimers', 'timers');
+      case 'shopping':
+        home.openShopping();
       case 'alarms':
         await _command(context, 'openAlarms', 'alarms');
       case 'store':
@@ -281,7 +450,9 @@ class _Tile extends StatelessWidget {
       case 'calendar':
         await _command(context, 'openCalendar', 'the calendar');
       case 'cameras':
-        if (c.camera.config.defaultView case final view?) c.camera.showView(view.id);
+        if (c.camera.config.defaultView case final view?) {
+          c.camera.showView(view.id);
+        }
       case 'settings':
         onOpenSettings();
     }
@@ -315,7 +486,9 @@ class _Tile extends StatelessWidget {
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(colors: colors),
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(3)),
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(3),
+                ),
               ),
             ),
           ),
@@ -323,7 +496,11 @@ class _Tile extends StatelessWidget {
       ),
     );
     if (!editing) return tile;
-    return AnimatedScale(scale: 0.96, duration: const Duration(milliseconds: 200), child: tile);
+    return AnimatedScale(
+      scale: 0.96,
+      duration: const Duration(milliseconds: 200),
+      child: tile,
+    );
   }
 
   Widget _content(BuildContext context, _Size size) {
@@ -336,7 +513,9 @@ class _Tile extends StatelessWidget {
         return _Body(
           icon: Icons.child_care_rounded,
           title: 'Kids Portal',
-          line: left == null ? 'Games & learning' : '$left min of play left today',
+          line: left == null
+              ? 'Games & learning'
+              : '$left min of play left today',
           size: size,
           extra: FutureBuilder<(int, bool)>(
             future: _kidsStatus(),
@@ -346,10 +525,16 @@ class _Tile extends StatelessWidget {
                 _Chip(Icons.star_rounded, '${snap.data?.$1 ?? 0} stars today'),
                 const SizedBox(height: 6),
                 Text(
-                  snap.data?.$2 == true ? "Today's challenge done!" : "Today's challenge: ${challenge.text}",
+                  snap.data?.$2 == true
+                      ? "Today's challenge done!"
+                      : "Today's challenge: ${challenge.text}",
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
@@ -367,12 +552,20 @@ class _Tile extends StatelessWidget {
               : Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: [for (final a in recent) HomeAppIcon(container: c, app: a, size: 40)],
+                  children: [
+                    for (final a in recent)
+                      HomeAppIcon(container: c, app: a, size: 40),
+                  ],
                 ),
         );
       case 'smart':
         if (!home.homeAssistantConfigured) {
-          return _Body(icon: Icons.home_work_rounded, title: 'Smart Home', line: 'Optional add-on', size: size);
+          return _Body(
+            icon: Icons.home_work_rounded,
+            title: 'Smart Home',
+            line: 'Optional add-on',
+            size: size,
+          );
         }
         final all = home.entities.value ?? const <HomeEntity>[];
         final lights = all.where((e) => e.domain == 'light' && e.active).length;
@@ -384,7 +577,11 @@ class _Tile extends StatelessWidget {
         return _Body(
           icon: Icons.home_work_rounded,
           title: 'Smart Home',
-          line: all.isEmpty ? 'Lights, scenes, climate' : (lights == 0 ? 'All lights off' : '$lights light${lights == 1 ? '' : 's'} on'),
+          line: all.isEmpty
+              ? 'Lights, scenes, climate'
+              : (lights == 0
+                    ? 'All lights off'
+                    : '$lights light${lights == 1 ? '' : 's'} on'),
           size: size,
           extra: pinned.isEmpty
               ? null
@@ -394,7 +591,12 @@ class _Tile extends StatelessWidget {
                   children: [
                     for (final e in pinned.take(4))
                       ActionChip(
-                        avatar: Icon(e.active ? Icons.toggle_on_rounded : Icons.toggle_off_outlined, size: 18),
+                        avatar: Icon(
+                          e.active
+                              ? Icons.toggle_on_rounded
+                              : Icons.toggle_off_outlined,
+                          size: 18,
+                        ),
                         label: Text(e.name, overflow: TextOverflow.ellipsis),
                         onPressed: () => unawaited(home.activate(e)),
                       ),
@@ -406,21 +608,36 @@ class _Tile extends StatelessWidget {
         // Today's lunch, or the next school day's on a weekend or holiday.
         final day = nextMenuDay(school);
         final lunch = _menuOn(school, 'lunch', day);
-        final when = day.year == now.year && day.month == now.month && day.day == now.day
+        final when =
+            day.year == now.year && day.month == now.month && day.day == now.day
             ? 'Lunch'
             : '${DateFormat('EEEE').format(day)} lunch';
         return _Body(
           icon: Icons.school_rounded,
-          title: school.config.value.schoolName.isEmpty ? 'School' : school.config.value.schoolName,
-          line: lunch == null || lunch.isEmpty ? school.status(now) : '$when: ${lunch.items.first}',
+          title: school.config.value.schoolName.isEmpty
+              ? 'School'
+              : school.config.value.schoolName,
+          line: lunch == null || lunch.isEmpty
+              ? school.status(now)
+              : '$when: ${lunch.items.first}',
           size: size,
           extra: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (lunch != null && !lunch.isEmpty) Text(school.status(now), style: const TextStyle(color: Colors.white70, fontSize: 13)),
+              if (lunch != null && !lunch.isEmpty)
+                Text(
+                  school.status(now),
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                ),
               if (lunch != null)
-                for (final item in lunch.items.skip(1).take(size == _Size.large ? 5 : 2))
-                  Text('• $item', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 13.5)),
+                for (final item
+                    in lunch.items.skip(1).take(size == _Size.large ? 5 : 2))
+                  Text(
+                    '• $item',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white, fontSize: 13.5),
+                  ),
             ],
           ),
         );
@@ -437,24 +654,47 @@ class _Tile extends StatelessWidget {
           extra: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('${today.varaNameTe} · ${nakshatraTe[today.nakshatra]} · ${today.samvatsaraName}',
-                  maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 13.5)),
-              Text('Sunrise ${DateFormat.jm().format(today.sunrise)} · Rahu ${DateFormat.jm().format(rs)}–${DateFormat.jm().format(re)}',
-                  maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70, fontSize: 12.5)),
+              Text(
+                '${today.varaNameTe} · ${nakshatraTe[today.nakshatra]} · ${today.samvatsaraName}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.white, fontSize: 13.5),
+              ),
+              Text(
+                'Sunrise ${DateFormat.jm().format(today.sunrise)} · Rahu ${DateFormat.jm().format(rs)}–${DateFormat.jm().format(re)}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.white70, fontSize: 12.5),
+              ),
             ],
           ),
         );
       case 'photos':
         if (!home.photos.configured) {
-          return _Body(icon: Icons.photo_library_rounded, title: 'Photos', line: 'Immich or a network folder: tap to set up', size: size);
+          return _Body(
+            icon: Icons.photo_library_rounded,
+            title: 'Photos',
+            line: 'Immich or a network folder: tap to set up',
+            size: size,
+          );
         }
         return Stack(
           fit: StackFit.expand,
           children: [
-            PhoenixPhotoFrame(key: ValueKey(home.photos.settings.value), container: c, showClock: false, seconds: 15),
+            PhoenixPhotoFrame(
+              key: ValueKey(home.photos.settings.value),
+              container: c,
+              showClock: false,
+              seconds: 15,
+            ),
             const DecoratedBox(
               decoration: BoxDecoration(
-                gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black54], stops: [0.6, 1]),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Colors.black54],
+                  stops: [0.6, 1],
+                ),
               ),
             ),
             Positioned(
@@ -462,10 +702,21 @@ class _Tile extends StatelessWidget {
               bottom: 10,
               child: Row(
                 children: [
-                  const Icon(Icons.photo_library_rounded, color: Colors.white, size: 20),
+                  const Icon(
+                    Icons.photo_library_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                   const SizedBox(width: 6),
-                  Text(home.photos.settings.value.source == 'immich' ? 'Immich' : 'Photos',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                  Text(
+                    home.photos.settings.value.source == 'immich'
+                        ? 'Immich'
+                        : 'Photos',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -482,22 +733,65 @@ class _Tile extends StatelessWidget {
           ],
         );
       case 'timers':
-        final running = [...c.voiceTimers.timers.value]..sort((a, b) => a.endsAt(now).compareTo(b.endsAt(now)));
+        final running = [...c.voiceTimers.timers.value]
+          ..sort((a, b) => a.endsAt(now).compareTo(b.endsAt(now)));
         final first = running.firstOrNull;
-        String fmt(int s) => s >= 3600 ? '${s ~/ 3600}h ${(s % 3600) ~/ 60}m' : '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
+        String fmt(int s) => s >= 3600
+            ? '${s ~/ 3600}h ${(s % 3600) ~/ 60}m'
+            : '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
         return _Body(
           icon: Icons.timer_rounded,
           title: 'Timers',
-          line: first == null ? 'None running' : '${first.name.isEmpty ? 'Timer' : first.name} ${fmt(first.remaining(now))}',
+          line: first == null
+              ? 'None running'
+              : '${first.name.isEmpty ? 'Timer' : first.name} ${fmt(first.remaining(now))}',
           size: size,
-          extra: running.length < 2
+          // Nothing running: one tap starts a common timer.
+          extra: running.isEmpty && c.voiceTimers.canStart
+              ? Align(
+                  alignment: Alignment.centerLeft,
+                  child: TimerQuickStart(
+                    compact: true,
+                    onStart: (seconds) =>
+                        unawaited(c.voiceTimers.start(seconds: seconds)),
+                  ),
+                )
+              : running.length < 2
               ? null
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     for (final t in running.skip(1).take(3))
-                      Text('${t.name.isEmpty ? 'Timer' : t.name} ${fmt(t.remaining(now))}', style: const TextStyle(color: Colors.white, fontSize: 13.5)),
+                      Text(
+                        '${t.name.isEmpty ? 'Timer' : t.name} ${fmt(t.remaining(now))}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13.5,
+                        ),
+                      ),
                   ],
+                ),
+        );
+      case 'shopping':
+        final todo = home.todo;
+        final open = [
+          for (final i in todo.items.value ?? const [])
+            if (!i.done) i,
+        ];
+        return _Body(
+          icon: Icons.shopping_cart_rounded,
+          title: todo.name,
+          line: todo.items.value == null
+              ? 'Your Home Assistant list'
+              : (open.isEmpty ? 'All done' : '${open.length} to get'),
+          size: size,
+          extra: open.isEmpty
+              ? null
+              : Text(
+                  open.take(4).map((i) => i.summary).join(' · '),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontSize: 13.5),
                 ),
         );
       case 'alarms':
@@ -519,23 +813,52 @@ class _Tile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     for (final (at, a) in upcoming.skip(1).take(3))
-                      Text('${when(at)} ${a.label}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 13.5)),
+                      Text(
+                        '${when(at)} ${a.label}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13.5,
+                        ),
+                      ),
                   ],
                 ),
         );
       case 'store':
-        return _Body(icon: Icons.storefront_rounded, title: 'App Store', line: 'Free apps for Portal', size: size);
+        return _Body(
+          icon: Icons.storefront_rounded,
+          title: 'App Store',
+          line: 'Free apps for Portal',
+          size: size,
+        );
       case 'calendar':
-        return _Body(icon: Icons.calendar_month_rounded, title: 'Calendar', line: 'Family calendars', size: size);
+        return _Body(
+          icon: Icons.calendar_month_rounded,
+          title: 'Calendar',
+          line: 'Family calendars',
+          size: size,
+        );
       case 'cameras':
-        return _Body(icon: Icons.videocam_rounded, title: 'Cameras', line: c.camera.config.defaultView?.name ?? '', size: size);
+        return _Body(
+          icon: Icons.videocam_rounded,
+          title: 'Cameras',
+          line: c.camera.config.defaultView?.name ?? '',
+          size: size,
+        );
       default:
-        return _Body(icon: Icons.settings_rounded, title: 'Settings', line: 'Home screen, Wi-Fi, more', size: size);
+        return _Body(
+          icon: Icons.settings_rounded,
+          title: 'Settings',
+          line: 'Home screen, Wi-Fi, more',
+          size: size,
+        );
     }
   }
 }
 
-Future<(int, bool)> _kidsStatus() async => (await KidsScores.starsToday(), await KidsScores.challengeDone());
+Future<(int, bool)> _kidsStatus() async =>
+    (await KidsScores.starsToday(), await KidsScores.challengeDone());
 
 MenuDay? _menuOn(SchoolService school, String kind, DateTime day) {
   for (final (slug, _) in school.config.value.menuTypes) {
@@ -548,7 +871,13 @@ enum _Size { small, wide, tall, large }
 
 /// A tile's face: icon, title, a live line, and [extra] when there is room.
 class _Body extends StatelessWidget {
-  const _Body({required this.icon, required this.title, required this.line, required this.size, this.extra});
+  const _Body({
+    required this.icon,
+    required this.title,
+    required this.line,
+    required this.size,
+    this.extra,
+  });
 
   final IconData icon;
   final String title;
@@ -562,7 +891,8 @@ class _Body extends StatelessWidget {
     child: LayoutBuilder(
       builder: (context, box) {
         final roomy = box.maxHeight >= 84;
-        final showExtra = extra != null && size != _Size.small && box.maxHeight >= 120;
+        final showExtra =
+            extra != null && size != _Size.small && box.maxHeight >= 120;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -572,23 +902,54 @@ class _Body extends StatelessWidget {
                 if (size != _Size.small) ...[
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
                 ],
               ],
             ),
             if (showExtra) ...[
               const SizedBox(height: 10),
-              Expanded(child: ClipRect(child: SingleChildScrollView(physics: const NeverScrollableScrollPhysics(), child: extra))),
+              Expanded(
+                child: ClipRect(
+                  child: SingleChildScrollView(
+                    physics: const NeverScrollableScrollPhysics(),
+                    child: extra,
+                  ),
+                ),
+              ),
             ] else
               const Spacer(),
             if (size == _Size.small)
-              Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800)),
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             if (roomy || size != _Size.small)
-              Text(line, maxLines: size == _Size.small ? 1 : 2, overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 13.5, fontWeight: FontWeight.w500)),
+              Text(
+                line,
+                maxLines: size == _Size.small ? 1 : 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
           ],
         );
       },
@@ -604,7 +965,10 @@ class _Chip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-    decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.22), borderRadius: BorderRadius.circular(14)),
+    decoration: BoxDecoration(
+      color: Colors.black.withValues(alpha: 0.22),
+      borderRadius: BorderRadius.circular(14),
+    ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -615,7 +979,11 @@ class _Chip extends StatelessWidget {
             text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+            ),
           ),
         ),
       ],
@@ -633,6 +1001,9 @@ class _EditFrame extends StatefulWidget {
     required this.spec,
     required this.resizing,
     required this.onHide,
+    required this.page,
+    required this.pageCount,
+    required this.onToPage,
     required this.onMove,
     required this.onMoveEnd,
     required this.onResizeStart,
@@ -644,6 +1015,12 @@ class _EditFrame extends StatefulWidget {
   final HomeTileSpec spec;
   final bool resizing;
   final VoidCallback onHide;
+
+  /// The home screen the tile is on, how many there are, and the move to
+  /// another (a new one at [pageCount]).
+  final int page;
+  final int pageCount;
+  final ValueChanged<int> onToPage;
   final ValueChanged<Offset> onMove;
   final VoidCallback onMoveEnd;
   final VoidCallback onResizeStart;
@@ -681,7 +1058,10 @@ class _EditFrameState extends State<_EditFrame> {
           child: DecoratedBox(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withValues(alpha: w.resizing ? 1 : 0.8), width: w.resizing ? 3 : 2),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: w.resizing ? 1 : 0.8),
+                width: w.resizing ? 3 : 2,
+              ),
             ),
           ),
         ),
@@ -689,9 +1069,22 @@ class _EditFrameState extends State<_EditFrame> {
           Center(
             child: IgnorePointer(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(14)),
-                child: Text('${w.spec.w} × ${w.spec.h}', style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(
+                  '${w.spec.w} × ${w.spec.h}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ),
             ),
           ),
@@ -699,7 +1092,39 @@ class _EditFrameState extends State<_EditFrame> {
         Positioned(
           left: -10,
           top: -10,
-          child: _Handle(icon: Icons.close_rounded, tooltip: 'Hide tile', onTap: w.onHide),
+          child: _Handle(
+            icon: Icons.close_rounded,
+            tooltip: 'Hide tile',
+            onTap: w.onHide,
+          ),
+        ),
+        // Another home screen (top right).
+        Positioned(
+          right: -10,
+          top: -10,
+          child: PopupMenuButton<int>(
+            tooltip: 'Move to another home screen',
+            onSelected: w.onToPage,
+            itemBuilder: (_) => [
+              for (var p = 0; p < w.pageCount; p++)
+                if (p != w.page)
+                  PopupMenuItem(
+                    value: p,
+                    child: Text(
+                      p == 0 ? 'Move to Home' : 'Move to Home ${p + 1}',
+                    ),
+                  ),
+              if (w.pageCount < maxHomePages)
+                PopupMenuItem(
+                  value: w.pageCount,
+                  child: const Text('Move to a new home screen'),
+                ),
+            ],
+            child: const _Handle(
+              icon: Icons.drive_file_move_outline,
+              tooltip: 'Move to another home screen',
+            ),
+          ),
         ),
         // Resize (bottom right): hold and drag.
         Positioned(
@@ -714,11 +1139,17 @@ class _EditFrameState extends State<_EditFrame> {
             },
             onPanUpdate: (d) {
               _pulled += d.delta;
-              w.onResize(Size(_start.width + _pulled.dx, _start.height + _pulled.dy));
+              w.onResize(
+                Size(_start.width + _pulled.dx, _start.height + _pulled.dy),
+              );
             },
             onPanEnd: (_) => w.onResizeEnd(),
             onPanCancel: w.onResizeEnd,
-            child: const _Handle(icon: Icons.open_in_full_rounded, tooltip: 'Drag to resize', big: true),
+            child: const _Handle(
+              icon: Icons.open_in_full_rounded,
+              tooltip: 'Drag to resize',
+              big: true,
+            ),
           ),
         ),
       ],
@@ -728,7 +1159,12 @@ class _EditFrameState extends State<_EditFrame> {
 
 /// A round white handle on a tile's frame.
 class _Handle extends StatelessWidget {
-  const _Handle({required this.icon, required this.tooltip, this.onTap, this.big = false});
+  const _Handle({
+    required this.icon,
+    required this.tooltip,
+    this.onTap,
+    this.big = false,
+  });
   final IconData icon;
   final String tooltip;
   final VoidCallback? onTap;
@@ -743,7 +1179,13 @@ class _Handle extends StatelessWidget {
       decoration: const BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
-        boxShadow: [BoxShadow(color: Color(0x66000000), blurRadius: 8, offset: Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x66000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Icon(icon, size: size * 0.55, color: const Color(0xFF1F2937)),
     );
@@ -772,6 +1214,7 @@ class HomeEditBar extends StatelessWidget {
     'apps': 'All apps',
     'smart': 'Smart Home',
     'timers': 'Timers',
+    'shopping': 'Shopping list',
     'alarms': 'Alarms',
     'store': 'App Store',
     'settings': 'Settings',
@@ -783,15 +1226,29 @@ class HomeEditBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final home = container.phoenixHome;
     return ListenableBuilder(
-      listenable: Listenable.merge([home.hiddenTiles, home.theme, home.weatherEffects]),
+      listenable: Listenable.merge([
+        home.hiddenTiles,
+        home.theme,
+        home.weatherEffects,
+      ]),
       builder: (context, _) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(color: const Color(0xFF181B21), borderRadius: BorderRadius.circular(24)),
+        decoration: BoxDecoration(
+          color: const Color(0xFF181B21),
+          borderRadius: BorderRadius.circular(24),
+        ),
         child: Row(
           children: [
             const Icon(Icons.dashboard_customize_rounded, color: Colors.white),
             const SizedBox(width: 10),
-            const Text('Edit home', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+            const Text(
+              'Edit home',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
             const SizedBox(width: 16),
             Expanded(
               child: SingleChildScrollView(
@@ -807,13 +1264,29 @@ class HomeEditBar extends StatelessWidget {
                             borderRadius: BorderRadius.circular(20),
                             onTap: () => unawaited(home.setTheme(t.id)),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(colors: t.tiles.first),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: home.theme.value == t.id ? Colors.white : Colors.transparent, width: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
                               ),
-                              child: Text(t.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: homeTheme(t.id).tiles.first,
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: home.theme.value == t.id
+                                      ? Colors.white
+                                      : Colors.transparent,
+                                  width: 2,
+                                ),
+                              ),
+                              child: Text(
+                                t.name,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -827,11 +1300,18 @@ class HomeEditBar extends StatelessWidget {
                 tooltip: 'Add a tile',
                 onSelected: (id) => unawaited(home.setTileHidden(id, false)),
                 itemBuilder: (_) => [
-                  for (final id in home.hiddenTiles.value) PopupMenuItem(value: id, child: Text(_names[id] ?? id)),
+                  for (final id in home.hiddenTiles.value)
+                    PopupMenuItem(value: id, child: Text(_names[id] ?? id)),
                 ],
                 child: const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 12),
-                  child: Row(children: [Icon(Icons.add_circle_outline, color: Colors.white), SizedBox(width: 6), Text('Add tile', style: TextStyle(color: Colors.white))]),
+                  child: Row(
+                    children: [
+                      Icon(Icons.add_circle_outline, color: Colors.white),
+                      SizedBox(width: 6),
+                      Text('Add tile', style: TextStyle(color: Colors.white)),
+                    ],
+                  ),
                 ),
               ),
             Tooltip(
@@ -839,7 +1319,11 @@ class HomeEditBar extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.thunderstorm_rounded, color: Colors.white70, size: 20),
+                  const Icon(
+                    Icons.thunderstorm_rounded,
+                    color: Colors.white70,
+                    size: 20,
+                  ),
                   Switch(
                     value: home.weatherEffects.value,
                     onChanged: (v) => unawaited(home.setWeatherEffects(v)),
@@ -855,10 +1339,16 @@ class HomeEditBar extends StatelessWidget {
               icon: const Icon(Icons.wb_sunny_rounded),
               label: const Text('Today layout'),
             ),
-            TextButton(onPressed: () => unawaited(home.resetTiles()), child: const Text('Reset')),
+            TextButton(
+              onPressed: () => unawaited(home.resetTiles()),
+              child: const Text('Reset'),
+            ),
             const SizedBox(width: 6),
             FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: homeTheme(home.theme.value).accent, foregroundColor: Colors.black),
+              style: FilledButton.styleFrom(
+                backgroundColor: homeTheme(home.theme.value).accent,
+                foregroundColor: Colors.black,
+              ),
               onPressed: () => home.editing.value = false,
               child: const Text('Done'),
             ),

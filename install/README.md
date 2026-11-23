@@ -1,9 +1,30 @@
-# Phoenix Portal test build 2026.12.17 (392)
+# Phoenix Portal test build 2026.12.18 (393)
 
 - APK: on the repository's [Releases](https://github.com/rayalavcp/phoenix-portal/releases/latest)
-  page (`phoenix-portal.apk`), armeabi-v7a, runs on every Portal. 100592802 bytes.
-  SHA-256 `e0ed4cd2305f3a26bba510db59c0b2920bf5f7e70d3f1b2e318b4aeeeebb38f7`.
+  page (`phoenix-portal.apk`), armeabi-v7a, runs on every Portal. 100707930 bytes.
+  SHA-256 `ffe59a6e3f6dc69c4138926a994c9fc4f5a7760ccdf2dd3f387d0866fbc2f7b5`.
 - New in this build:
+  - **New puzzles every game**: Munch Maze makes a new maze each stage
+    (mirrored, every path reachable, no dead ends) and Brick Bash a new
+    brick wall, fuller and tougher as the stages go up. Maze, Sudoku, Word
+    Search and Lights Out were already new every round.
+  - **Kids leaderboards, arcade style**: a score that makes a game's top
+    ten asks "New high score!" for a name (names used before are one tap
+    away). **Top 10** on the Kids hub lists every game's top ten, medals for
+    the first three. A parent's score reset clears them too.
+  - **Shopping list**: a new tile (with Home Assistant) showing what is
+    left to get; tap for a big list to tick items off, add new ones, clear
+    the ticked ones or switch lists. It is Home Assistant's own to-do list,
+    the same one its app and voice assistants use.
+  - **Quick-start timers**: 1, 5, 10, 15 and 30 minute buttons on the
+    Timers tile and the empty Timers view start a timer in one tap.
+  - **From wallpaper** colours: a theme that takes the tile colours and
+    accent from the wallpaper on screen and follows it when it changes.
+    Picking another theme is the manual override.
+  - **Several home screens**: in edit mode each tile has a move handle
+    (top right): Move to Home 2, 3 ... or a new home screen. Swipe between
+    them; dots show which one is up. Swiping right on the first still opens
+    Smart Home. The remote admin's tile list has a Screen column.
   - **License and credits**: About (on the Portal and in the remote admin)
     links this repository's LICENSE, credits Kiosk Satellite by Xavier
     Larrea and, new, Immortal by Starbright Lab for the Portal setup steps

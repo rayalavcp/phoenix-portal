@@ -64,4 +64,38 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));
   });
+
+  test('home screens run without gaps, in order', () {
+    final p = homePages(const [HomeTileSpec('a', 1, 1), HomeTileSpec('b', 1, 1, page: 3), HomeTileSpec('c', 1, 1, page: 1)]);
+    expect(p.pages, [0, 2, 1]);
+    expect(p.count, 3);
+    expect(decodeTileLayout('[{"id":"apps","w":1,"h":1,"p":2}]').firstWhere((t) => t.id == 'apps').page, 2);
+  });
+
+  testWidgets('tiles move to a new home screen and the pages swipe', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final c = AppContainer();
+    await c.settings.init();
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await c.phoenixHome.setTiles(const [HomeTileSpec('apps', 1, 1), HomeTileSpec('settings', 1, 1), HomeTileSpec('store', 1, 1)]);
+    c.phoenixHome.editing.value = true;
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: HomeTileGrid(container: c, onOpenSettings: () {}))));
+    await tester.pump(const Duration(milliseconds: 400));
+    // The store tile's page handle: on to a new home screen.
+    await tester.tap(find.byTooltip('Move to another home screen').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Move to a new home screen'));
+    await tester.pumpAndSettle();
+    expect(c.phoenixHome.tiles.value.firstWhere((t) => t.id == 'store').page, 1);
+    expect(homePages(c.phoenixHome.tiles.value).count, 2);
+    expect(find.byType(PageView), findsOneWidget);
+    c.phoenixHome.editing.value = false;
+    await tester.pumpAndSettle();
+    // Home 2 shows the store tile alone.
+    expect(find.text('App Store'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 1));
+  });
 }

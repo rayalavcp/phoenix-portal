@@ -212,6 +212,7 @@ class _TimersScreenState extends State<_TimersScreen> {
                               ? _Empty(
                                   text: s.voiceTimersEmpty,
                                   onNew: canStart ? _newTimer : null,
+                                  onQuick: canStart ? (seconds) => unawaited(_set(seconds, '')) : null,
                                 )
                               : _Body(
                                   container: c,
@@ -341,12 +342,15 @@ class _TimersScreenState extends State<_TimersScreen> {
 }
 
 class _Empty extends StatelessWidget {
-  const _Empty({required this.text, this.onNew});
+  const _Empty({required this.text, this.onNew, this.onQuick});
 
   final String text;
 
   /// Opens the wheels for a new timer. Null where none can be started.
   final VoidCallback? onNew;
+
+  /// Starts a timer of so many seconds at once (the quick-start tiles).
+  final ValueChanged<int>? onQuick;
 
   @override
   Widget build(BuildContext context) {
@@ -371,8 +375,58 @@ class _Empty extends StatelessWidget {
               style: alarmButtonStyle(context),
             ),
           ],
+          if (onQuick != null) ...[
+            const SizedBox(height: 24),
+            TimerQuickStart(onStart: onQuick!),
+          ],
         ],
       ),
+    );
+  }
+}
+
+/// The minutes the quick-start tiles offer.
+const timerQuickMinutes = [1, 5, 10, 15, 30];
+
+/// Big one-tap tiles that start a timer of 1, 5, 10, 15 or 30 minutes.
+class TimerQuickStart extends StatelessWidget {
+  const TimerQuickStart({super.key, required this.onStart, this.compact = false});
+
+  final ValueChanged<int> onStart;
+
+  /// Small chips (a home tile) instead of big tiles (the timers view).
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Wrap(
+      alignment: compact ? WrapAlignment.start : WrapAlignment.center,
+      spacing: compact ? 6 : 12,
+      runSpacing: compact ? 6 : 12,
+      children: [
+        for (final m in timerQuickMinutes)
+          Material(
+            color: compact ? Colors.white.withValues(alpha: 0.16) : scheme.primaryContainer,
+            borderRadius: BorderRadius.circular(compact ? 12 : 20),
+            child: InkWell(
+              key: ValueKey('timer-quick-$m'),
+              borderRadius: BorderRadius.circular(compact ? 12 : 20),
+              onTap: () => onStart(m * 60),
+              child: Padding(
+                padding: compact ? const EdgeInsets.symmetric(horizontal: 10, vertical: 5) : const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+                child: Text(
+                  '$m min',
+                  style: TextStyle(
+                    fontSize: compact ? 13 : 22,
+                    fontWeight: FontWeight.w800,
+                    color: compact ? Colors.white : scheme.onPrimaryContainer,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

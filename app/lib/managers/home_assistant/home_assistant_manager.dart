@@ -564,6 +564,7 @@ class HomeAssistantManager extends Manager {
             'service': 'service name, e.g. turn_on',
             'entity_id': 'optional target entity',
             'data': 'optional service data (JSON object)',
+            'response': 'true to answer with the service response (todo.get_items, ...)',
           },
           handler: (p) async {
             final domain = '${p['domain'] ?? ''}'.trim();
@@ -576,16 +577,18 @@ class HomeAssistantManager extends Manager {
             }
             final entity = '${p['entity_id'] ?? ''}'.trim();
             final data = p['data'];
+            final response = p['response'] == true;
             try {
-              await _wsCommand({
+              final result = await _wsCommand({
                 'type': 'call_service',
                 'domain': domain,
                 'service': service,
                 if (data is Map) 'service_data': data,
                 if (entity.isNotEmpty) 'target': {'entity_id': entity},
+                if (response) 'return_response': true,
               });
               log.info(name, 'called $domain.$service');
-              return const CommandResult.ok();
+              return response ? CommandResult.ok(result) : const CommandResult.ok();
             } catch (e) {
               return CommandResult.fail('$domain.$service failed: $e');
             }

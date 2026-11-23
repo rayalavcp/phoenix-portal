@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -25,8 +26,15 @@ abstract final class KidsScores {
       (await SharedPreferences.getInstance()).getInt('$_bestPrefix$game');
 
   /// Record [score]; returns true for a new best. [lowerIsBetter] for times.
+  /// A score that makes [game]'s top ten also waits in [pendingEntry] for
+  /// the player's name, arcade style (the Kids Portal asks for it).
   static Future<bool> offer(String game, int score, {bool lowerIsBetter = false}) async {
     final prefs = await SharedPreferences.getInstance();
+    final board = await leaderboard(game);
+    final place = boardPlace(board, score, lowerIsBetter: lowerIsBetter);
+    if (place != null && score > 0) {
+      pendingEntry.value = (game: game, score: score, lowerIsBetter: lowerIsBetter, place: place);
+    }
     final old = prefs.getInt('$_bestPrefix$game');
     final better = old == null || (lowerIsBetter ? score < old : score > old);
     if (better) {
@@ -35,6 +43,67 @@ abstract final class KidsScores {
     }
     return better;
   }
+
+  // ── Leaderboard ──────────────────────────────────────────────────────
+
+  static const boardPrefix = 'phx.kids.board.';
+  static const _namesKey = 'phx.kids.names';
+
+  /// How many names each game's leaderboard keeps.
+  static const boardSize = 10;
+
+  /// A score that made a top ten and waits for a name (null: none).
+  static final pendingEntry = ValueNotifier<({String game, int score, bool lowerIsBetter, int place})?>(null);
+
+  /// [game]'s leaderboard, best first.
+  static Future<List<KidsBoardEntry>> leaderboard(String game) async {
+    final raw = (await SharedPreferences.getInstance()).getString('$boardPrefix$game');
+    if (raw == null) return const [];
+    try {
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      return [for (final e in data['e'] as List) KidsBoardEntry.fromJson(e as Map<String, dynamic>)];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Whether [game]'s leaderboard counts lower scores as better (times).
+  static Future<bool> boardLowerIsBetter(String game) async {
+    final raw = (await SharedPreferences.getInstance()).getString('$boardPrefix$game');
+    if (raw == null) return false;
+    try {
+      return (jsonDecode(raw) as Map<String, dynamic>)['low'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Every game with a leaderboard.
+  static Future<List<String>> boardGames() async => [
+    for (final k in (await SharedPreferences.getInstance()).getKeys())
+      if (k.startsWith(boardPrefix)) k.substring(boardPrefix.length),
+  ]..sort();
+
+  /// Puts [name] on [game]'s leaderboard with [score]; returns its place
+  /// (1 = top), or null when it did not make the cut.
+  static Future<int?> addToBoard(String game, int score, String name, {bool lowerIsBetter = false, DateTime? now}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final entry = KidsBoardEntry(name.trim().isEmpty ? 'Player' : name.trim(), score, now ?? DateTime.now());
+    final next = boardInsert(await leaderboard(game), entry, lowerIsBetter: lowerIsBetter);
+    await prefs.setString(
+      '$boardPrefix$game',
+      jsonEncode({'low': lowerIsBetter, 'e': [for (final e in next) e.toJson()]}),
+    );
+    // The names used, newest first, for quick picks next time.
+    final names = [entry.name, ...(prefs.getStringList(_namesKey) ?? const []).where((n) => n != entry.name)].take(8).toList();
+    await prefs.setStringList(_namesKey, names);
+    changes.value++;
+    final i = next.indexOf(entry);
+    return i < 0 ? null : i + 1;
+  }
+
+  /// Names typed before, newest first.
+  static Future<List<String>> recentNames() async => (await SharedPreferences.getInstance()).getStringList(_namesKey) ?? const [];
 
   static Future<int> starsToday({DateTime? now}) async {
     final raw = (await SharedPreferences.getInstance()).getString(_starsKey) ?? '';
@@ -67,6 +136,41 @@ abstract final class KidsScores {
     await (await SharedPreferences.getInstance()).setString(_starsKey, '${_today(now ?? DateTime.now())}:$total');
     changes.value++;
   }
+}
+
+// ── Leaderboard entries ─────────────────────────────────────────────────
+
+/// One name on a game's leaderboard.
+@immutable
+class KidsBoardEntry {
+  const KidsBoardEntry(this.name, this.score, this.when);
+  final String name;
+  final int score;
+  final DateTime when;
+
+  factory KidsBoardEntry.fromJson(Map<String, dynamic> j) =>
+      KidsBoardEntry('${j['n'] ?? 'Player'}', (j['s'] as num?)?.toInt() ?? 0, DateTime.fromMillisecondsSinceEpoch((j['t'] as num?)?.toInt() ?? 0));
+
+  Map<String, Object> toJson() => {'n': name, 's': score, 't': when.millisecondsSinceEpoch};
+}
+
+/// Where [score] would land on [board] (1 = top), or null when it would
+/// not make the top [KidsScores.boardSize]. A tie goes below the earlier
+/// score, as on an arcade machine.
+int? boardPlace(List<KidsBoardEntry> board, int score, {bool lowerIsBetter = false}) {
+  var place = 1;
+  for (final e in board) {
+    final ahead = lowerIsBetter ? e.score <= score : e.score >= score;
+    if (ahead) place++;
+  }
+  return place <= KidsScores.boardSize ? place : null;
+}
+
+/// [board] with [entry] put in its place, cut to the top ten.
+List<KidsBoardEntry> boardInsert(List<KidsBoardEntry> board, KidsBoardEntry entry, {bool lowerIsBetter = false}) {
+  final place = boardPlace(board, entry.score, lowerIsBetter: lowerIsBetter);
+  if (place == null) return board;
+  return [...board.take(place - 1), entry, ...board.skip(place - 1)].take(KidsScores.boardSize).toList();
 }
 
 // ── Math Blitz ─────────────────────────────────────────────────────────

@@ -10,6 +10,7 @@ import '../theme.dart';
 import 'home_apps.dart';
 import 'home_glass.dart';
 import 'home_tiles.dart';
+import 'shopping_page.dart';
 import 'school_page.dart';
 import 'telugu_calendar_page.dart';
 import 'today_home.dart';
@@ -75,6 +76,7 @@ class _PhoenixHomeState extends State<PhoenixHome> {
         home.appsOpen,
         home.schoolOpen,
         home.teluguOpen,
+        home.shoppingOpen,
       ]),
       builder: (context, _) {
         // The dashboard is on screen: only a way back home floats over it.
@@ -136,6 +138,8 @@ class _PhoenixHomeState extends State<PhoenixHome> {
                   ? HomeAppDrawer(key: const ValueKey('apps'), container: c)
                   : home.schoolOpen.value
                   ? SchoolPage(key: const ValueKey('school'), container: c)
+                  : home.shoppingOpen.value
+                  ? ShoppingPage(key: const ValueKey('shopping'), container: c)
                   : home.teluguOpen.value
                   ? TeluguCalendarPage(
                       key: const ValueKey('telugu'),

@@ -16,6 +16,11 @@ Built from this branch and installed from `install/` (see `install/README.md`).
   calling.
 - **School:** SchoolCafe menus and the Frisco ISD calendar.
 - **Updates:** from this repository; nothing is sent to the original project.
+- **2026.12.18:** Kids Portal top-ten leaderboards (arcade-style name entry,
+  Top 10 page); a Shopping list tile and page (Home Assistant to-do lists);
+  quick-start timers (1 to 30 min); a From wallpaper colour theme; several
+  swipeable home screens; Munch Maze and Brick Bash make a new maze or
+  brick wall every stage.
 - **2026.12.17:** LICENSE states CC BY-NC-ND 4.0 with credit to Kiosk
   Satellite and Immortal's MIT notice; About links this repository's LICENSE
   and credits Immortal.

@@ -678,12 +678,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   Widget build(BuildContext context) => PhoenixPageBackdrop(
     container: c,
-    child: ValueListenableBuilder<String>(
-      valueListenable: c.phoenixHome.theme,
-      builder: (context, id, _) => Theme(
+    child: ListenableBuilder(
+      listenable: Listenable.merge([c.phoenixHome.theme, autoHomeTheme]),
+      builder: (context, _) => Theme(
         data: phoenixGlassTheme(
           ks.buildTheme(Brightness.dark),
-          homeTheme(id).accent,
+          homeTheme(c.phoenixHome.theme.value).accent,
         ),
         child: ClockSetting(
           container: c,
