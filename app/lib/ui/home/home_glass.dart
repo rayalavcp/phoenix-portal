@@ -126,3 +126,59 @@ class HomeWallpaper extends StatelessWidget {
     );
   }
 }
+
+/// Fills for pages drawn over the wallpaper (the calendars, School), so
+/// their cards are the same tinted glass as the Today screen's.
+const glassFill = Color(0xA610121A);
+const glassFillSoft = Color(0x7010121A);
+const glassEdge = Color(0x26FFFFFF);
+
+/// A picked or highlighted day: the glass warmed by the accent.
+const glassPicked = Color(0xB84A2210);
+
+/// A full-screen page over the wallpaper, as the Today screen stands: the
+/// wallpaper, a shade so text reads over any photo, then [child].
+class PhoenixPageBackdrop extends StatelessWidget {
+  const PhoenixPageBackdrop({super.key, required this.container, required this.child});
+
+  final AppContainer container;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    fit: StackFit.expand,
+    children: [
+      HomeWallpaper(container: container),
+      const DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0x8C000000), Color(0x66000000), Color(0x99000000)],
+          ),
+        ),
+      ),
+      child,
+    ],
+  );
+}
+
+/// The dark theme a glass page's widgets are drawn in: surfaces are glass
+/// (see-through), the accent is the home theme's.
+ThemeData phoenixGlassTheme(ThemeData dark, Color accent) => dark.copyWith(
+  scaffoldBackgroundColor: Colors.transparent,
+  canvasColor: Colors.transparent,
+  colorScheme: dark.colorScheme.copyWith(
+    primary: accent,
+    surface: glassFillSoft,
+    surfaceContainerLowest: glassFillSoft,
+    surfaceContainerLow: glassFillSoft,
+    surfaceContainer: glassFill,
+    surfaceContainerHigh: glassFill,
+    surfaceContainerHighest: glassFill,
+    outlineVariant: glassEdge,
+  ),
+);
+
+/// Whether [theme] is a glass page's (its surfaces see through).
+bool isGlassTheme(ThemeData theme) => theme.colorScheme.surface.a < 1;

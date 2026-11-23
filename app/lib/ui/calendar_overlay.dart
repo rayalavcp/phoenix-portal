@@ -18,6 +18,9 @@ import '../managers/settings/definitions.dart' as defs;
 import 'calendar_editor.dart';
 import 'clock_setting.dart';
 import 'compass/compass_center.dart';
+import 'home/home_glass.dart';
+import 'home/home_themes.dart';
+import 'theme.dart' as ks;
 import 'kit.dart';
 import 'theme.dart';
 import 'weather_readings.dart' show weatherConditionIcon;
@@ -158,7 +161,9 @@ class CalendarPaint {
 
   /// A day of the week that is not today: a step deeper than the light
   /// ground, a step up from the dark one, under today's raised surface.
-  Color get panel => _dark
+  Color get panel => isGlassTheme(Theme.of(context))
+      ? Theme.of(context).colorScheme.surface
+      : _dark
       ? Color.lerp(calendarGround(Theme.of(context)), raised, .5)!
       : Theme.of(context).colorScheme.surface;
 
@@ -668,11 +673,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   // Times follow Settings > Calendar > 24-hour clock.
+  // Phoenix: the family calendar stands on the wallpaper in glass, like the
+  // Today screen, in the home theme's accent.
   @override
-  Widget build(BuildContext context) => ClockSetting(
+  Widget build(BuildContext context) => PhoenixPageBackdrop(
     container: c,
-    setting: defs.calendarClock24h,
-    child: Builder(builder: _screen),
+    child: ValueListenableBuilder<String>(
+      valueListenable: c.phoenixHome.theme,
+      builder: (context, id, _) => Theme(
+        data: phoenixGlassTheme(
+          ks.buildTheme(Brightness.dark),
+          homeTheme(id).accent,
+        ),
+        child: ClockSetting(
+          container: c,
+          setting: defs.calendarClock24h,
+          child: Builder(builder: _screen),
+        ),
+      ),
+    ),
   );
 
   Widget _screen(BuildContext context) {
@@ -694,7 +713,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
         // A flat ground, and a Material of that color, so the edge fades of
         // the lists on it fade into the same tone.
         child: Material(
-          color: calendarGround(theme),
+          // On glass the wallpaper is the ground.
+          color: isGlassTheme(theme)
+              ? Colors.transparent
+              : calendarGround(theme),
           child: SafeArea(
             child: ListenableBuilder(
               listenable: Listenable.merge([
@@ -2465,28 +2487,42 @@ class _MonthGrid extends StatelessWidget {
         Expanded(
           child: DecoratedBox(
             decoration: BoxDecoration(
-              border: Border(top: line, left: line),
+              // On glass the month is one tinted pane, like a Today card.
+              color: isGlassTheme(Theme.of(context))
+                  ? scheme.surfaceContainer
+                  : null,
+              borderRadius: isGlassTheme(Theme.of(context))
+                  ? BorderRadius.circular(18)
+                  : null,
+              border: isGlassTheme(Theme.of(context))
+                  ? Border.all(color: scheme.outlineVariant)
+                  : Border(top: line, left: line),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (var w = 0; w < weeks; w++)
-                  Expanded(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        for (var d = 0; d < 7; d++)
-                          Expanded(
-                            child: _MonthCell(
-                              args: args,
-                              day: addDays(start, w * 7 + d),
-                              line: line,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(
+                isGlassTheme(Theme.of(context)) ? 18 : 0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var w = 0; w < weeks; w++)
+                    Expanded(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (var d = 0; d < 7; d++)
+                            Expanded(
+                              child: _MonthCell(
+                                args: args,
+                                day: addDays(start, w * 7 + d),
+                                line: line,
+                              ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

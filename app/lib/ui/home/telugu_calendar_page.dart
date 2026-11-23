@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../app_container.dart';
 import '../../managers/home/panchang.dart';
 import '../theme.dart';
+import 'home_glass.dart';
 
 /// Phoenix Home's Telugu calendar (తెలుగు క్యాలెండర్): today's full
 /// panchangam, the month with each day's tithi and festivals, and what is
@@ -29,14 +30,9 @@ class _TeluguCalendarPageState extends State<TeluguCalendarPage> {
   PanchangCalculator get calc => widget.container.phoenixHome.panchang;
 
   @override
-  Widget build(BuildContext context) => Container(
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFF1E1410), Color(0xFF0B0D10)],
-      ),
-    ),
+  // On the wallpaper in glass, like the Today screen.
+  Widget build(BuildContext context) => PhoenixPageBackdrop(
+    container: widget.container,
     child: SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -148,7 +144,7 @@ class _DayDetail extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1C2028),
+        color: glassFill,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Phx.gold.withValues(alpha: 0.35)),
       ),
@@ -285,7 +281,7 @@ class _Month extends StatelessWidget {
     final festival = p.festivals.firstOrNull;
     final special = p.pournami || p.amavasya;
     return Material(
-      color: picked ? const Color(0xFF3A1C0E) : const Color(0xFF1C2028),
+      color: picked ? glassPicked : glassFill,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),

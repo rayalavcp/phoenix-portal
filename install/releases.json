@@ -1,16 +1,16 @@
 [
   {
-    "tag_name": "v2026.12.15",
-    "name": "Phoenix Portal 2026.12.15",
+    "tag_name": "v2026.12.16",
+    "name": "Phoenix Portal 2026.12.16",
     "draft": false,
     "prerelease": false,
-    "body": "A half sun on the top edge moves from left at sunrise to right at sunset. Notification access is granted through Shizuku (a Portal has no screen for it). Localization Credits removed from About.",
-    "html_url": "https://github.com/rayalavcp/phoenix-portal/releases/tag/v2026.12.15",
+    "body": "The family calendar, School and Telugu calendar pages now stand on the wallpaper in frosted glass like the Today screen, in the theme's accent.",
+    "html_url": "https://github.com/rayalavcp/phoenix-portal/releases/tag/v2026.12.16",
     "assets": [
       {
-        "name": "kiosk-satellite-2026.12.15.armeabi-v7a.apk",
-        "browser_download_url": "https://github.com/rayalavcp/phoenix-portal/releases/download/v2026.12.15/kiosk-satellite-2026.12.15.armeabi-v7a.apk",
-        "size": 100592706,
+        "name": "kiosk-satellite-2026.12.16.armeabi-v7a.apk",
+        "browser_download_url": "https://github.com/rayalavcp/phoenix-portal/releases/download/v2026.12.16/kiosk-satellite-2026.12.16.armeabi-v7a.apk",
+        "size": 100592702,
         "state": "uploaded"
       }
     ]

@@ -1,9 +1,15 @@
-# Phoenix Portal test build 2026.12.15 (390)
+# Phoenix Portal test build 2026.12.16 (391)
 
 - APK: on the repository's [Releases](https://github.com/rayalavcp/phoenix-portal/releases/latest)
-  page (`phoenix-portal.apk`), armeabi-v7a, runs on every Portal. 100592706 bytes.
-  SHA-256 `01c1d5c3dc837349fcc60b5982c24bd9db8b05ee3872689ed2e2d33c87b92ab5`.
+  page (`phoenix-portal.apk`), armeabi-v7a, runs on every Portal. 100592702 bytes.
+  SHA-256 `d99b2a91359cd41155a2613c5975eb5828ccec503924501ba692eb82172879df`.
 - New in this build:
+  - **Calendars match the Today screen**: the family calendar (Day, Week,
+    Month, Schedule), the School page and the Telugu calendar now stand on
+    your wallpaper with the same frosted glass cards, and the family
+    calendar uses the home theme's accent colour.
+  - Checked against Kiosk Satellite's feature list: nothing was lost; only
+    the translations (Phoenix is English only) were left out on purpose.
   - **The sun sits on the top edge**: a half sun that moves from the left
     at sunrise to the right at sunset, so it never lands on a wallpaper's
     hills or behind the tiles. Shorter, softer rays.

@@ -191,6 +191,28 @@ Not yet seen on a device:
 - Whether the HA Bridge app still takes over after a reboot once the
   installer has stopped its boot start.
 
+## Kiosk Satellite features kept (checked 2026.12.16)
+
+Every feature in Kiosk Satellite's README is still in Phoenix and its guide
+is in `docs/`: Voice Satellite (skins, timers, announcements, wake word with
+the screen off and background listening), dashboard optimizations,
+Sendspin / AirPlay / HA and Sonos following, Now Playing with lyrics, Music
+Library, screensavers (Immich, local photos, clocks, Weather Mood, night
+sky), camera motion / face / person detection, ESPHome and the Bluetooth
+proxy, remote admin and Fleet, intercom, alarms with sunrise, the family
+calendar (Day, Week, Month, Schedule), timers and shared timers, finger
+gestures, home launcher, camera views (HA, Go2RTC), PIN kiosk mode, touch and
+clap gestures, DLNA, RTSP, Shizuku, plugins, Ground Control / Voice Match,
+LED control, custom pages, At a Glance, Remote and JS APIs, TLS.
+Deliberately different: English only (the translation catalogs and the
+Localization Credits page are gone), ARM-only builds, updates from this
+repository's Releases, nothing sent to the original project.
+
+The family calendar (`calendar_overlay.dart`), School and Telugu calendar
+pages stand on the wallpaper in glass like the Today screen
+(`PhoenixPageBackdrop`, `phoenixGlassTheme` and the `glassFill` colours in
+`home_glass.dart`; the calendar takes the home theme's accent).
+
 ## Grants a Portal has no screen for
 
 Notification access (Now Playing / Media Session source) has no settings

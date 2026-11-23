@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../app_container.dart';
 import '../../managers/home/school_service.dart';
 import '../theme.dart';
+import 'home_glass.dart';
 
 /// Phoenix Home's School page: today's status and bell times, this week's
 /// breakfast and lunch menus, and what is coming up on the school calendar.
@@ -31,14 +32,9 @@ class _SchoolPageState extends State<SchoolPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Container(
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFF15181F), Color(0xFF0B0D10)],
-      ),
-    ),
+  // On the wallpaper in glass, like the Today screen.
+  Widget build(BuildContext context) => PhoenixPageBackdrop(
+    container: widget.container,
     child: SafeArea(
       child: ListenableBuilder(
         listenable: Listenable.merge([
@@ -225,7 +221,7 @@ class _StatusCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         gradient: const LinearGradient(
-          colors: [Color(0xFF3A1C0E), Color(0xFF1C2028)],
+          colors: [glassPicked, glassFill],
         ),
         border: Border.all(color: Phx.ember.withValues(alpha: 0.5)),
       ),
@@ -309,8 +305,8 @@ class _MenuWeek extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: isToday
-                    ? const Color(0xFF3A1C0E)
-                    : const Color(0xFF1C2028),
+                    ? glassPicked
+                    : glassFill,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: isToday
@@ -842,7 +838,7 @@ class _TodayMenu extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: const Color(0xFF1C2028),
+          color: glassFill,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
@@ -1170,10 +1166,10 @@ class _MonthCalendar extends StatelessWidget {
     final today = _sameDay(day, now);
     return Material(
       color: off
-          ? const Color(0xFF3A2A0E)
+          ? const Color(0xB84A3510)
           : weekend
-          ? const Color(0xFF14161B)
-          : const Color(0xFF1C2028),
+          ? glassFillSoft
+          : glassFill,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
