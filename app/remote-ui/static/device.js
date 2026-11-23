@@ -785,7 +785,7 @@ export async function loadAboutInfo() {
       if (!res?.reachable) {
         alert(supportText("Update check failed. Can the device reach GitHub?"));
       } else if (!res.availableVersion) {
-        messageBox({ title: deviceText('Updates'), message: supportText("You are on the latest version.") });
+        messageBox({ title: deviceText('Updates'), message: supportText("You are on the latest version.") + (res.latestVersion ? ` (${res.currentVersion}; newest on GitHub: ${res.latestVersion})` : '') });
       }
     });
     const failed = sys.lastError && !systemUpdateBusy(sys) ? document.createElement('div') : null;
@@ -894,9 +894,11 @@ export async function loadAboutInfo() {
     ['Author', link('krayala', 'https://github.com/rayalavcp')],
     // Built on Kiosk Satellite; its licence asks for the original credit.
     ['Based on', link('Kiosk Satellite by Xavier Larrea', 'https://github.com/jxlarrea/kiosk-satellite')],
+    // The Portal setup steps and the Calls link come from Immortal (MIT).
+    ['Portal setup from', link('Immortal by Starbright Lab', 'https://github.com/starbrightlab/immortal')],
     ['Source code', repo],
     ['License', link('CC BY-NC-ND 4.0',
-      'https://github.com/jxlarrea/kiosk-satellite/blob/main/LICENSE')],
+      'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/LICENSE')],
   ]);
 
   const p = document.createElement('p');

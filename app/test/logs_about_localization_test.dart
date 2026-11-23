@@ -93,7 +93,9 @@ void main() {
     expect(find.text('Créditos'), findsOneWidget);
     // The author row and the made-by line both name krayala.
     expect(find.text('krayala'), findsNWidgets(2));
-    expect(find.text('See LICENSE'), findsOneWidget);
+    expect(find.text('CC BY-NC-ND 4.0'), findsOneWidget);
+    expect(find.text('Immortal by Starbright Lab'), findsOneWidget);
+    expect(find.text('Kiosk Satellite by Xavier Larrea'), findsOneWidget);
     final author = find.text('krayala').last;
     final heart = find.byIcon(Icons.favorite);
     await tester.ensureVisible(author);

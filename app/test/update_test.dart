@@ -1160,4 +1160,29 @@ void main() {
       expect(kioskCalls, ['pause', 'resume']);
     });
   });
+
+  test('the newest version wins whatever order GitHub lists releases in', () async {
+    update.clientFactory = () => MockClient(
+      (request) async =>
+          http.Response(releases([entry('1.0.0'), entry('1.2.0'), entry('1.1.0')]), 200),
+    );
+    await update.init();
+    expect(await update.check(), isTrue);
+    expect(update.available.value?.version, '1.2.0');
+  });
+
+  test('an up-to-date answer is checked against the latest-release page', () async {
+    update.clientFactory = () => MockClient((request) async {
+      if (request.url.host == 'github.com' && request.url.path.endsWith('/releases/latest')) {
+        return http.Response('', 302, headers: {
+          'location': 'https://github.com/rayalavcp/phoenix-portal/releases/tag/v1.3.0',
+        });
+      }
+      return http.Response(release('1.0.0'), 200);
+    });
+    await update.init();
+    expect(await update.check(), isTrue);
+    expect(update.available.value?.version, '1.3.0');
+    expect(update.latestSeen, '1.3.0');
+  });
 }

@@ -192,7 +192,8 @@ the signing secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_STORE_PASSWORD`, `ANDROI
 ## Credits
 
 Phoenix Portal is built on [Kiosk Satellite](https://github.com/jxlarrea/kiosk-satellite) by Xavier
-Larrea, with Portal provisioning know-how from [Immortal](https://github.com/starbrightlab/immortal)
+Larrea (CC BY-NC-ND 4.0), with its Portal setup steps and Calls link based on
+[Immortal](https://github.com/starbrightlab/immortal) by Starbright Lab (MIT)
 and ideas from [OpenPortal](https://openportal.cc). Phoenix Control uses
 [Tango ADB](https://github.com/yume-chan/ya-webadb). Fonts: Inter, Nunito and Rubik (SIL OFL).
 Icons: Material Design. See [LICENSE](LICENSE) and [CHANGELOG.md](CHANGELOG.md).

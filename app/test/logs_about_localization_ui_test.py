@@ -85,18 +85,15 @@ try:
 
         footer = page.locator('.made-by')
         credit = footer.locator('.made-by-credit')
-        author = footer.get_by_role('link', name='Xavier Larrea', exact=True)
-        coffee = footer.locator(':scope > a')
+        author = footer.get_by_role('link', name='krayala', exact=True)
         page.evaluate("window.footerAuthor = document.querySelector('.made-by-credit a')")
         author.focus()
         before = len(commands)
         for locale, catalog in [('es', translated), ('en', english), ('es', translated)]:
             language(locale)
-            expect(credit).to_have_text(catalog['settingsMadeBy'].replace('{heart}', '♥').replace('{author}', 'Xavier Larrea'))
-            expect(coffee).to_have_text(catalog['settingsBuyCoffee'])
-            expect(author).to_have_attribute('href', 'https://github.com/jxlarrea')
-            expect(coffee).to_have_attribute('href', 'https://buymeacoffee.com/jxlarrea')
-            for link in [author, coffee]:
+            expect(credit).to_have_text(catalog['settingsMadeBy'].replace('{heart}', '♥').replace('{author}', 'krayala'))
+            expect(author).to_have_attribute('href', 'https://github.com/rayalavcp')
+            for link in [author]:
                 expect(link).to_have_attribute('target', '_blank')
                 expect(link).to_have_attribute('rel', 'noreferrer')
             assert page.evaluate("window.footerAuthor === document.querySelector('.made-by-credit a')")
@@ -163,7 +160,8 @@ try:
         expect(root).to_contain_text('2026.9.59-RAW (258)')
         expect(root).to_contain_text('me.jxl.kiosk_satellite')
         expect(root).to_contain_text('CC BY-NC-ND 4.0')
-        expect(root.get_by_role('link', name='CC BY-NC-ND 4.0')).to_have_attribute('href', 'https://github.com/jxlarrea/kiosk-satellite/blob/main/LICENSE')
+        expect(root.get_by_role('link', name='CC BY-NC-ND 4.0')).to_have_attribute('href', 'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/LICENSE')
+        expect(root.get_by_role('link', name='Immortal by Starbright Lab')).to_have_attribute('href', 'https://github.com/starbrightlab/immortal')
         install = root.get_by_role('button', name=translated['deviceInstallVersion'].replace('{version}', update['availableVersion']))
         expect(install).to_be_visible()
         install.click()

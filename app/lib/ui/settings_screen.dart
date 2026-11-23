@@ -2388,6 +2388,13 @@ class _CategoryContentState extends State<_CategoryContent> {
             'Kiosk Satellite by Xavier Larrea',
             onTap: () => _openLink('https://github.com/jxlarrea/kiosk-satellite'),
           ),
+          // The Portal setup steps and the Calls link come from Immortal
+          // (MIT); its notice is in LICENSE.
+          row(
+            supportText(context, 'Portal setup from'),
+            'Immortal by Starbright Lab',
+            onTap: () => _openLink('https://github.com/starbrightlab/immortal'),
+          ),
           ListTile(
             title: Text(supportText(context, 'Source code')),
             trailing: ConstrainedBox(
@@ -2421,9 +2428,9 @@ class _CategoryContentState extends State<_CategoryContent> {
           ),
           row(
             supportText(context, 'License'),
-            'See LICENSE',
+            'CC BY-NC-ND 4.0',
             onTap: () => _openLink(
-              'https://github.com/rayalavcp/phoenix-portal/blob/main/LICENSE',
+              'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/LICENSE',
             ),
           ),
         ],

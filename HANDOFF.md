@@ -213,6 +213,17 @@ pages stand on the wallpaper in glass like the Today screen
 (`PhoenixPageBackdrop`, `phoenixGlassTheme` and the `glassFill` colours in
 `home_glass.dart`; the calendar takes the home theme's accent).
 
+## License and credits
+
+`LICENSE` (2026.12.17): Phoenix Portal under CC BY-NC-ND 4.0, as Kiosk
+Satellite (Xavier Larrea) is, with that credit; plus Immortal's MIT notice
+(Starbright Lab) for what came from Immortal: the Portal setup steps in
+`provisioning/`, `install/install-phoenix.ps1` and `control/`, and the Calls
+link. No Immortal source code was copied (checked line by line against the
+`legacy-immortal` branch: only generic Android boilerplate matches). About
+(device and remote admin) shows Based on Kiosk Satellite, Portal setup from
+Immortal, and License linking this repository's LICENSE. Do not relicense.
+
 ## Grants a Portal has no screen for
 
 Notification access (Now Playing / Media Session source) has no settings

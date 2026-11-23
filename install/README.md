@@ -1,9 +1,21 @@
-# Phoenix Portal test build 2026.12.16 (391)
+# Phoenix Portal test build 2026.12.17 (392)
 
 - APK: on the repository's [Releases](https://github.com/rayalavcp/phoenix-portal/releases/latest)
-  page (`phoenix-portal.apk`), armeabi-v7a, runs on every Portal. 100592702 bytes.
-  SHA-256 `d99b2a91359cd41155a2613c5975eb5828ccec503924501ba692eb82172879df`.
+  page (`phoenix-portal.apk`), armeabi-v7a, runs on every Portal. 100592802 bytes.
+  SHA-256 `e0ed4cd2305f3a26bba510db59c0b2920bf5f7e70d3f1b2e318b4aeeeebb38f7`.
 - New in this build:
+  - **License and credits**: About (on the Portal and in the remote admin)
+    links this repository's LICENSE, credits Kiosk Satellite by Xavier
+    Larrea and, new, Immortal by Starbright Lab for the Portal setup steps
+    and the Calls link.
+  - **Update check fix**: a Portal on 2026.12.14 said it was up to date
+    while newer builds were out. The check now takes the newest release by
+    version number and double-checks GitHub's latest-release page, and
+    "You are on the latest version" shows the newest version GitHub
+    reported. A Portal on 2026.12.14 to 2026.12.16 can get this build with
+    the remote admin's **Phoenix** page > **Install apps on this Portal** >
+    **Install from a link**:
+    `https://github.com/rayalavcp/phoenix-portal/releases/latest/download/phoenix-portal.apk`.
   - **Calendars match the Today screen**: the family calendar (Day, Week,
     Month, Schedule), the School page and the Telugu calendar now stand on
     your wallpaper with the same frosted glass cards, and the family

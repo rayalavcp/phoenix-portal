@@ -1,1 +1,59 @@
-free to use how ever you want
+Phoenix Portal
+Copyright (c) 2026 krayala (github.com/rayalavcp): Phoenix Portal's own
+changes and additions.
+
+Phoenix Portal is based on Kiosk Satellite by Xavier Larrea
+(https://github.com/jxlarrea/kiosk-satellite), Copyright (c) 2026 Xavier
+Larrea, which is licensed under the Creative Commons
+Attribution-NonCommercial-NoDerivatives 4.0 International License
+(CC BY-NC-ND 4.0). Phoenix Portal is distributed under that same license:
+
+  Summary:    https://creativecommons.org/licenses/by-nc-nd/4.0/
+  Legal code: https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode
+
+In short: you may use and share Phoenix Portal for personal, non-commercial
+purposes, with credit to Kiosk Satellite and Xavier Larrea. Commercial use is
+not permitted. The license's terms, at the links above, are what govern.
+
+Independent plugins have an additional permission from Xavier Larrea:
+see PLUGIN-EXCEPTION.md.
+
+--------------------------------------------------------------------------
+
+Immortal
+
+Phoenix Portal's Portal setup steps (provisioning/phoenix-provision.sh,
+install/install-phoenix.ps1 and Phoenix Control in control/: the Gen-1
+installer overlay fix, the install verifier and OTA handling, the stock
+launcher snapshot for restore) and its Calls link into the Portal's calling
+screen are based on Immortal (https://github.com/starbrightlab/immortal),
+used under the MIT License:
+
+  MIT License
+
+  Copyright (c) 2026 Starbright Lab.
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+--------------------------------------------------------------------------
+
+Third-party components keep their own licenses: see the LICENSE and
+LICENSE-NOTICE files next to them (for example app/packages/*/LICENSE,
+app/assets/l10n/LICENSE.txt, the font licenses in app/assets/fonts/ and
+app/remote-ui/static/vendor-*.LICENSE.txt).

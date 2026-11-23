@@ -1086,7 +1086,7 @@ $('#tileCheckUpdate').addEventListener('click', async () => {
       await messageBox({ title: 'Check for updates',
         message: 'Update check failed. Can the device reach GitHub?' });
     } else if (!res.availableVersion) {
-      await messageBox({ title: 'Check for updates', message: 'You are on the latest version.' });
+      await messageBox({ title: 'Check for updates', message: `You are on the latest version${res.latestVersion ? ` (${res.currentVersion}; newest on GitHub: ${res.latestVersion})` : ''}.` });
     } else {
       showToast({ title: t('overviewVersionAvailable', {version: res.availableVersion}),
         message: overviewText('Install it from Needs attention.'), kind: 'info' });

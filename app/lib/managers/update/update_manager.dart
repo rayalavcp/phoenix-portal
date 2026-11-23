@@ -87,6 +87,10 @@ class UpdateManager extends Manager {
   final bool Function() useShizuku;
   static bool _shizukuDisabled() => false;
 
+  /// The newest release version the last check saw, for the "you are up to
+  /// date" messages (null before a check answered).
+  String? latestSeen;
+
   /// The custom repository folder, or null while releases come from
   /// GitHub. A folder on the user's own web server that holds a copy of
   /// GitHub's releases list as `releases.json` and the APKs it names, for
@@ -373,6 +377,7 @@ class UpdateManager extends Manager {
               'reachable': reachable,
               'currentVersion': _currentVersion,
               'availableVersion': available.value?.version,
+              'latestVersion': latestSeen,
               'availableNotes': available.value?.notes,
               'progress': progress.value,
             });
@@ -544,10 +549,19 @@ class UpdateManager extends Manager {
       // Betas and drafts never count, exactly as /releases/latest excluded
       // them; the first entry left is the release that endpoint would have
       // answered with.
-      final releases = (jsonDecode(res.body) as List)
-          .cast<Map<String, dynamic>>()
-          .where((r) => r['draft'] != true && r['prerelease'] != true)
-          .toList();
+      final releases =
+          (jsonDecode(res.body) as List)
+              .cast<Map<String, dynamic>>()
+              .where((r) => r['draft'] != true && r['prerelease'] != true)
+              .toList()
+            // Newest version first, whatever order the list came in: GitHub
+            // orders releases by their tags' dates, which need not follow
+            // the version numbers.
+            ..sort(
+              (a, b) => _isNewer(tagOf(a), tagOf(b))
+                  ? -1
+                  : (_isNewer(tagOf(b), tagOf(a)) ? 1 : 0),
+            );
       final latest = releases.firstOrNull;
       if (latest == null) return (reachable: false, info: null);
       final tag = tagOf(latest);
@@ -561,7 +575,23 @@ class UpdateManager extends Manager {
       final url = _assetUrl(apk, source);
       if (tag.isEmpty || url == null) return (reachable: false, info: null);
       final newer = _isNewer(tag, _currentVersion);
+      latestSeen = tag;
       if (newer) log.info(name, 'selected APK: ${apk['name']}');
+      if (!newer && source == null) {
+        // A second opinion from github.com's own latest-release page (no
+        // request limit, never cached with the API's answers): a Portal
+        // once read an up-to-date answer while a newer release was out.
+        final page = await _fetchLatestFromPage(client);
+        if (page != null && page.info != null) {
+          latestSeen = page.info!.version;
+          log.info(
+            name,
+            'the releases list said $tag, the release page '
+            '${page.info!.version}: offering ${page.info!.version}',
+          );
+          return page;
+        }
+      }
       log.info(
         name,
         'latest release $tag on ${source == null ? 'GitHub' : uri.host}, '

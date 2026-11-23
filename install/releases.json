@@ -1,16 +1,16 @@
 [
   {
-    "tag_name": "v2026.12.16",
-    "name": "Phoenix Portal 2026.12.16",
+    "tag_name": "v2026.12.17",
+    "name": "Phoenix Portal 2026.12.17",
     "draft": false,
     "prerelease": false,
-    "body": "The family calendar, School and Telugu calendar pages now stand on the wallpaper in frosted glass like the Today screen, in the theme's accent.",
-    "html_url": "https://github.com/rayalavcp/phoenix-portal/releases/tag/v2026.12.16",
+    "body": "Update check fix: takes the newest release by version and double-checks GitHub's latest-release page; the up-to-date message names GitHub's newest version. LICENSE states CC BY-NC-ND 4.0 with credit to Kiosk Satellite, plus Immortal's MIT notice; About credits Immortal and links this repository's LICENSE.",
+    "html_url": "https://github.com/rayalavcp/phoenix-portal/releases/tag/v2026.12.17",
     "assets": [
       {
-        "name": "kiosk-satellite-2026.12.16.armeabi-v7a.apk",
-        "browser_download_url": "https://github.com/rayalavcp/phoenix-portal/releases/download/v2026.12.16/kiosk-satellite-2026.12.16.armeabi-v7a.apk",
-        "size": 100592702,
+        "name": "kiosk-satellite-2026.12.17.armeabi-v7a.apk",
+        "browser_download_url": "https://github.com/rayalavcp/phoenix-portal/releases/download/v2026.12.17/kiosk-satellite-2026.12.17.armeabi-v7a.apk",
+        "size": 100592802,
         "state": "uploaded"
       }
     ]

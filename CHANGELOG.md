@@ -16,6 +16,13 @@ Built from this branch and installed from `install/` (see `install/README.md`).
   calling.
 - **School:** SchoolCafe menus and the Frisco ISD calendar.
 - **Updates:** from this repository; nothing is sent to the original project.
+- **2026.12.17:** LICENSE states CC BY-NC-ND 4.0 with credit to Kiosk
+  Satellite and Immortal's MIT notice; About links this repository's LICENSE
+  and credits Immortal.
+- **2026.12.17 (updates):** the update check picks the newest release by version
+  number (not list order) and checks an "up to date" answer against
+  GitHub's latest-release page; "You are on the latest version" names the
+  newest version GitHub reported.
 - **2026.12.16:** the family calendar, School and Telugu calendar pages
   stand on the wallpaper in glass like the Today screen, in the theme's
   accent.
