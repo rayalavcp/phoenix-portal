@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/services.dart';
 
 /// Dart side of the native camera motion detector (`CameraMotion.kt`).
@@ -47,6 +49,8 @@ class NativeMotion {
     double faceMinWidth = 0.1,
     bool fingers = false,
     bool heads = false,
+    bool gameHands = false,
+    bool gameBody = false,
     bool paused = false,
     bool preview = false,
     bool rtsp = false,
@@ -81,6 +85,9 @@ class NativeMotion {
           // The Kids Portal's head-steered games: the face's position,
           // about ten times a second, while a game is open.
           'heads': heads,
+          // A Kids Portal game is open: its hands (up to two, with their
+          // points) and its body outline, on every frame (GameVision.kt).
+          'game': {'hands': gameHands, 'body': gameBody},
           // Whether a voice interaction is running as the session starts
           // (see [setPaused]): the flag rides the bind too, so a session
           // rebound mid-turn, on a native side recreated with the
@@ -116,7 +123,17 @@ class NativeMotionTick {
     this.handX,
     this.handY,
     this.head,
+    this.gameHands,
+    this.body,
   });
+
+  /// A game's hands, as the child sees them (an empty list: none in view).
+  final List<GameHand>? gameHands;
+  bool get isGameHands => gameHands != null;
+
+  /// A game's body outline mask.
+  final BodyMask? body;
+  bool get isBody => body != null;
 
   /// A head-tracking report: whether a face is in view (its position in
   /// [handX], [handY] as the person sees it). Null for other events.
@@ -152,6 +169,20 @@ class NativeMotionTick {
   /// original null events.
   static NativeMotionTick fromNative(Object? raw) {
     if (raw is Map) {
+      final ghands = raw['ghands'];
+      if (ghands is List) {
+        return NativeMotionTick._(null, null, null, gameHands: [
+          for (final h in ghands)
+            if (h is Map && h['x'] is num && h['y'] is num) GameHand.fromNative(h),
+        ]);
+      }
+      final body = raw['body'];
+      if (body is Uint8List && raw['bw'] is num && raw['bh'] is num) {
+        final w = (raw['bw'] as num).toInt(), h = (raw['bh'] as num).toInt();
+        if (w > 0 && h > 0 && body.length == w * h) {
+          return NativeMotionTick._(null, null, null, body: BodyMask(w, h, body));
+        }
+      }
       final head = raw['head'];
       if (head is bool) {
         return NativeMotionTick._(
@@ -233,4 +264,41 @@ double faceMinWidthFor(int sensitivity) {
   final s = sensitivity.clamp(1, 100);
   final meters = 0.3 + (s - 1) / 99 * 2.2;
   return 0.09 / meters;
+}
+
+/// One hand in a game: its palm, the fingers it shows and its 21 points
+/// (x, y pairs), all 0..1 across and down the picture as the child sees it.
+class GameHand {
+  const GameHand(this.palm, this.fingers, this.points);
+
+  factory GameHand.fromNative(Map<Object?, Object?> raw) {
+    final lm = raw['lm'];
+    final pts = lm is Float32List
+        ? lm
+        : lm is List
+        ? Float32List.fromList([for (final v in lm) (v as num).toDouble()])
+        : Float32List(0);
+    final f = raw['f'];
+    return GameHand(
+      Offset((raw['x']! as num).toDouble(), (raw['y']! as num).toDouble()),
+      f is num ? f.toInt() : 0,
+      pts.length == 42 ? pts : Float32List(0),
+    );
+  }
+
+  final Offset palm;
+  final int fingers;
+  final Float32List points;
+
+  Offset point(int i) => Offset(points[i * 2], points[i * 2 + 1]);
+}
+
+/// The body as the game sees it: [width] × [height] cells, each how sure
+/// the model is that it is the person (0..255), upright and mirrored.
+class BodyMask {
+  const BodyMask(this.width, this.height, this.cells);
+  final int width, height;
+  final Uint8List cells;
+
+  double at(int x, int y) => cells[y * width + x] / 255.0;
 }

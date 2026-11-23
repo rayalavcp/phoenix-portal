@@ -620,7 +620,7 @@ class _SkyGlideState extends _ArcadeGame<SkyGlide> {
   @override
   void reset() {
     _tracker?.dispose();
-    _tracker = _steer == 0 ? null : KidsHands(widget.container.motion, head: _steer == 1);
+    _tracker = _steer == 0 ? null : KidsHands(widget.container.motion, head: _steer == 1, body: false);
     _pillars.clear();
     _y = _skyH / 2;
     _vy = 0;
@@ -920,7 +920,7 @@ class _FoxRunState extends _ArcadeGame<FoxRun> {
   @override
   void reset() {
     _tracker?.dispose();
-    _tracker = _steer == 0 ? null : KidsHands(widget.container.motion, head: _steer == 1);
+    _tracker = _steer == 0 ? null : KidsHands(widget.container.motion, head: _steer == 1, body: false);
     _headRest = null;
     _obstacles.clear();
     _coins.clear();

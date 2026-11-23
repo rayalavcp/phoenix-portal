@@ -56,9 +56,13 @@ abstract class _MoveGame<T extends StatefulWidget> extends State<T> with SingleT
     super.dispose();
   }
 
+  /// Whether the point is where the child really is (it matches the
+  /// glowing outline) rather than stretched for steering.
+  bool get amplify => true;
+
   void begin() {
     hands?.dispose();
-    hands = KidsHands(container.motion, head: steer == 0);
+    hands = KidsHands(container.motion, head: steer == 0, amplify: amplify);
     setState(() {
       score = 0;
       lives = 3;
@@ -188,6 +192,11 @@ class _WallDodgeState extends _MoveGame<WallDodge> {
   VoidCallback get onBack => widget.onBack;
   @override
   String get scoreKey => 'walls${level + 1}';
+
+  // The hole is matched against where the child really is: the same
+  // place the glowing outline shows.
+  @override
+  bool get amplify => false;
   @override
   int starsFor(int s) => s >= 300 ? 3 : (s >= 150 ? 2 : (s >= 50 ? 1 : 0));
 
@@ -695,6 +704,10 @@ class _FreezeDanceState extends _MoveGame<FreezeDance> {
       return;
     }
     meter.add(hands?.point.value, dt);
+    // The whole body, when the camera sees it: how much of the outline
+    // changed, on the meter's scale.
+    final h = hands;
+    if (h != null && h.outline.value != null) meter.level = math.max(meter.level, h.bodyChange * 3);
     _phase -= dt;
     if (!_frozen) {
       // The music plays: a note every beat; points for moving.

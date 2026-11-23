@@ -95,7 +95,10 @@ class CameraMotion(
 ) : EventChannel.StreamHandler {
     companion object {
         /** How often the head games look for the face: ~10 a second. */
-        private const val HEAD_INTERVAL_NS = 90_000_000L
+        // Every frame the camera delivers while a game wants the head.
+        private const val HEAD_INTERVAL_NS = 0L
+        /** A game session's frame slot: as fast as the camera delivers. */
+        private const val GAME_FRAME_NS = 33_000_000L
         const val CHANNEL = "kiosk_satellite/motion"
         const val CONTROL_CHANNEL = "kiosk_satellite/motion/control"
         private const val TAG = "CameraMotion"
@@ -492,6 +495,13 @@ class CameraMotion(
     @Volatile private var fingersWanted = false
     /** The Kids Portal's head-steered games: the face's position, fast. */
     @Volatile private var headsWanted = false
+
+    /** A Kids Portal game is open (see [GameVision]): its hands (two, with
+     *  landmarks) and its body mask, on every frame, emitted at once. */
+    @Volatile private var gameHands = false
+    @Volatile private var gameBody = false
+    private var gameVision: GameVision? = null
+    private val gameMode get() = gameHands || gameBody || headsWanted
     private var lastHeadNs = 0L
 
     /** Bumped per presence, so a hold timer from an ended presence
@@ -932,6 +942,13 @@ class CameraMotion(
             fingersWanted = allowAnalysis && args?.get("fingers") == true
             palmsWanted = fingersWanted
             headsWanted = allowAnalysis && args?.get("heads") == true
+            val game = args?.get("game") as? Map<*, *>
+            gameHands = allowAnalysis && game?.get("hands") == true
+            gameBody = allowAnalysis && game?.get("body") == true
+            if (!gameHands && !gameBody) {
+                gameVision?.close()
+                gameVision = null
+            }
             faceMinWidth =
                 ((args?.get("faceMinWidth") as? Number)?.toFloat() ?: 0.1f).coerceIn(0.01f, 1f)
             lastFaceEmitNs = 0L
@@ -952,7 +969,12 @@ class CameraMotion(
             // detection is unchanged (see analyze).
             frameIntervalNs = (1_000_000_000.0 / fps).toLong()
             gridStride = 1
-            if (palmsWanted && frameIntervalNs > PALM_FRAME_SLOT_NS) {
+            if (gameMode && frameIntervalNs > GAME_FRAME_NS) {
+                // A game: every frame, with the motion grid still comparing
+                // frames the configured interval apart.
+                gridStride = (frameIntervalNs / GAME_FRAME_NS).toInt().coerceIn(1, 60)
+                frameIntervalNs = 0L
+            } else if (palmsWanted && frameIntervalNs > PALM_FRAME_SLOT_NS) {
                 gridStride = (frameIntervalNs / PALM_FRAME_SLOT_NS).toInt().coerceIn(1, 8)
                 frameIntervalNs /= gridStride
             }
@@ -1142,7 +1164,7 @@ class CameraMotion(
             val jpegHung = deviceCamera?.jpegHung(cameraId) == true
             val legSize =
                 if (captureLevel >= 2) Size(320, 240)
-                else if (palmsWanted || previewWanted || boundVideo) Size(640, 480) else Size(320, 240)
+                else if (palmsWanted || previewWanted || boundVideo || gameMode) Size(640, 480) else Size(320, 240)
             val analysisSize = listOfNotNull(
                 legSize,
                 pluginSize?.takeIf { captureLevel < 2 },
@@ -1513,7 +1535,8 @@ class CameraMotion(
             if (session != boundSession) return
             lastFrameAtMs = SystemClock.elapsedRealtime()
             deviceCamera?.captureAnalysisFrame(image)
-            if (!motionWanted && !facesWanted && !fingersWanted && !headsWanted && !previewWanted && pluginFrames == null) return
+            if (!motionWanted && !facesWanted && !fingersWanted && !headsWanted && !gameHands && !gameBody &&
+                !previewWanted && pluginFrames == null) return
             val now = System.nanoTime()
             // A plugin holding the camera is offered every frame, never
             // during a voice turn. The bridge paces and copies them.
@@ -1528,6 +1551,20 @@ class CameraMotion(
             // Drop frames that arrive before the next slot is due.
             if (lastProcessedNs != 0L && now - lastProcessedNs < frameIntervalNs) return
             lastProcessedNs = now
+
+            // A game's hands and body first, on the newest frame: the
+            // models run on their own threads and skip frames while busy.
+            if ((gameHands || gameBody) && !paused) {
+                try {
+                    val vision = gameVision ?: GameVision(context) { event ->
+                        val sink = activeSink
+                        if (sink != null && !paused) mainHandler.post { sink.success(event) }
+                    }.also { gameVision = it }
+                    vision.offer(image, image.imageInfo.rotationDegrees, boundFront, gameHands, gameBody)
+                } catch (e: Throwable) {
+                    Log.w(TAG, "game vision failed: $e")
+                }
+            }
 
             val grid = sampleGrid(image)
             // The frame gridStride analyzed frames back, so the deltas
@@ -2081,6 +2118,16 @@ class CameraMotion(
             )?.filter { it.lower >= 1 && it.upper <= 120 }
             if (ranges.isNullOrEmpty()) return
             val want = ceil(requestedFps).toInt()
+            if (gameMode) {
+                // A game: a steady rate (no slow low-light range, whose
+                // long exposures smear a moving hand and halve the looks).
+                val steady = ranges.filter { it.upper >= 24 && it.lower <= 30 }.maxByOrNull { it.lower * 100 + it.upper }
+                if (steady != null) {
+                    Camera2Interop.Extender(builder).setCaptureRequestOption(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, steady)
+                    Log.i(TAG, "game: steady fps range $steady")
+                }
+                return
+            }
             val minLowerAll = ranges.minOf { it.lower }
             val slowCandidates = ranges.filter { it.lower == minLowerAll }
             val slowWide = slowCandidates
@@ -2307,6 +2354,8 @@ class CameraMotion(
             faceDetector = null
             handTracker?.close()
             handTracker = null
+            gameVision?.close()
+            gameVision = null
         }
         analysisExecutor.shutdown()
     }

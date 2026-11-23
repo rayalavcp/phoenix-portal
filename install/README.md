@@ -1,8 +1,19 @@
-# Phoenix Portal test build 2026.12.8 (383)
+# Phoenix Portal test build 2026.12.9 (384)
 
-- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 100243502 bytes.
-  SHA-256 `16a6769dd45b9e5a335291d4c3964158e2a42815103109467cd30517210a0c32`.
+- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 100542330 bytes.
+  SHA-256 `04327d7cbcf89ea9f710ad9b7c0f2e085e96dc4d53c01096e0b6056a1893ece1`.
 - New in this build:
+  - **Camera games without the lag**: while a camera game is open the
+    camera runs a game mode (every frame, a steady frame rate, no power
+    saving pauses), and the cursor uses a smoother that keeps still hands
+    steady but follows fast moves closely, with a short look ahead.
+  - **Two hands**: both are followed; Bubble Pop pops with either hand,
+    Finger Math counts the fingers on both.
+  - **What the camera sees**: a soft glowing aura of the body in the
+    whole-body games (Wall Dodge, Freeze Dance, head-steered games) and
+    a warm sparkly glow on each hand in the hand games. Freeze Dance
+    reads movement from the whole body.
+  - The camera only runs while a camera game is being played.
   - **Maps** shelf in the Kids Portal: **USA Map** (50 states), **India
     Map** (28 states and 8 union territories, India's official map) and
     **World Map**. Find it, Name it, Capitals, Fill the map (colour the

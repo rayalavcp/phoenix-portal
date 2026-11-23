@@ -66,7 +66,7 @@ remote administration. Home Assistant is optional.
 | Photos (Immich / folder), photo frame | `managers/home/photo_service.dart`, `ui/home/photo_frame.dart` |
 | Kids Portal hub and frame | `ui/kids/kids_overlay.dart`, `ui/kids/kids_activities.dart` |
 | Kids games | `kids_learn.dart` (quizzes), `kids_games.dart`, `kids_puzzles.dart`, `kids_play.dart` (incl. piano), `kids_motion.dart` (camera games), `kids_arcade.dart` (Munch Maze, Brick Bash), `kids_arcade2.dart` (Hop Across, Sky Glide, Fox Run), `kids_motion2.dart` (Wall Dodge, Air Trace, Freeze Dance), `kids_learn_more.dart` (Count It, Letter Sounds, Place Value, Story Sums, Telugu Words), `kids_maps.dart` (USA, India, World maps; data in `assets/maps`, rebuilt with `tool/kids_maps`) |
-| Hand/head tracking for games | native `HandTracker.kt`, `FaceDetector.kt`, `CameraMotion.kt`; Dart `managers/motion/motion_manager.dart` (`startHandTest`, `startHeadTracking`) |
+| Hand/head tracking for games | native `GameVision.kt` (game mode: two hands with landmarks, selfie-segmenter body mask, every frame), `FaceDetector.kt`, `CameraMotion.kt` (`game` arg); Dart `motion_manager.dart` (`startGameVision`, `startHeadTracking`), `kids_motion.dart` (`KidsHands`, One Euro smoothing, glow painters) |
 | Updates from GitHub | `managers/update/update_manager.dart` (`_releasesUrl` = this repo's `install/releases.json`) |
 | Admin Phoenix Home page | `remote-ui/static/phoenix_home.js` (+ CSS in `app.css`, `#tab-phoenix`) |
 
@@ -82,8 +82,8 @@ cd app && flutter build apk --release --split-per-abi --target-platform android-
 
 The APK is debug-signed with the same key every time (certificate SHA-256
 starts `47fff989d4`), so builds install over each other and keep settings.
-Keep the APK under 100 MB (GitHub's file limit, 104,857,600 bytes; 2026.12.8 is
-100,243,502, so about 4.6 MB of room is left): large assets go in
+Keep the APK under 100 MB (GitHub's file limit, 104,857,600 bytes; 2026.12.9 is
+100,542,330, so about 4.3 MB of room is left): large assets go in
 `wallpapers/` and download at run time.
 
 Before shipping, run the analyzer and the tests that cover what changed.

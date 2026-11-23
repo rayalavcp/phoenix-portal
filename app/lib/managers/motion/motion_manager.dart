@@ -812,6 +812,7 @@ class MotionManager extends Manager {
           _sensorEnabled ||
           _wantPalms ||
           _wantHeads ||
+          _wantGame ||
           _previewHolding ||
           (_screensaverActive
               ? enabled || faceEnabled
@@ -840,6 +841,7 @@ class MotionManager extends Manager {
             _streamFaces != _wantFaces ||
             _streamPalms != _wantPalms ||
             _streamHeads != _wantHeads ||
+            _streamGame != _wantGameKey ||
             _streamPreview != _wantPreview ||
             _streamRtsp != _rtspDemand ||
             !mapEquals(_streamIntercom, _intercomVideo) ||
@@ -888,6 +890,7 @@ class MotionManager extends Manager {
       final faces = _wantFaces;
       final palms = _wantPalms;
       final heads = _wantHeads;
+      final game = _wantGameKey;
       final preview = _wantPreview;
       final faceMinWidth = faceMinWidthFor(
         _settings.get(defs.faceSensitivity).toInt(),
@@ -896,6 +899,7 @@ class MotionManager extends Manager {
       _streamFaces = faces;
       _streamPalms = palms;
       _streamHeads = heads;
+      _streamGame = game;
       _streamPreview = preview;
       _streamRtsp = _rtspDemand;
       _streamIntercom = _intercomVideo;
@@ -925,6 +929,8 @@ class MotionManager extends Manager {
             faceMinWidth: faceMinWidth,
             fingers: palms,
             heads: heads,
+            gameHands: game == 'hands' || game == 'both',
+            gameBody: game == 'body' || game == 'both',
             paused: _voiceTurn,
             preview: preview,
             rtsp: _streamRtsp,
@@ -964,6 +970,14 @@ class MotionManager extends Manager {
               }
               // Hands are not a lighting change either. A count of 0 is the
               // hand gone, which the gestures manager needs to re-arm.
+              if (tick.isGameHands) {
+                gameHands.value = tick.gameHands!;
+                return;
+              }
+              if (tick.isBody) {
+                bodyMask.value = tick.body;
+                return;
+              }
               if (tick.isHead) {
                 final x = tick.handX, y = tick.handY;
                 headTest.value = tick.head! && x != null && y != null ? Offset(x, y) : null;
@@ -1127,6 +1141,43 @@ class MotionManager extends Manager {
   /// loads on this device.
   bool get headsAvailable => _vision.faces && _settings.get(defs.cameraEnabled);
 
+  /// A Kids Portal game's vision (GameVision.kt): its hands, up to two
+  /// with their points, and/or its body outline, on every frame the
+  /// camera delivers, while the game is open. Behind the camera switch
+  /// and the screen being on, like the head leg.
+  bool _gameHandsOn = false, _gameBodyOn = false;
+  String? _streamGame;
+  bool get _wantGame => _wantGameKey != null;
+  String? get _wantGameKey {
+    if (!_settings.get(defs.cameraEnabled) || !_screenOn) return null;
+    final h = _gameHandsOn && _vision.hands, b = _gameBodyOn;
+    return h && b ? 'both' : (h ? 'hands' : (b ? 'body' : null));
+  }
+
+  /// The game's hands (empty when none is in view).
+  final gameHands = ValueNotifier<List<GameHand>>(const []);
+
+  /// The game's body outline (null when not asked for or not seen yet).
+  final bodyMask = ValueNotifier<BodyMask?>(null);
+
+  void startGameVision({bool hands = false, bool body = false}) {
+    if (_gameHandsOn == hands && _gameBodyOn == body) return;
+    _gameHandsOn = hands;
+    _gameBodyOn = body;
+    log.info(name, 'game vision on (hands=$hands body=$body)');
+    _sync();
+  }
+
+  void stopGameVision() {
+    if (!_gameHandsOn && !_gameBodyOn) return;
+    _gameHandsOn = false;
+    _gameBodyOn = false;
+    gameHands.value = const [];
+    bodyMask.value = null;
+    log.info(name, 'game vision off');
+    _sync();
+  }
+
   void startHeadTracking() {
     if (_headTracking) return;
     _headTracking = true;
@@ -1182,6 +1233,8 @@ class MotionManager extends Manager {
     facePreview.dispose();
     handTest.dispose();
     headTest.dispose();
+    gameHands.dispose();
+    bodyMask.dispose();
   }
 }
 
