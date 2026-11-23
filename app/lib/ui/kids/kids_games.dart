@@ -35,7 +35,13 @@ class KidsButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[Icon(icon, color: ink ?? const Color(0xFF1A1340), size: size * 1.1), SizedBox(width: size * 0.35)],
-            Text(label, style: kidsText(size, color: ink ?? const Color(0xFF1A1340))),
+            // Shrinks a little rather than overflow a narrow spot.
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(label, style: kidsText(size, color: ink ?? const Color(0xFF1A1340))),
+              ),
+            ),
           ],
         ),
       ),

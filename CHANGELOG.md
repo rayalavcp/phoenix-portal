@@ -2,6 +2,23 @@
 
 All notable changes to Kiosk Satellite are documented here. Full release notes for each version are available on the [releases page](https://github.com/jxlarrea/kiosk-satellite/releases).
 
+## Phoenix Portal 2026.12 (test builds)
+
+Built from this branch and installed from `install/` (see `install/README.md`).
+
+- **Kids Portal:** more than 50 games on seven shelves (Learn, Maps, Puzzles,
+  Play, Arcade, Move, Create); USA, India and World map games; Count It,
+  Letter Sounds, Place Value, Story Sums, Telugu Words; quiz levels with stars
+  and Next level; arcade games with stages; camera games with a fast game
+  mode, two hands and a soft 3D pixel glow; Freeze Dance DJ mixes.
+- **Today screen:** 4K wallpapers, glass cards, weather effects, Home
+  Assistant cameras, a doorbell alert, a **Calls** button into the Portal's
+  calling.
+- **School:** SchoolCafe menus and the Frisco ISD calendar.
+- **Updates:** from this repository; nothing is sent to the original project.
+- **Fixes:** the remote admin's loading spinner, a blank play area in Bubble
+  Pop and Fruit Catcher, the piano's floating notes, Tic-Tac-Toe in portrait.
+
 ## Unreleased
 
 ### Added

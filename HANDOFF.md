@@ -8,9 +8,13 @@ still open.
 
 Phoenix Portal is a home-hub app for **Meta Portal** devices (Android 9/10,
 armeabi-v7a), built on Kiosk Satellite. It is the Portal's home screen:
-a launcher (Phoenix Home) with a Today screen, a Kids Portal, school menus
-and calendar, a Telugu calendar, photos, live Home Assistant cameras and
-remote administration. Home Assistant is optional.
+a launcher (Phoenix Home) with a Today screen (with a **Calls** button into
+the Portal's own calling), a Kids Portal (more than 50 games: learning,
+maps, puzzles, arcade, camera games, create), school menus and calendar, a
+Telugu calendar, photos, live Home Assistant cameras and remote
+administration. Home Assistant is optional. It replaces **Immortal**
+(see `docs/phoenix/IMMORTAL.md` for what is and isn't covered, and how to
+remove it safely).
 
 - Owner: krayala, GitHub `rayalavcp`. Repository `rayalavcp/phoenix-portal`.
 - Working branch: **`claude/fervent-hopper-25a7jk`** (everything ships from it).
@@ -37,6 +41,8 @@ remote administration. Home Assistant is optional.
   readable text. Do not bring back loud gradients.
 - Wallpapers: real 4K photos (Wikimedia Commons, credited in
   `wallpapers/CREDITS.md`); the owner may upload their own.
+- Freeze Dance music: only public-domain tunes, remixed on the device
+  (`kids_dj.dart`). Real chart songs cannot be bundled (copyright).
 - Do not recreate copyrighted game characters (the Space Blaster enemies are
   original saucers on purpose; the Arcade games use original characters).
 
@@ -82,8 +88,8 @@ cd app && flutter build apk --release --split-per-abi --target-platform android-
 
 The APK is debug-signed with the same key every time (certificate SHA-256
 starts `47fff989d4`), so builds install over each other and keep settings.
-Keep the APK under 100 MB (GitHub's file limit, 104,857,600 bytes; 2026.12.9 is
-100,542,330, so about 4.3 MB of room is left): large assets go in
+Keep the APK under 100 MB (GitHub's file limit, 104,857,600 bytes; 2026.12.10 is
+100,575,166, so about 4.3 MB of room is left): large assets go in
 `wallpapers/` and download at run time.
 
 Before shipping, run the analyzer and the tests that cover what changed.
@@ -102,7 +108,7 @@ pre-existing problem); it passes on its own.
 ## Shipping a build
 
 1. Give it a **new version name** in `app/pubspec.yaml` (e.g.
-   `2026.12.9+384`). The Portal's update check compares names.
+   `2026.12.11+386`). The Portal's update check compares names.
 2. Build, then check: version, signing key, size under 100 MB.
 3. Copy to `install/phoenix-portal.apk`.
 4. `python3 install/make_releases.py <version> "notes"` writes
@@ -124,6 +130,29 @@ Portals on **2026.12.3 or newer** then find it themselves (on start and every
 - The installer also sets Phoenix as the home screen, turns on start on boot,
   and offers to stop other apps (e.g. Portal HA Bridge) opening at boot.
 
+## The Kids Portal at a glance
+
+Shelves (hub order): **Learn** (16 quizzes: Math Blitz, Times Tables, Telling
+the Time, Flag Quiz, Word Scramble, Patterns, Fractions, Money, Science,
+Spelling, Opposites, Count It, Letter Sounds, Place Value, Story Sums,
+Telugu Words), **Maps** (USA, India, World map games), **Puzzles**, **Play**,
+**Arcade** (Munch Maze, Brick Bash, Hop Across, Sky Glide, Fox Run),
+**Move** (camera games: Space Blaster, Bubble Pop, Fruit Catcher, Finger
+Math, Wall Dodge, Air Trace, Freeze Dance), **Create**.
+
+- Quizzes (`KidsQuiz`): no repeats within a round, a best and stars per
+  level, "Next level" after 2+ stars.
+- Camera games: a **game mode** in the native camera pipeline
+  (`GameVision.kt`: every frame, two hands with 21 points each, selfie
+  segmenter body mask; `CameraMotion.kt` `game` arg), `KidsHands` with a
+  One Euro filter and a 60 ms look ahead, drawn as soft 3D glowing pixels
+  (`_glowPixels`). The camera runs only while a camera game is played.
+- `test/kids_all_games_test.dart` opens and plays every game at three
+  screen sizes with random taps, so a layout bug can show only in some
+  game states (Connect Four's 1.6 px button overflow at 1024×600 did:
+  fixed in `KidsButton`). Simon Says failed once in a full run and never
+  on reruns: if it repeats, capture the message before changing anything.
+
 ## Verified vs not yet verified on a real Portal
 
 Verified here (tests, real admin server in Chromium, real SchoolCafe and
@@ -136,8 +165,16 @@ Not yet seen on a device:
   updating to a newer build).
 - Live HA camera video in the Today card and the doorbell alert (no Home
   Assistant here). The settings and the "no camera" path are tested.
-- Hand and head tracking in the Move games (direction may need the in-game
-  ↔ swap; the camera must be on in camera settings).
+- Hand and head tracking in the camera games, now through the game mode:
+  the lag, two hands and the body outline need a real check (the log line
+  "GameVision ... ms a look" gives the per-look cost). Direction may need
+  the in-game ↔ swap; the camera must be on in camera settings.
+- Freeze Dance's DJ music through the native player (rendered to WAV in
+  the cache, phrase by phrase).
+- **Calls** on the Today dock opening the Portal's calling screen.
+- The camera's green light staying off outside games: Home Assistant's
+  ESPHome **Camera** entity opens the camera on every fetch; exclude it
+  (ESPHome > Excluded entities) if the owner wants the camera for games only.
 - The piano's sound on the device (SoundPool) and the synthesized tone.
 - Whether the HA Bridge app still takes over after a reboot once the
   installer has stopped its boot start.
@@ -146,3 +183,8 @@ Not yet seen on a device:
 
 - More motion games; owner will upload wallpapers.
 - Bell times for Miller Elementary are not set (unknown).
+- Immortal features not in Phoenix yet (iCloud/SMB/WebDAV photos, clock
+  faces, lamp, bedtime stories, notes, converter, hourly chime, help tour):
+  see `docs/phoenix/IMMORTAL.md`. Uninstalling Immortal is the owner's call.
+- A one-tap "Camera for Kids games only" switch (exclude the HA camera
+  entity, turn off the other camera features) was offered, not built.

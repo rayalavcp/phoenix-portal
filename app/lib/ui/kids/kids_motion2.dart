@@ -11,6 +11,7 @@ import 'kids_arcade2.dart' show arcadeHud;
 import 'kids_games.dart';
 import 'kids_logic.dart' show KidsScores;
 import 'kids_motion.dart';
+import 'kids_dj.dart';
 import 'kids_play.dart' show KidsTones;
 
 /// More of the Move shelf, played with the whole body in front of the
@@ -648,8 +649,6 @@ class MotionMeter {
   }
 }
 
-/// A bouncy tune for the dancing, as notes of the Kids piano (C4 = 0).
-const _danceTune = [0, 4, 7, 12, 7, 4, 0, 4, 5, 9, 12, 17, 12, 9, 5, 9, 7, 11, 14, 19, 14, 11, 7, 11, 0, 4, 7, 12, 16, 12, 7, 4];
 
 /// Dance while the music plays; freeze the moment it stops.
 class FreezeDance extends StatefulWidget {
@@ -666,10 +665,36 @@ class _FreezeDanceState extends _MoveGame<FreezeDance> {
   static const _seconds = 90.0;
   final _rng = math.Random();
   final meter = MotionMeter();
-  bool _frozen = false, _caught = false;
-  double _phase = 0, _left = _seconds, _beat = 0, _flash = 0, _still = 0;
-  int _note = 0, _freezes = 0;
+  bool _frozen = false, _caught = false, _musicReady = false;
+  double _phase = 0, _left = _seconds, _flash = 0, _still = 0, _phraseLeft = 0;
+  int _freezes = 0;
   String _message = '';
+
+  /// The DJ, and the song picked (the last choice shuffles).
+  late final KidsDj _dj = KidsDj(container.sound.playFile, container.sound.stopFile);
+  int _pick = djSongs.length;
+  int _song = 0;
+
+  String get songName => djSongs[_song].$1;
+
+  @override
+  void dispose() {
+    unawaited(_dj.stop());
+    super.dispose();
+  }
+
+  @override
+  Future<void> finish() async {
+    unawaited(_dj.stop());
+    await super.finish();
+  }
+
+  /// The music comes (back) in on a new phrase.
+  void _music() {
+    if (!_musicReady) return;
+    unawaited(_dj.nextPhrase());
+    _phraseLeft = djPhraseSeconds;
+  }
 
   @override
   AppContainer get container => widget.container;
@@ -692,7 +717,13 @@ class _FreezeDanceState extends _MoveGame<FreezeDance> {
     _freezes = 0;
     _message = 'DANCE!';
     _flash = 1.2;
-    unawaited(widget.tones?.warm());
+    _musicReady = false;
+    _song = _pick >= djSongs.length ? _rng.nextInt(djSongs.length) : _pick;
+    unawaited(_dj.load(_song).then((_) {
+      if (!mounted || !playing) return;
+      _musicReady = true;
+      if (!_frozen) _music();
+    }));
   }
 
   @override
@@ -710,11 +741,10 @@ class _FreezeDanceState extends _MoveGame<FreezeDance> {
     if (h != null && h.outline.value != null) meter.level = math.max(meter.level, h.bodyChange * 3);
     _phase -= dt;
     if (!_frozen) {
-      // The music plays: a note every beat; points for moving.
-      _beat -= dt;
-      if (_beat <= 0) {
-        _beat += 0.22;
-        unawaited(widget.tones?.note(_danceTune[_note++ % _danceTune.length], volume: 0.7));
+      // The music plays, phrase after phrase; points for moving.
+      if (_musicReady) {
+        _phraseLeft -= dt;
+        if (_phraseLeft <= 0) _music();
       }
       if (meter.level > 0.12) {
         _still = 0;
@@ -737,6 +767,8 @@ class _FreezeDanceState extends _MoveGame<FreezeDance> {
         _phase = const [3.0, 4.0, 5.0][level];
         _message = 'FREEZE!';
         _flash = 1.2;
+        // The DJ cuts the record.
+        unawaited(_dj.freeze());
       }
     } else {
       // Frozen: a short grace to stop, then any movement counts.
@@ -758,6 +790,7 @@ class _FreezeDanceState extends _MoveGame<FreezeDance> {
         _flash = 1.2;
         _frozen = false;
         _phase = 4 + _rng.nextDouble() * 5;
+        _music();
       }
     }
   }
@@ -770,10 +803,14 @@ class _FreezeDanceState extends _MoveGame<FreezeDance> {
     colors: const [Color(0xFF5A1F6B), Color(0xFFFF6B9A)],
     hud: '${_left.ceil()}s',
     icon: Icons.music_note_rounded,
-    pitch: 'Dance while the music plays! When it stops, FREEZE like a statue until it starts again.',
+    pitch: 'The DJ is spinning! Dance while the music plays. When the record stops, FREEZE like a statue until it starts again.',
     options: Column(
       children: [
         kidsLevelChips(const ['Easy', 'Medium', 'Hard'], level, (i) => setState(() => level = i)),
+        const SizedBox(height: 14),
+        Text('DJ mix', style: kidsText(18, weight: FontWeight.w700)),
+        const SizedBox(height: 8),
+        kidsLevelChips([for (final (name, _) in djSongs) name, 'Shuffle'], _pick, (i) => setState(() => _pick = i)),
         const SizedBox(height: 14),
         steerChips('The camera watches', const ['My head', 'My hand']),
       ],
@@ -814,7 +851,8 @@ class _DancePainter extends CustomPainter {
       }
     }
     // The dancing star: bounces to the beat, turns to ice when frozen.
-    final bounce = g._frozen ? 0.0 : math.sin(g.time * math.pi * 2 / 0.44).abs() * short * 0.05;
+    // The star bounces on the beat.
+    final bounce = g._frozen ? 0.0 : math.sin(g.time * math.pi / djBeat).abs() * short * 0.05;
     final star = c + Offset(0, short * 0.12 - bounce);
     final tilt = g._frozen ? 0.0 : math.sin(g.time * 4) * 0.25;
     final r = short * 0.16;
@@ -843,6 +881,9 @@ class _DancePainter extends CustomPainter {
         final o = star + Offset(math.cos(a) * r * 1.6, math.sin(a) * r * 0.9 - r * 0.6);
         _say(canvas, '♪', o, short * 0.08, Colors.white70);
       }
+    }
+    if (g._musicReady && !g._frozen) {
+      _say(canvas, 'DJ MIX: ${g.songName.toUpperCase()}', Offset(c.dx, size.height * 0.88), short * 0.045, Colors.white70);
     }
     // The motion meter: how much you are moving, and the freeze line.
     final meterBox = Rect.fromLTWH(24, size.height - 34, size.width - 48, 14);

@@ -17,9 +17,11 @@
 
 ## What it does
 
-**Phoenix Home.** The home screen is a launcher that needs nothing else: the clock, the weather
-(Open-Meteo, set your city), big shortcuts (Kids Portal, all apps, Smart Home, School, timers,
-alarms, the App Store, the photo frame) and a dock of favourite apps. Every installed app is one
+**Phoenix Home.** The home screen is a launcher that needs nothing else. The **Today** screen
+shows the time and weather on a 4K photo with live weather effects, glass cards (Home Assistant
+cameras you can swipe through, what's up next, school, the Telugu word of the day) and a dock:
+Kids Portal, Smart Home, **Calls** (the Portal's own WhatsApp and Messenger calling), Apps,
+School, Calendar, Photos and Settings. A doorbell ring shows its camera full screen for 30 s. Every installed app is one
 tap away in the app drawer, with search, recent and most-used apps; press and hold an app to add
 it to the dock or the Kids Portal, hide it, or open its Android info page.
 
@@ -39,9 +41,9 @@ today's date and what is special about it.
 **Photos.** A photo tile and the Phoenix Photo Frame screensaver from Immich (the photo server
 most Unraid setups run) or a network folder served over http.
 
-**School.** This week's breakfast and lunch menus from the district's Nutrislice menu site
-(Frisco ISD by default; pick your school on the Portal), the school calendar from an iCal link
-(holidays, early release days), and the bell times with a "school starts in 20 min" line.
+**School.** This week's breakfast and lunch menus from SchoolCafe (Miller Elementary, Frisco
+ISD by default; pick your school on the Portal), the Frisco ISD calendar (holidays, early release
+days) from its iCal link, and the bell times with a "school starts in 20 min" line.
 
 **Smart Home (Home Assistant, optional).** Quick controls for lights, switches, covers, locks,
 climate, players, scenes and scripts, with favourites and rooms, and the full dashboard one tap
@@ -53,31 +55,17 @@ wake words, timers, alarms, a family calendar, camera views, intercom between Po
 synchronized music. The Portal shows up in Home Assistant through ESPHome with its screen,
 volume, sensors, presence, and the new **Profile** switch.
 
-**Kids Portal.** A game hub made for a 9-year-old, offline and ad-free:
+**Kids Portal.** A game hub made for a 9-year-old, offline and ad-free, on seven shelves:
 
-| Game | What it is |
+| Shelf | Games |
 |---|---|
-| **Math Blitz** | 60 seconds against the clock. Levels climb from + and − to 12× tables and division. |
-| **Word Scramble** | Ten themed words a round (animals, space, sports, science), with hints and skips. |
-| **2048** | Slide and merge to 2048. |
-| **Connect Four** | Against the computer, Easy or Hard. |
-| **Memory Pro** | Eight pairs on the clock. |
-| **Draw Studio** | Finger painting with an eraser, undo and brush sizes. |
-| **Times Tables** | 20 questions from one table (×2 to ×12) or all of them mixed. |
-| **Telling the Time** | A real clock face: half hours, quarters, then five minutes. |
-| **Flag Quiz** | Flags of 42 countries, and their capitals. |
-| **Patterns** | What comes next? Adding, doubling, growing steps and squares. |
-| **Sudoku** | 4×4, 6×6 and 9×9, each with exactly one solution. |
-| **Maze** | Small to big mazes; swipe or use the arrows. |
-| **Word Search** | Animals, space, food or sports words, across, down and diagonal. |
-| **Word Guess** | Guess the word before the balloons are gone. |
-| **Snake**, **Simon Says**, **Tic-Tac-Toe** | Classic play; Simon plays real tones. |
-| **Pixel Paint**, **Piano** | Colour by number, and a two-octave piano with songs to follow. |
-| **Fractions**, **Money**, **Science**, **Spelling**, **Opposites** | Easy, Medium and Hard levels each. |
-| **Whack-a-Mole**, **Lights Out** | Three speeds; 3×3, 4×4 and 5×5 boards. |
-
-Games with levels: Sudoku, Maze, Word Search, Word Guess, Snake, Telling the Time, Patterns,
-Times Tables and every quiz above.
+| **Learn** | Math Blitz, Times Tables, Telling the Time, Flag Quiz, Word Scramble, Patterns, Fractions, Money, Science, Spelling, Opposites, Count It, Letter Sounds, Place Value, Story Sums, Telugu Words. Levels with stars, a best per level and **Next level** after a good round. |
+| **Maps** | USA (50 states), India (28 states and 8 union territories) and World: find it, name it, capitals, continents, flags, fill the whole map, shape memory. |
+| **Puzzles** | Sudoku, Maze, Word Search, Word Guess, Memory Pro (6 to 12 pairs), 2048, Lights Out. |
+| **Play** | Snake (walls that change every stage), Whack-a-Mole, Simon Says, Tic-Tac-Toe, Connect Four. |
+| **Arcade** | Munch Maze, Brick Bash, Hop Across, Sky Glide, Fox Run: original retro games with stages. |
+| **Move** | Camera games: Space Blaster, Bubble Pop, Fruit Catcher, Finger Math, Wall Dodge, Air Trace, Freeze Dance (DJ mixes). Two hands, the body shown as soft glowing 3D pixels; every game also plays by touch. |
+| **Create** | Draw Studio, Pixel Paint, Piano. |
 
 A **daily challenge** (a new one each day) is worth three bonus stars.
 

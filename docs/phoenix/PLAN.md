@@ -100,3 +100,17 @@ intercom, RTSP, the fleet agent.
     from Immich or an http folder with the Phoenix Photo Frame screensaver (`photo_service.dart`),
     the school's month calendar with menus and events, and Kids Portal levels plus Fractions, Money,
     Science, Spelling, Opposites, Whack-a-Mole and Lights Out.
+12. **Today home and school, round three: done.** A Today screen with 4K
+    wallpapers, glass cards, weather effects, live Home Assistant cameras and
+    a doorbell alert; SchoolCafe menus (Miller Elementary) and the Frisco ISD
+    calendar; updates from this repository's `install/releases.json`.
+13. **Kids Portal, round three: done.** Calm redesign; Arcade (Munch Maze,
+    Brick Bash, Hop Across, Sky Glide, Fox Run); Move camera games; Maps
+    (USA, India, World); five more learning games; quiz levels with stars
+    and Next level; Snake stages and Memory sizes.
+14. **Camera games, low lag: done.** A native game mode (`GameVision.kt`),
+    two hands, a body mask, soft 3D glowing pixels; Freeze Dance DJ mixes of
+    public-domain songs (`kids_dj.dart`).
+15. **Replacing Immortal:** a Calls button on the Today dock (the stock
+    Portal home's calling screen). What is still missing and how to remove
+    Immortal safely: `docs/phoenix/IMMORTAL.md`.

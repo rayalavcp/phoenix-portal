@@ -1,8 +1,19 @@
-# Phoenix Portal test build 2026.12.9 (384)
+# Phoenix Portal test build 2026.12.10 (385)
 
-- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 100542330 bytes.
-  SHA-256 `04327d7cbcf89ea9f710ad9b7c0f2e085e96dc4d53c01096e0b6056a1893ece1`.
+- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 100575166 bytes.
+  SHA-256 `65ea5bbdc76495e9c0e3269e461386931c8dc937c388136040bc7d75e2309c6a`.
 - New in this build:
+  - **Freeze Dance DJ**: dance remixes (beat, bass, chords, synth lead,
+    an intro with a riser and a drop) of Twinkle Twinkle, Old MacDonald,
+    Mary Had a Little Lamb, London Bridge, Jingle Bells and Ode to Joy,
+    made on the Portal. The record scratches to a stop for each freeze.
+  - **Calls** on the Today dock: the Portal's own WhatsApp and Messenger
+    calling, the way Immortal's Calls tile opened it.
+  - What the camera sees in the camera games is drawn as soft, glowing
+    3D pixels (body in the whole-body games, hands in the hand games).
+  - Fix: a game button could overflow its space on a 1024×600 screen.
+  - Docs: `docs/phoenix/IMMORTAL.md` (what Phoenix covers of Immortal and
+    how to remove Immortal safely).
   - **Camera games without the lag**: while a camera game is open the
     camera runs a game mode (every frame, a steady frame rate, no power
     saving pauses), and the cursor uses a smoother that keeps still hands

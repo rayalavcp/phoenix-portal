@@ -63,6 +63,18 @@ class _TodayHomeState extends State<TodayHome> {
     super.dispose();
   }
 
+  /// The Portal's own calling (WhatsApp, Messenger, contacts) lives in
+  /// Meta's stock home, which only lets itself open it: this deep link
+  /// brings its Home tab (the calling screen) forward, the way Immortal's
+  /// Calls tile did.
+  Future<void> _openCalls() async {
+    final overlay = Overlay.maybeOf(context);
+    final result = await c.commands.execute('openUri', const {'uri': 'portal://launcher/home'});
+    if ((!result.ok || result.data == false) && overlay != null && overlay.mounted) {
+      showToastIn(overlay, title: 'Calls are not available', message: "This device has no Portal calling app.", kind: ToastKind.error);
+    }
+  }
+
   Future<void> _command(String name, String what) async {
     final overlay = Overlay.maybeOf(context);
     final CommandResult result = await c.commands.execute(name, const {});
@@ -128,6 +140,7 @@ class _TodayHomeState extends State<TodayHome> {
                     final dock = _Dock(
                       container: c,
                       onKids: () => unawaited(_command('openKids', 'the Kids Portal')),
+                      onCalls: () => unawaited(_openCalls()),
                       onPhotos: () => unawaited(_openPhotos()),
                       onOpenSettings: widget.onOpenSettings,
                     );
@@ -898,10 +911,11 @@ class _WordCard extends StatelessWidget {
 // ── Dock ──────────────────────────────────────────────────────────────────
 
 class _Dock extends StatelessWidget {
-  const _Dock({required this.container, required this.onKids, required this.onPhotos, required this.onOpenSettings});
+  const _Dock({required this.container, required this.onKids, required this.onCalls, required this.onPhotos, required this.onOpenSettings});
 
   final AppContainer container;
   final VoidCallback onKids;
+  final VoidCallback onCalls;
   final VoidCallback onPhotos;
   final VoidCallback onOpenSettings;
 
@@ -911,6 +925,7 @@ class _Dock extends StatelessWidget {
     final items = <(IconData, String, VoidCallback, bool)>[
       (Icons.child_care_rounded, 'Kids Portal', onKids, true),
       (Icons.home_work_rounded, 'Smart Home', home.openSmartHomeButton, true),
+      (Icons.call_rounded, 'Calls', onCalls, false),
       (Icons.apps_rounded, 'Apps', () => home.appsOpen.value = true, false),
       (Icons.school_rounded, 'School', home.openSchool, false),
       (Icons.brightness_5_rounded, 'Calendar', home.openTelugu, false),

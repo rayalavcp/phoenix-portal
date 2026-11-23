@@ -1710,8 +1710,52 @@ List<(Offset, Offset)> maskContour(BodyMask m, {double threshold = 0.5}) {
   return out;
 }
 
-/// The body the camera sees, as a soft friendly aura: a gentle lavender
-/// glow filling it and a wide, blurred halo round its edge. No hard lines.
+/// A gentle twinkle for a pixel at grid cell ([x], [y]): 0..1, each
+/// pixel on its own slow phase.
+double _twinkle(int x, int y, double t) {
+  final h = ((x * 73856093) ^ (y * 19349663)) & 0x3ff;
+  return 0.5 + 0.5 * math.sin(t * 2.2 + h / 1024 * math.pi * 2);
+}
+
+/// One glowing 3D pixel: its front square, how bright it is (0..1, for
+/// the twinkle) and how tall it stands (0..1).
+typedef _Voxel = ({Rect r, double level, double height});
+
+/// Draws glowing 3D pixels: little cubes with a lit top face and a shaded
+/// side, standing taller where [height] is higher, over a soft glow. The
+/// cubes leave room between them, so their faces never overlap and the
+/// order they are drawn in does not matter.
+void _glowPixels(Canvas canvas, List<_Voxel> voxels, Color color, {double glowBlur = 6}) {
+  if (voxels.isEmpty) return;
+  final glow = Path(), top = Path(), side = Path();
+  final fronts = [Path(), Path(), Path()];
+  for (final v in voxels) {
+    final r = v.r;
+    glow.addRect(r);
+    // The depth: up and to the right, more for taller pixels.
+    final e = r.width * (0.25 + 0.45 * v.height);
+    top.addPolygon([r.topLeft, r.topLeft.translate(e, -e), r.topRight.translate(e, -e), r.topRight], true);
+    side.addPolygon([r.topRight, r.topRight.translate(e, -e), r.bottomRight.translate(e, -e), r.bottomRight], true);
+    fronts[v.level < 0.4 ? 0 : (v.level < 0.75 ? 1 : 2)].addRect(r);
+  }
+  canvas.drawPath(
+    glow,
+    Paint()
+      ..color = color.withValues(alpha: 0.32)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, glowBlur),
+  );
+  final hsl = HSLColor.fromColor(color);
+  Color tone(double lightness, double alpha) => hsl.withLightness(lightness.clamp(0.0, 1.0)).toColor().withValues(alpha: alpha);
+  // Sides in shade, tops in light, fronts by their twinkle.
+  canvas.drawPath(side, Paint()..color = tone(hsl.lightness * 0.62, 0.85));
+  canvas.drawPath(top, Paint()..color = tone(hsl.lightness + (1 - hsl.lightness) * 0.6, 0.9));
+  canvas.drawPath(fronts[0], Paint()..color = tone(hsl.lightness * 0.92, 0.7));
+  canvas.drawPath(fronts[1], Paint()..color = tone(hsl.lightness, 0.85));
+  canvas.drawPath(fronts[2], Paint()..color = tone(hsl.lightness + (1 - hsl.lightness) * 0.4, 0.95));
+}
+
+/// The body the camera sees, as soft glowing pixels: a calm pastel field
+/// that twinkles gently, brighter round its edge. Friendly, never X-ray.
 class _BodyGlowPainter extends CustomPainter {
   _BodyGlowPainter(this.hands) : super(repaint: hands.outline);
   final KidsHands hands;
@@ -1720,59 +1764,35 @@ class _BodyGlowPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final m = hands.outline.value;
     if (m == null) return;
-    final sx = size.width / m.width, sy = size.height / m.height;
-    Offset at(Offset cell) {
-      final x = cell.dx * sx, y = cell.dy * sy;
-      return Offset(hands.flip ? size.width - x : x, y);
-    }
-
-    // A soft fill where the body is.
-    final fill = Path();
-    for (var y = 0; y < m.height; y++) {
-      int? start;
-      for (var x = 0; x <= m.width; x++) {
-        final inside = x < m.width && m.cells[y * m.width + x] > 127;
-        if (inside && start == null) start = x;
-        if (!inside && start != null) {
-          fill.addRect(Rect.fromPoints(at(Offset(start.toDouble(), y.toDouble())), at(Offset(x.toDouble(), y + 1.0))));
-          start = null;
+    // Pixels about 20 px across, whatever the mask's resolution.
+    final step = math.max(1, (m.width / (size.width / 20)).round());
+    final cw = size.width / m.width * step, ch = size.height / m.height * step;
+    // Room left for each cube's depth (see _glowPixels).
+    final side = math.min(cw, ch) * 0.56;
+    final t = DateTime.now().millisecondsSinceEpoch / 1000.0;
+    bool inside(int x, int y) => x >= 0 && y >= 0 && x < m.width && y < m.height && m.cells[y * m.width + x] > 127;
+    final pixels = <_Voxel>[];
+    for (var y = 0; y < m.height; y += step) {
+      for (var x = 0; x < m.width; x += step) {
+        if (!inside(x, y)) continue;
+        final edge = !inside(x - step, y) || !inside(x + step, y) || !inside(x, y - step) || !inside(x, y + step);
+        // Taller in the middle of the body: the share of the body round it.
+        var around = 0, seen = 0;
+        for (var dy = -2; dy <= 2; dy++) {
+          for (var dx = -2; dx <= 2; dx++) {
+            seen++;
+            if (inside(x + dx * step, y + dy * step)) around++;
+          }
         }
+        final height = math.pow(around / seen, 2).toDouble();
+        var cx = (x + step / 2) / m.width * size.width;
+        if (hands.flip) cx = size.width - cx;
+        final cy = (y + step / 2) / m.height * size.height;
+        final level = edge ? 0.8 + 0.2 * _twinkle(x, y, t) : 0.15 + 0.5 * _twinkle(x, y, t);
+        pixels.add((r: Rect.fromCenter(center: Offset(cx, cy), width: side, height: side), level: level, height: height));
       }
     }
-    canvas.drawPath(
-      fill,
-      Paint()
-        ..color = const Color(0xFFC9B8FF).withValues(alpha: 0.22)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
-    );
-    // A wide, blurred halo round the edge.
-    final line = Path();
-    for (final (a, b) in maskContour(m)) {
-      final p = at(a), q = at(b);
-      line
-        ..moveTo(p.dx, p.dy)
-        ..lineTo(q.dx, q.dy);
-    }
-    canvas.drawPath(
-      line,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 18
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round
-        ..color = const Color(0xFFFFB8E6).withValues(alpha: 0.28)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14),
-    );
-    canvas.drawPath(
-      line,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 5
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round
-        ..color = Colors.white.withValues(alpha: 0.35)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
-    );
+    _glowPixels(canvas, pixels, const Color(0xFFB8A8FF), glowBlur: side * 0.6);
   }
 
   @override
@@ -1788,13 +1808,13 @@ const handBones = [
   (13, 17), (0, 17), (17, 18), (18, 19), (19, 20),
 ];
 
-/// Each hand the camera sees, as a soft warm glow in its shape with a
-/// twinkle on every fingertip. No lines: friendly, never X-ray-like.
+/// Each hand the camera sees, as glowing pixels in its shape, with the
+/// fingertips twinkling brightest. Warm and soft; no lines.
 class _HandGlowPainter extends CustomPainter {
   _HandGlowPainter(this.hands) : super(repaint: hands.skeletons);
   final KidsHands hands;
 
-  static const _colors = [Color(0xFFFFD98A), Color(0xFFFFB3DE)];
+  static const _colors = [Color(0xFFFFD27A), Color(0xFFFF9FD6)];
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1803,41 +1823,44 @@ class _HandGlowPainter extends CustomPainter {
     for (var h = 0; h < all.length; h++) {
       final pts = [for (final p in all[h]) Offset(p.dx * size.width, p.dy * size.height)];
       if (pts.length < 21) continue;
-      final color = _colors[h % 2];
-      // The hand's size on screen sets the glow's.
+      // The pixel grid scales with the hand: about 9 pixels wrist to knuckle.
       final span = (pts[0] - pts[9]).distance.clamp(20.0, 400.0);
-      final glow = Paint()
-        ..color = color.withValues(alpha: 0.42)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, span * 0.18);
-      // Soft blobs along the hand blend into one warm glow.
-      canvas.drawCircle(Offset.lerp(pts[0], pts[9], 0.5)!, span * 0.55, glow);
+      final g = math.max(8.0, span / 7);
+      final cells = <(int, int)>{};
+      void mark(Offset p) => cells.add(((p.dx / g).floor(), (p.dy / g).floor()));
+      // Along every finger, and across the palm.
       for (final (a, b) in handBones) {
-        canvas.drawCircle(Offset.lerp(pts[a], pts[b], 0.5)!, span * 0.16, glow);
+        final n = math.max(1, ((pts[a] - pts[b]).distance / (g * 0.5)).ceil());
+        for (var k = 0; k <= n; k++) {
+          mark(Offset.lerp(pts[a], pts[b], k / n)!);
+        }
       }
-      // A little twinkle on each fingertip.
-      for (final (k, i) in const [4, 8, 12, 16, 20].indexed) {
-        final pulse = 0.75 + 0.25 * math.sin(t * 5 + k * 1.3);
-        _sparkle(canvas, pts[i], span * 0.11 * pulse, color);
+      const palm = [0, 1, 5, 9, 13, 17];
+      for (final a in palm) {
+        for (final b in palm) {
+          if (a >= b) continue;
+          final n = math.max(1, ((pts[a] - pts[b]).distance / (g * 0.5)).ceil());
+          for (var k = 0; k <= n; k++) {
+            mark(Offset.lerp(pts[a], pts[b], k / n)!);
+          }
+        }
       }
+      final tips = {
+        for (final i in const [4, 8, 12, 16, 20]) ((pts[i].dx / g).floor(), (pts[i].dy / g).floor()),
+      };
+      final side = g * 0.56;
+      // The palm stands tallest, the fingertips least.
+      final palmAt = Offset.lerp(pts[0], pts[9], 0.6)!;
+      final pixels = <_Voxel>[
+        for (final (x, y) in cells)
+          (
+            r: Rect.fromCenter(center: Offset((x + 0.5) * g, (y + 0.5) * g), width: side, height: side),
+            level: tips.contains((x, y)) ? 1.0 : 0.3 + 0.45 * _twinkle(x, y, t),
+            height: (1 - (Offset((x + 0.5) * g, (y + 0.5) * g) - palmAt).distance / (span * 1.6)).clamp(0.0, 1.0),
+          ),
+      ];
+      _glowPixels(canvas, pixels, _colors[h % 2], glowBlur: g * 0.7);
     }
-  }
-
-  void _sparkle(Canvas canvas, Offset c, double r, Color color) {
-    canvas.drawCircle(
-      c,
-      r * 1.1,
-      Paint()
-        ..color = color.withValues(alpha: 0.45)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.8),
-    );
-    final star = Path()
-      ..moveTo(c.dx, c.dy - r)
-      ..quadraticBezierTo(c.dx, c.dy, c.dx + r, c.dy)
-      ..quadraticBezierTo(c.dx, c.dy, c.dx, c.dy + r)
-      ..quadraticBezierTo(c.dx, c.dy, c.dx - r, c.dy)
-      ..quadraticBezierTo(c.dx, c.dy, c.dx, c.dy - r)
-      ..close();
-    canvas.drawPath(star, Paint()..color = Colors.white.withValues(alpha: 0.9));
   }
 
   @override

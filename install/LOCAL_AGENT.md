@@ -40,3 +40,34 @@ If any line says FAIL, also send the 30 lines above it.
 
 After this install (version 2026.12.3 or newer), the Portal updates itself
 from GitHub: the PC is only needed again if something goes wrong.
+
+---
+
+## Optional: remove Immortal (ONLY when the owner says so)
+
+Give the agent this part only after the owner has decided to remove
+Immortal. Background: `docs/phoenix/IMMORTAL.md`.
+
+Do exactly these steps. Do NOT run Immortal's Restore-Portal or
+`provision.sh --restore`: it turns Meta's OS updates back on and undoes
+the fixes Phoenix needs.
+
+STEP A. Check Phoenix is installed and is the home screen:
+adb shell pm list packages com.phoenix.portal
+adb shell cmd package resolve-activity -a android.intent.action.MAIN -c android.intent.category.HOME
+The second line must mention com.phoenix.portal. If not, STOP and tell me.
+
+STEP B. Turn off Immortal's device admin:
+adb shell dpm remove-active-admin com.immortal.launcher/.AdminReceiver
+If that fails, tell me to open on the Portal: Settings > Security >
+Device admin apps > Immortal > Deactivate, then continue.
+
+STEP C. Uninstall it:
+adb uninstall com.immortal.launcher
+
+STEP D. Make sure Meta's presence sensor is on (Phoenix uses it):
+adb shell pm list packages -d
+If com.facebook.alohaservices.presence is in that list, run:
+adb shell pm enable com.facebook.alohaservices.presence
+
+STEP E. Send me the output of every step.
