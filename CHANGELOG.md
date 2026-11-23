@@ -16,6 +16,9 @@ Built from this branch and installed from `install/` (see `install/README.md`).
   calling.
 - **School:** SchoolCafe menus and the Frisco ISD calendar.
 - **Updates:** from this repository; nothing is sent to the original project.
+- **Review (2026.12.13):** stale upstream files and dead code removed; the
+  admin password check is constant-time; sideloaded APKs are size-capped and
+  checked to be APKs first.
 - **Fixes:** the remote admin's loading spinner, a blank play area in Bubble
   Pop and Fruit Catcher, the piano's floating notes, Tic-Tac-Toe in portrait.
 

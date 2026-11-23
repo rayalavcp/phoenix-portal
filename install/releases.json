@@ -1,14 +1,14 @@
 [
   {
-    "tag_name": "2026.12.12",
-    "name": "Phoenix Portal 2026.12.12",
+    "tag_name": "2026.12.13",
+    "name": "Phoenix Portal 2026.12.13",
     "draft": false,
     "prerelease": false,
-    "body": "Swipe right on the Today screen to open Smart Home (your Home Assistant dashboard).",
+    "body": "Repo and security review: stale files and dead code removed, constant-time admin password check, sideloaded APKs size-capped and checked.",
     "html_url": "https://github.com/rayalavcp/phoenix-portal/tree/claude/fervent-hopper-25a7jk/install",
     "assets": [
       {
-        "name": "kiosk-satellite-2026.12.12.apk",
+        "name": "kiosk-satellite-2026.12.13.apk",
         "browser_download_url": "https://raw.githubusercontent.com/rayalavcp/phoenix-portal/claude/fervent-hopper-25a7jk/install/phoenix-portal.apk",
         "size": 100609682,
         "state": "uploaded"

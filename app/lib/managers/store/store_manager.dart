@@ -335,6 +335,7 @@ class StoreManager extends Manager {
       await for (final chunk in res) {
         sink.add(chunk);
         received += chunk.length;
+        if (received > maxSideloadBytes) throw StateError('That file is too big for an app (over 1 GB)');
         final now = DateTime.now();
         // Progress at most ten times a second: smooth without flooding the UI.
         if (now.difference(lastReport) > const Duration(milliseconds: 100)) {
@@ -442,7 +443,12 @@ class StoreManager extends Manager {
     return File('${dir.path}/sideload.apk');
   }
 
+  /// The biggest sideloaded APK taken in, so a wrong link or a runaway
+  /// upload cannot fill the Portal's storage.
+  static const maxSideloadBytes = 1024 * 1024 * 1024;
+
   Future<void> _save(Stream<List<int>> data, File file, int? total) async {
+    if (total != null && total > maxSideloadBytes) throw StateError('That file is too big for an app (over 1 GB)');
     final sink = file.openWrite();
     var received = 0;
     var lastReport = DateTime.fromMillisecondsSinceEpoch(0);
@@ -450,6 +456,7 @@ class StoreManager extends Manager {
       await for (final chunk in data) {
         sink.add(chunk);
         received += chunk.length;
+        if (received > maxSideloadBytes) throw StateError('That file is too big for an app (over 1 GB)');
         final now = DateTime.now();
         if (now.difference(lastReport) > const Duration(milliseconds: 200)) {
           lastReport = now;
@@ -460,6 +467,12 @@ class StoreManager extends Manager {
       await sink.close();
     }
     if (received < 1024) throw StateError('That is not an APK (only $received bytes)');
+    // Every APK is a zip: anything else (an HTML error page behind a link)
+    // is turned away before Android's installer sees it.
+    final head = await file.openRead(0, 4).fold<List<int>>([], (a, b) => a..addAll(b));
+    if (head.length < 4 || head[0] != 0x50 || head[1] != 0x4b || head[2] != 0x03 || head[3] != 0x04) {
+      throw StateError('That file is not an Android app (APK)');
+    }
   }
 
   Future<void> _installFile(File file) async {

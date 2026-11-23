@@ -899,7 +899,7 @@ class RemoteManager extends Manager {
     final password = body?['password'];
     if (password is String &&
         password.isNotEmpty &&
-        password == _settings.get(defs.remotePassword)) {
+        AuthStore.constantTimeEquals(password, _settings.get(defs.remotePassword))) {
       _auth.clearFailures(ip);
       // ttl_days (issue #84): a Home Assistant rest_command cannot redo the
       // login dance every week, so an automation logs in once with a long

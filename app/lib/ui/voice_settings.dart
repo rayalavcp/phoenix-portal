@@ -11,7 +11,6 @@ import '../managers/voice/voice_manager.dart';
 import 'assist/assist_skins.dart';
 import 'kit.dart';
 import 'theme.dart';
-import 'toast.dart';
 
 /// The notice on the Voice Satellite page while the kiosk still runs the
 /// integration's engine in the dashboard, with the way out.
@@ -1780,6 +1779,3 @@ const voiceWakeWordRows = [
   ),
 ];
 
-/// Shows a toast after a switch or rollback from anywhere.
-void voiceToast(BuildContext context, String message) =>
-    showToast(context, title: 'Voice Satellite', message: message);

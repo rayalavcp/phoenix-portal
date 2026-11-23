@@ -270,10 +270,6 @@ class _Programs {
       });
 }
 
-/// Forgets loaded shaders, since each widget test has its own binding.
-@visibleForTesting
-void resetCelestialPrograms() => _Programs._loading = null;
-
 /// Loads the shaders, the catalog, the sprites and [terrain]'s ground
 /// ahead of the first frame. Tests call it with real async.
 Future<void> preloadCelestial({String terrain = 'hills'}) async {

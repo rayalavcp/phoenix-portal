@@ -1,8 +1,11 @@
-# Phoenix Portal test build 2026.12.12 (387)
+# Phoenix Portal test build 2026.12.13 (388)
 
 - `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 100609682 bytes.
-  SHA-256 `8f534c5673d01da35c043f41684663621b8ba4aac2623fd7abfbe9dc4fb6de9f`.
+  SHA-256 `121a14fdb4b27c9364eff5666184482ffccdc14eeb9eb46c34b69e67edf2d4e8`.
 - New in this build:
+  - **Review and security pass:** stale files and dead code removed; the
+    remote admin's password check is constant-time; an APK installed from a
+    link or an upload must really be an APK and is capped at 1 GB.
   - **Swipe right** on the Today screen opens Smart Home (your Home
     Assistant dashboard, or whatever the Smart Home button is set to). A
     swipe in from the very left edge still opens the menu.

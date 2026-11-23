@@ -193,3 +193,35 @@ Not yet seen on a device:
   script (written for Windows PowerShell 5.1, not run here).
 - A one-tap "Camera for Kids games only" switch (exclude the HA camera
   entity, turn off the other camera features) was offered, not built.
+
+## Repo and security review (2026.12.13)
+
+Removed as stale: `app/ios` (Portal is Android only; launcher icons now
+`ios: false`), `assets/screenshots`, the upstream demo GIFs and benchmark SVG,
+four unused `docs/phoenix/screens` images, `.github/funding.yml` (pointed at
+the original author) and the upstream issue bots (`stale.yml`,
+`require-logs.yml`). Dead code: `core/image_orientation.dart` (and its test),
+`resetCelestialPrograms`, `voiceToast`, an orphan font licence.
+
+Security, checked and fine: every remote admin endpoint except login, setup
+(only before a password exists), health, fleet invite/identity, intercom and
+shared timers needs a signed bearer token (HMAC, expiry, per-IP login
+throttling); fleet tokens are limited to the fleet and update endpoints;
+file upload/download paths are canonicalized and kept inside their root;
+exported Android components are permission-guarded or harmless
+(boot/package-replaced); `UpdateHelperProvider` answers only the shell/root
+uid; the remote UI builds DOM without `innerHTML`; no secrets in the repo
+(only test TLS fixtures); signing keys live outside the repo.
+
+Hardened: the admin password is compared in constant time; sideloaded APKs
+(link or upload) are capped at 1 GB and must start with the zip signature
+before Android's installer sees them.
+
+Known and accepted: the remote admin is plain http on the LAN by default
+(HTTPS can be turned on in its settings); cleartext is allowed because most
+Home Assistant dashboards are http; user CAs are trusted for private HA
+certificates. The `.git` folder is about 1.5 GB because every build
+committed a ~100 MB APK; shrinking it means rewriting history (force push),
+only with the owner's OK. Remaining `jxlarrea` mentions are the required
+"Based on Kiosk Satellite" credits, the Echo-only system images (never used
+on a Portal) and upstream changelog history.

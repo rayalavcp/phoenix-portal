@@ -74,6 +74,10 @@ class AuthStore {
     return base64Url.encode(digest.bytes);
   }
 
+  /// Compares secrets (signatures, the admin password) without leaking,
+  /// through timing, how much of a guess was right.
+  static bool constantTimeEquals(String a, String b) => _constantTimeEquals(a, b);
+
   static bool _constantTimeEquals(String a, String b) {
     if (a.length != b.length) return false;
     var result = 0;
