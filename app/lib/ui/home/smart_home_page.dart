@@ -6,6 +6,7 @@ import '../../app_container.dart';
 import '../../managers/home/phoenix_home_manager.dart';
 import '../../managers/settings/definitions.dart' as defs;
 import '../theme.dart';
+import 'home_glass.dart';
 
 /// Phoenix Home's Smart Home page: Home Assistant as an add-on. Quick
 /// controls for lights, switches, covers, locks, climate, players, scenes
@@ -58,14 +59,9 @@ class _SmartHomePageState extends State<SmartHomePage> {
   Widget build(BuildContext context) {
     final home = c.phoenixHome;
     final hasDashboard = c.settings.get(defs.startUrl).isNotEmpty;
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF15181F), Color(0xFF0B0D10)],
-        ),
-      ),
+    return PhoenixPageBackdrop(
+      // On the wallpaper in glass, like the Today screen.
+      container: c,
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -312,7 +308,7 @@ class _EntityTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final on = entity.active && !entity.runs;
     return Material(
-      color: on ? const Color(0xFF3A1C0E) : const Color(0xFF1C2028),
+      color: on ? glassPicked : glassFill,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),

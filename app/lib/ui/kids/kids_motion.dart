@@ -249,7 +249,7 @@ class KidsHandHint extends StatelessWidget {
           children: [
             Icon(
               hands.camera ? (hands.head ? Icons.face_rounded : Icons.back_hand_rounded) : Icons.touch_app_rounded,
-              color: const Color(0xFFFFD23F),
+              color: const Color(0xFFF2CF6E),
               size: 28,
             ),
             const SizedBox(width: 10),
@@ -977,7 +977,7 @@ class _FingerMathState extends State<FingerMath> {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.front_hand_rounded, color: Color(0xFFFFD23F), size: 44),
+                        const Icon(Icons.front_hand_rounded, color: Color(0xFFF2CF6E), size: 44),
                         const SizedBox(width: 12),
                         Text(shown == null ? 'Show me your fingers!' : 'You show $shown', style: kidsText(34)),
                         if (shown != null) ...[
@@ -988,7 +988,7 @@ class _FingerMathState extends State<FingerMath> {
                             child: CircularProgressIndicator(
                               value: (_hold / 0.8).clamp(0.0, 1.0),
                               strokeWidth: 6,
-                              color: const Color(0xFFFFD23F),
+                              color: const Color(0xFFF2CF6E),
                               backgroundColor: Colors.white24,
                             ),
                           ),
@@ -1041,7 +1041,7 @@ const _pixelColors = {
   'C': Color(0xFF39D0FF),
   'R': Color(0xFFFF3D6E),
   'B': Color(0xFF2B3A8F),
-  'O': Color(0xFFFFB627),
+  'O': Color(0xFFE7B663),
   'G': Color(0xFF7CFF6B),
   'S': Color(0xFF9A8F86),
   'D': Color(0xFF6B625B),
@@ -1180,7 +1180,7 @@ class _SpaceBlasterState extends State<SpaceBlaster> with SingleTickerProviderSt
   void _boom(double x, double y, Color color, int n) {
     for (var i = 0; i < n; i++) {
       final a = _rng.nextDouble() * math.pi * 2, v = 0.1 + _rng.nextDouble() * 0.35;
-      _sparks.add(_Spark(x, y, math.cos(a) * v, math.sin(a) * v, i.isEven ? color : const Color(0xFFFFE066)));
+      _sparks.add(_Spark(x, y, math.cos(a) * v, math.sin(a) * v, i.isEven ? color : const Color(0xFFF3DA8A)));
     }
   }
 
@@ -1305,7 +1305,7 @@ class _SpaceBlasterState extends State<SpaceBlaster> with SingleTickerProviderSt
                 children: [
                   Text('WAVE $_wave', style: _arcade(30, const Color(0xFF39D0FF))),
                   const SizedBox(width: 18),
-                  Text(_score.toString().padLeft(5, '0'), style: _arcade(36, const Color(0xFFFFE066))),
+                  Text(_score.toString().padLeft(5, '0'), style: _arcade(36, const Color(0xFFF3DA8A))),
                   const SizedBox(width: 18),
                   for (var i = 0; i < 3; i++)
                     Padding(
@@ -1435,7 +1435,7 @@ class _SpacePainter extends CustomPainter {
     for (final p in g._powers) {
       final c = Offset(p.x * size.width, p.y * size.height);
       final pulse = 1 + 0.15 * math.sin(g._time * 10);
-      final col = p.shield ? const Color(0xFF39D0FF) : const Color(0xFFFFE066);
+      final col = p.shield ? const Color(0xFF39D0FF) : const Color(0xFFF3DA8A);
       canvas.drawRect(Rect.fromCenter(center: c, width: cell * 7 * pulse, height: cell * 7 * pulse), Paint()..color = col);
       final tp = TextPainter(
         text: TextSpan(
@@ -1448,7 +1448,7 @@ class _SpacePainter extends CustomPainter {
     }
     // The ship (blinking right after a crash), its flame and shield.
     final ship = Offset(g._ship.dx * size.width, g._ship.dy * size.height);
-    final flame = Paint()..color = Color.lerp(const Color(0xFFFFB627), const Color(0xFFFF3D6E), (math.sin(g._time * 30) + 1) / 2)!;
+    final flame = Paint()..color = Color.lerp(const Color(0xFFE7B663), const Color(0xFFFF3D6E), (math.sin(g._time * 30) + 1) / 2)!;
     canvas.drawRect(Rect.fromCenter(center: ship + Offset(0, cell * 7), width: cell * 2.5, height: cell * (3 + 2 * ((g._time * 20) % 1))), flame);
     if (g._hurt <= 0 || (g._time * 12).floor().isEven) _drawPixels(canvas, _shipArt, ship, cell * 1.4);
     if (g._shield > 0) {
@@ -1473,7 +1473,7 @@ class _SpacePainter extends CustomPainter {
       final tp = TextPainter(
         text: const TextSpan(
           text: 'TRIPLE SHOT',
-          style: TextStyle(fontFamily: 'VT323', fontSize: 28, color: Color(0xFFFFE066)),
+          style: TextStyle(fontFamily: 'VT323', fontSize: 28, color: Color(0xFFF3DA8A)),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
@@ -1564,13 +1564,13 @@ class _StickPainter extends CustomPainter {
           ..lineTo(back.dx + side.dx, back.dy + side.dy)
           ..lineTo(back.dx - side.dx, back.dy - side.dy)
           ..close(),
-        Paint()..color = on ? const Color(0xFFFFE066) : Colors.white24,
+        Paint()..color = on ? const Color(0xFFF3DA8A) : Colors.white24,
       );
     }
     final q = p;
     if (q != null) {
       final dot = c + Offset((q.dx - 0.5) * 2 * r * 0.8, (q.dy - 0.5) * 2 * r * 0.8);
-      canvas.drawCircle(dot, r * 0.17, Paint()..color = live ? const Color(0xFFFFE066) : Colors.white38);
+      canvas.drawCircle(dot, r * 0.17, Paint()..color = live ? const Color(0xFFF3DA8A) : Colors.white38);
     }
     final icon = head ? Icons.face_rounded : Icons.back_hand_rounded;
     final tp = TextPainter(

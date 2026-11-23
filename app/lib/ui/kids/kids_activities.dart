@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' show ImageFilter;
 
@@ -9,6 +10,13 @@ import 'package:flutter/material.dart';
 /// The playful face the Kids Portal speaks in: Nunito, rounded and friendly,
 /// bundled in the APK.
 const kidsFont = 'Nunito';
+
+/// A gentler version of [c] for the Kids Portal's own screens: a little
+/// less saturated and never glaring, so the hub stays calm.
+Color kidsSoft(Color c) {
+  final hsv = HSVColor.fromColor(c);
+  return hsv.withSaturation(hsv.saturation * 0.72).withValue(math.min(hsv.value, 0.86)).toColor();
+}
 
 TextStyle kidsText(double size, {Color color = Colors.white, FontWeight weight = FontWeight.w800}) =>
     TextStyle(fontFamily: kidsFont, fontSize: size, fontWeight: weight, color: color, height: 1.15);
@@ -121,7 +129,7 @@ class KidsActivityFrame extends StatelessWidget {
   Widget build(BuildContext context) => Stack(
       fit: StackFit.expand,
       children: [
-        KidsCalmBackground(tint: colors.first),
+        KidsCalmBackground(tint: kidsSoft(colors.first)),
         SafeArea(
           child: Column(
             children: [
@@ -267,7 +275,7 @@ class KidsStartPanel extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.emoji_events_rounded, color: Color(0xFFFFD23F), size: 22),
+                        const Icon(Icons.emoji_events_rounded, color: Color(0xFFF2CF6E), size: 22),
                         const SizedBox(width: 6),
                         Text(snap.data ?? 'No best yet: be the first!', style: kidsText(19, weight: FontWeight.w700)),
                       ],
@@ -288,7 +296,7 @@ class KidsStartPanel extends StatelessWidget {
 
 /// A big, bright, 3D button: the one thing to press.
 class KidsBigButton extends StatelessWidget {
-  const KidsBigButton(this.label, {super.key, required this.onTap, this.icon, this.size = 32, this.colors = const [Color(0xFFFFE066), Color(0xFFFFB627)]});
+  const KidsBigButton(this.label, {super.key, required this.onTap, this.icon, this.size = 32, this.colors = const [Color(0xFFF3DA8A), Color(0xFFE7B663)]});
   final String label;
   final VoidCallback? onTap;
   final IconData? icon;
@@ -333,7 +341,7 @@ class _Float extends StatefulWidget {
 }
 
 class _FloatState extends State<_Float> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600))..repeat(reverse: true);
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 3200))..repeat(reverse: true);
 
   @override
   void dispose() {

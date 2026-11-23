@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 import '../../app_container.dart';
+import '../theme.dart' as ks;
 import 'home_themes.dart';
 
 /// How see-through the glass is below this point: 0 clear, 1 solid.
@@ -155,7 +156,7 @@ class PhoenixPageBackdrop extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0x8C000000), Color(0x66000000), Color(0x99000000)],
+            colors: [Color(0x99000000), Color(0x80000000), Color(0xA6000000)],
           ),
         ),
       ),
@@ -183,3 +184,25 @@ ThemeData phoenixGlassTheme(ThemeData dark, Color accent) => dark.copyWith(
 
 /// Whether [theme] is a glass page's (its surfaces see through).
 bool isGlassTheme(ThemeData theme) => theme.colorScheme.surface.a < 1;
+
+/// A full-screen page in Phoenix's calm look: [PhoenixPageBackdrop] (the
+/// wallpaper under a shade) and the glass theme in the home theme's accent
+/// for [child]'s own widgets.
+class PhoenixGlassPage extends StatelessWidget {
+  const PhoenixGlassPage({super.key, required this.container, required this.child});
+
+  final AppContainer container;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => PhoenixPageBackdrop(
+    container: container,
+    child: ListenableBuilder(
+      listenable: Listenable.merge([container.phoenixHome.theme, autoHomeTheme]),
+      builder: (context, _) => Theme(
+        data: phoenixGlassTheme(ks.buildTheme(Brightness.dark), homeTheme(container.phoenixHome.theme.value).accent),
+        child: child,
+      ),
+    ),
+  );
+}

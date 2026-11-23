@@ -1,9 +1,17 @@
-# Phoenix Portal test build 2026.12.18 (393)
+# Phoenix Portal test build 2026.12.19 (394)
 
 - APK: on the repository's [Releases](https://github.com/rayalavcp/phoenix-portal/releases/latest)
-  page (`phoenix-portal.apk`), armeabi-v7a, runs on every Portal. 100707930 bytes.
-  SHA-256 `ffe59a6e3f6dc69c4138926a994c9fc4f5a7760ccdf2dd3f387d0866fbc2f7b5`.
+  page (`phoenix-portal.apk`), armeabi-v7a, runs on every Portal. 100707922 bytes.
+  SHA-256 `60c38462c9940ae32e71b8df311a35279651e9ee90a9c354c9199b851d680efa`.
 - New in this build:
+  - **Calmer everywhere**: the orange, gold, blue, green and rose accents
+    are a step softer on every screen and in the remote admin. Smart Home,
+    All apps, the App Store and Timers now stand on your wallpaper in the
+    same frosted glass as the Today screen and the calendars, so moving
+    between them no longer jumps between looks. The dock's Kids Portal and
+    Smart Home buttons are soft tinted glass instead of bright pills. The
+    Kids hub uses gentler colours, a glass stars pill, a quiet challenge
+    banner and slower waving and floating. Storms flash once, softly.
   - **New puzzles every game**: Munch Maze makes a new maze each stage
     (mirrored, every path reachable, no dead ends) and Brick Bash a new
     brick wall, fuller and tougher as the stages go up. Maze, Sudoku, Word

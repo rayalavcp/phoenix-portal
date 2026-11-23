@@ -12,6 +12,7 @@ import '../managers/voice_timers/voice_timer_manager.dart';
 import 'compass/compass_center.dart';
 import 'kit.dart';
 import 'alarms_overlay.dart' show alarmButtonStyle;
+import 'home/home_glass.dart';
 import 'theme.dart';
 import 'timer_editor.dart';
 import 'toast.dart';
@@ -173,8 +174,12 @@ class _TimersScreenState extends State<_TimersScreen> {
     return [...alerts, ...running];
   }
 
+  // Phoenix: the timers stand on the wallpaper in glass, like the Today
+  // screen.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => PhoenixGlassPage(container: c, child: Builder(builder: _screen));
+
+  Widget _screen(BuildContext context) {
     final theme = Theme.of(context);
     final s = l10n(context);
     final now = DateTime.now();
@@ -192,10 +197,12 @@ class _TimersScreenState extends State<_TimersScreen> {
         behavior: HitTestBehavior.opaque,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            gradient: ksGroundGradient(
-              theme.colorScheme.surface,
-              theme.brightness,
-            ),
+            gradient: isGlassTheme(theme)
+                ? null
+                : ksGroundGradient(
+                    theme.colorScheme.surface,
+                    theme.brightness,
+                  ),
           ),
           child: Material(
             type: MaterialType.transparency,
@@ -231,11 +238,15 @@ class _TimersScreenState extends State<_TimersScreen> {
                       if (editor)
                         Positioned.fill(
                           child: DecoratedBox(
+                            // The wheels hide the list: a deep glass.
                             decoration: BoxDecoration(
-                              gradient: ksGroundGradient(
-                                theme.colorScheme.surface,
-                                theme.brightness,
-                              ),
+                              color: isGlassTheme(theme) ? const Color(0xEE10121A) : null,
+                              gradient: isGlassTheme(theme)
+                                  ? null
+                                  : ksGroundGradient(
+                                      theme.colorScheme.surface,
+                                      theme.brightness,
+                                    ),
                             ),
                             child: TimerEditorStep(
                               key: ValueKey('timer-editor-${_editing ?? ''}'),

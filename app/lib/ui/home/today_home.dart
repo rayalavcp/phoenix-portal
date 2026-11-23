@@ -974,12 +974,13 @@ class _Dock extends StatelessWidget {
                             onTap: onTap,
                             child: Ink(
                               height: 60,
+                              // The two main doors stand out by a soft tint
+                              // of glass, not a loud fill.
                               decoration: primary
                                   ? BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: label == 'Kids Portal'
-                                            ? const [Color(0xFF7B5CFF), Color(0xFFB06BFF)]
-                                            : const [Color(0xFFD45A1A), Color(0xFFF0A01A)],
+                                      color: label == 'Kids Portal' ? const Color(0x339A8CE8) : const Color(0x33DB7B4E),
+                                      border: Border.all(
+                                        color: label == 'Kids Portal' ? const Color(0x66B3A8F0) : const Color(0x66E9A27E),
                                       ),
                                       borderRadius: BorderRadius.circular(22),
                                     )
@@ -987,7 +988,11 @@ class _Dock extends StatelessWidget {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(icon, color: Colors.white, size: primary ? 27 : 24),
+                                  Icon(
+                                    icon,
+                                    color: !primary ? Colors.white : (label == 'Kids Portal' ? const Color(0xFFCFC7FA) : const Color(0xFFF2C3A8)),
+                                    size: primary ? 26 : 24,
+                                  ),
                                   if (labels)
                                     Text(
                                       label,

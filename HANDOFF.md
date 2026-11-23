@@ -213,6 +213,17 @@ pages stand on the wallpaper in glass like the Today screen
 (`PhoenixPageBackdrop`, `phoenixGlassTheme` and the `glassFill` colours in
 `home_glass.dart`; the calendar takes the home theme's accent).
 
+## Calm look (2026.12.19)
+
+The owner asked for a calmer UI everywhere. The brand tokens in
+`ui/theme.dart` (`Phx.ember`, `gold`, `iris`, `mint`, `rose`, `flame`,
+`badges`) and `remote-ui/static/app.css` are softened; the home themes in
+`home_themes.dart` are desaturated; `kidsSoft()` (kids_activities.dart)
+calms the Kids hub and game tints. Full-screen pages use `PhoenixGlassPage`
+or `PhoenixPageBackdrop` (`home_glass.dart`): Smart Home, All apps, App
+Store, Timers, calendars, School, Telugu, Shopping. Keep new screens in
+that look and avoid saturated fills.
+
 ## 2026.12.18 features (where they live)
 
 - Kids leaderboards: `kids_logic.dart` (`KidsScores.offer` sets

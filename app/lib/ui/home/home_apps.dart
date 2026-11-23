@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../app_container.dart';
 import '../../managers/launcher/app_launcher_manager.dart';
 import '../theme.dart';
+import 'home_glass.dart';
 import '../toast.dart';
 
 /// Phoenix Home's app pieces: the icon, the tile, the long-press sheet and
@@ -412,14 +413,9 @@ class _HomeAppDrawerState extends State<HomeAppDrawer> {
           list.sort((a, b) => uses(b).compareTo(uses(a)));
         }
         final recent = q.isEmpty && !_showHidden ? home.recent(8) : const [];
-        return Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF15181F), Color(0xFF0B0D10)],
-            ),
-          ),
+        return PhoenixPageBackdrop(
+          // On the wallpaper in glass, like the Today screen.
+          container: c,
           child: SafeArea(
             child: Column(
               children: [

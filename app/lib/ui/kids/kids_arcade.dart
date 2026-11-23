@@ -360,7 +360,7 @@ class _MunchMazeState extends State<MunchMaze> with SingleTickerProviderStateMix
   KidsHands? _tracker;
   int _playWith = 0; // buttons, hand, head
 
-  static const _robotColors = [Color(0xFFFF4D6D), Color(0xFF39D0FF), Color(0xFFFFB627)];
+  static const _robotColors = [Color(0xFFFF4D6D), Color(0xFF39D0FF), Color(0xFFE7B663)];
 
   @override
   void dispose() {
@@ -572,7 +572,7 @@ class _MunchMazeState extends State<MunchMaze> with SingleTickerProviderStateMix
                 children: [
                   Text('MAZE $_stage', style: arcadeText(30, const Color(0xFF39D0FF))),
                   const SizedBox(width: 18),
-                  Text(_score.toString().padLeft(5, '0'), style: arcadeText(36, const Color(0xFFFFE066))),
+                  Text(_score.toString().padLeft(5, '0'), style: arcadeText(36, const Color(0xFFF3DA8A))),
                   const SizedBox(width: 14),
                   for (var i = 0; i < 3; i++)
                     Padding(
@@ -703,7 +703,7 @@ class _MazePainter extends CustomPainter {
         canvas.drawLine(c + Offset(0, -cell * 0.3), c + Offset(0, -cell * 0.48), Paint()
           ..color = body
           ..strokeWidth = cell * 0.08);
-        canvas.drawCircle(c + Offset(0, -cell * 0.5), cell * 0.08, Paint()..color = const Color(0xFFFFE066));
+        canvas.drawCircle(c + Offset(0, -cell * 0.5), cell * 0.08, Paint()..color = const Color(0xFFF3DA8A));
       }
       // The visor and eyes (all that is left of an eaten robot going home).
       final visor = Rect.fromCenter(center: c + Offset(0, -cell * 0.02), width: cell * 0.6, height: cell * 0.22);
@@ -820,7 +820,7 @@ List<String> randomBrickLayout(int stage, math.Random rng) {
 
 List<_Brick> _bricksFor(int stage, math.Random rng) {
   final layout = randomBrickLayout(stage, rng);
-  const colors = [Color(0xFFFF4D6D), Color(0xFFFF9F1C), Color(0xFFFFE066), Color(0xFF7CFF6B), Color(0xFF39D0FF)];
+  const colors = [Color(0xFFFF4D6D), Color(0xFFFF9F1C), Color(0xFFF3DA8A), Color(0xFF7CFF6B), Color(0xFF39D0FF)];
   final out = <_Brick>[];
   const w = _fieldW / 10, h = 3.6;
   for (var r = 0; r < layout.length; r++) {
@@ -1034,7 +1034,7 @@ class _BrickBashState extends State<BrickBash> with SingleTickerProviderStateMix
                 children: [
                   Text('LEVEL $_stage', style: arcadeText(30, const Color(0xFF39D0FF))),
                   const SizedBox(width: 18),
-                  Text(_score.toString().padLeft(5, '0'), style: arcadeText(36, const Color(0xFFFFE066))),
+                  Text(_score.toString().padLeft(5, '0'), style: arcadeText(36, const Color(0xFFF3DA8A))),
                   const SizedBox(width: 14),
                   for (var i = 0; i < 3; i++)
                     Padding(
@@ -1161,7 +1161,7 @@ class _BricksPainter extends CustomPainter {
       canvas.drawCircle(c, k * 1.3, Paint()..color = Colors.white);
     }
     if (g._serve > 0) {
-      final tp = TextPainter(text: TextSpan(text: 'GET READY', style: arcadeText(k * 6, const Color(0xFFFFE066))), textDirection: TextDirection.ltr)..layout();
+      final tp = TextPainter(text: TextSpan(text: 'GET READY', style: arcadeText(k * 6, const Color(0xFFF3DA8A))), textDirection: TextDirection.ltr)..layout();
       tp.paint(canvas, Offset(size.width / 2 - tp.width / 2, size.height * 0.55));
     }
   }

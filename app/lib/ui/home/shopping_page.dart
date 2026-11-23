@@ -118,6 +118,8 @@ class _ShoppingPageState extends State<ShoppingPage> {
                           style: const TextStyle(color: Colors.white, fontSize: 20),
                           textCapitalization: TextCapitalization.sentences,
                           decoration: const InputDecoration(
+                            // No fill of its own: it sits on the glass.
+                            filled: false,
                             border: InputBorder.none,
                             hintText: 'Add an item',
                             hintStyle: TextStyle(color: Colors.white54, fontSize: 20),

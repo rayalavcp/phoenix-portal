@@ -385,9 +385,10 @@ class _WeatherPainter extends CustomPainter {
     // Three strikes a minute: a flash and a jagged bolt.
     final phase = t % 20;
     final strike = t ~/ 20;
-    final on = (phase > 9.0 && phase < 9.14) || (phase > 9.28 && phase < 9.4);
+    // One soft flash, no flicker.
+    final on = phase > 9.0 && phase < 9.18;
     if (!on) return;
-    canvas.drawRect(Offset.zero & size, Paint()..color = const Color.fromRGBO(225, 235, 255, 0.28));
+    canvas.drawRect(Offset.zero & size, Paint()..color = const Color.fromRGBO(225, 235, 255, 0.12));
     final rnd = math.Random(strike * 31 + 7);
     var p = Offset(size.width * (0.2 + 0.6 * rnd.nextDouble()), 0);
     final bolt = Path()..moveTo(p.dx, p.dy);
@@ -407,7 +408,7 @@ class _WeatherPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.5
-        ..color = const Color.fromRGBO(255, 255, 255, 0.95),
+        ..color = const Color.fromRGBO(255, 255, 255, 0.6),
     );
   }
 

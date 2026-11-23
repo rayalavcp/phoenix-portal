@@ -24,59 +24,59 @@ class HomeTheme {
 const homeThemes = <HomeTheme>[
   // Colours picked from the wallpaper (see [autoHomeTheme]); until they
   // are worked out, Ember's.
-  HomeTheme('auto', 'From wallpaper', [Color(0xFF3A1A0E), Color(0xFF14161C), Color(0xFF0B0D10)], [
-    [Color(0xFF7B5CFF), Color(0xFFB06BFF)],
-    [Color(0xFFD42A1A), Color(0xFFF07A1A)],
-    [Color(0xFF14A06B), Color(0xFF52D69F)],
-  ], Color(0xFFF26A1B)),
-  HomeTheme('ember', 'Ember', [Color(0xFF3A1A0E), Color(0xFF14161C), Color(0xFF0B0D10)], [
-    [Color(0xFF7B5CFF), Color(0xFFB06BFF)],
-    [Color(0xFFD42A1A), Color(0xFFF07A1A)],
-    [Color(0xFF14A06B), Color(0xFF52D69F)],
-    [Color(0xFF283066), Color(0xFF5B6CFF)],
-    [Color(0xFFE08A00), Color(0xFFF7B733)],
-    [Color(0xFF1C8ED6), Color(0xFF63C3FF)],
-    [Color(0xFFE0446A), Color(0xFFFF8FA3)],
-    [Color(0xFF282D37), Color(0xFF3E4552)],
-  ], Color(0xFFF26A1B)),
-  HomeTheme('ocean', 'Ocean', [Color(0xFF0E2A3A), Color(0xFF0C1620), Color(0xFF070B10)], [
-    [Color(0xFF0B6E99), Color(0xFF2BB3D9)],
-    [Color(0xFF14527A), Color(0xFF3A8FD1)],
-    [Color(0xFF0F7C76), Color(0xFF34C2B3)],
-    [Color(0xFF223A7A), Color(0xFF5B7CFF)],
-    [Color(0xFF0E5E6F), Color(0xFF4FB6C9)],
-    [Color(0xFF2A3F5F), Color(0xFF6C8EBF)],
-  ], Color(0xFF2BB3D9)),
-  HomeTheme('forest', 'Forest', [Color(0xFF16301A), Color(0xFF101812), Color(0xFF080C09)], [
-    [Color(0xFF1F6B3A), Color(0xFF4CAF6E)],
-    [Color(0xFF4B6B1F), Color(0xFF9BC53D)],
-    [Color(0xFF16594F), Color(0xFF3FA796)],
-    [Color(0xFF6B4E1F), Color(0xFFC79A3D)],
-    [Color(0xFF2F5E2F), Color(0xFF7DBE6A)],
-    [Color(0xFF3A4A2A), Color(0xFF6E8B4E)],
-  ], Color(0xFF9BC53D)),
-  HomeTheme('midnight', 'Midnight', [Color(0xFF221A44), Color(0xFF110F1E), Color(0xFF07060D)], [
-    [Color(0xFF3B2A8C), Color(0xFF7A5CFF)],
-    [Color(0xFF5A2A8C), Color(0xFFB06BFF)],
-    [Color(0xFF1E2A6B), Color(0xFF4F6BFF)],
-    [Color(0xFF6B2A6B), Color(0xFFD16BD1)],
-    [Color(0xFF2A3A5A), Color(0xFF6A84B8)],
-    [Color(0xFF2B2440), Color(0xFF4A3F70)],
-  ], Color(0xFFB06BFF)),
-  HomeTheme('sunset', 'Sunset', [Color(0xFF4A1A2A), Color(0xFF1C1018), Color(0xFF0D080C)], [
-    [Color(0xFFE0446A), Color(0xFFFF8FA3)],
-    [Color(0xFFD42A1A), Color(0xFFF5A623)],
-    [Color(0xFF8C2A6B), Color(0xFFE05AA8)],
-    [Color(0xFFE08A00), Color(0xFFFFD27A)],
-    [Color(0xFFB0303C), Color(0xFFFF6B6B)],
-    [Color(0xFF5A2A4A), Color(0xFF9A5A80)],
-  ], Color(0xFFFF8FA3)),
-  HomeTheme('graphite', 'Graphite', [Color(0xFF26282E), Color(0xFF15161A), Color(0xFF0B0C0E)], [
-    [Color(0xFF2E3138), Color(0xFF4A4F5A)],
-    [Color(0xFF34373F), Color(0xFF555B68)],
-    [Color(0xFF2A2D33), Color(0xFF444954)],
-    [Color(0xFF3A3D45), Color(0xFF60667A)],
-  ], Color(0xFFF26A1B)),
+  HomeTheme('auto', 'From wallpaper', [Color(0xFF3A2118), Color(0xFF16171C), Color(0xFF0C0E10)], [
+    [Color(0xFF8872E4), Color(0xFFAD7DE4)],
+    [Color(0xFFCE4D41), Color(0xFFE48C45)],
+    [Color(0xFF319B73), Color(0xFF6CD0A6)],
+  ], Color(0xFFE48046)),
+  HomeTheme('ember', 'Ember', [Color(0xFF3A2118), Color(0xFF16171C), Color(0xFF0C0E10)], [
+    [Color(0xFF8872E4), Color(0xFFAD7DE4)],
+    [Color(0xFFCE4D41), Color(0xFFE48C45)],
+    [Color(0xFF319B73), Color(0xFF6CD0A6)],
+    [Color(0xFF363C66), Color(0xFF717DE4)],
+    [Color(0xFFD99830), Color(0xFFE4B657)],
+    [Color(0xFF4399D0), Color(0xFF77BAE4)],
+    [Color(0xFFD96380), Color(0xFFE496A4)],
+    [Color(0xFF2B2F37), Color(0xFF424852)],
+  ], Color(0xFFE48046)),
+  HomeTheme('ocean', 'Ocean', [Color(0xFF182E3A), Color(0xFF101820), Color(0xFF090C10)], [
+    [Color(0xFF297494), Color(0xFF4FB6D2)],
+    [Color(0xFF2A5B7A), Color(0xFF5899CB)],
+    [Color(0xFF277C77), Color(0xFF51BCB1)],
+    [Color(0xFF35487A), Color(0xFF7188E4)],
+    [Color(0xFF23626F), Color(0xFF67B5C3)],
+    [Color(0xFF36465F), Color(0xFF7A94B9)],
+  ], Color(0xFF4FB6D2)),
+  HomeTheme('forest', 'Forest', [Color(0xFF1C301F), Color(0xFF121813), Color(0xFF090C0A)], [
+    [Color(0xFF306B45), Color(0xFF5FAA79)],
+    [Color(0xFF526B30), Color(0xFF9FBF58)],
+    [Color(0xFF255951), Color(0xFF53A295)],
+    [Color(0xFF6B5430), Color(0xFFC19F59)],
+    [Color(0xFF395E39), Color(0xFF87B879)],
+    [Color(0xFF3E4A31), Color(0xFF718759)],
+  ], Color(0xFF9FBF58)),
+  HomeTheme('midnight', 'Midnight', [Color(0xFF292344), Color(0xFF14121E), Color(0xFF08080D)], [
+    [Color(0xFF4B3E88), Color(0xFF8772E4)],
+    [Color(0xFF623E88), Color(0xFFAD7DE4)],
+    [Color(0xFF2F386B), Color(0xFF697DE4)],
+    [Color(0xFF6B386B), Color(0xFFCB7ECB)],
+    [Color(0xFF35415A), Color(0xFF778BB2)],
+    [Color(0xFF302A40), Color(0xFF524A70)],
+  ], Color(0xFFAD7DE4)),
+  HomeTheme('sunset', 'Sunset', [Color(0xFF4A2531), Color(0xFF1C1319), Color(0xFF0D090C)], [
+    [Color(0xFFD96380), Color(0xFFE496A4)],
+    [Color(0xFFCE4D41), Color(0xFFE4AA4B)],
+    [Color(0xFF883E6F), Color(0xFFD974AF)],
+    [Color(0xFFD99830), Color(0xFFE4C487)],
+    [Color(0xFFAB4A53), Color(0xFFE47D7D)],
+    [Color(0xFF5A354E), Color(0xFF956582)],
+  ], Color(0xFFE496A4)),
+  HomeTheme('graphite', 'Graphite', [Color(0xFF28292E), Color(0xFF16171A), Color(0xFF0C0C0E)], [
+    [Color(0xFF303338), Color(0xFF4E515A)],
+    [Color(0xFF36393F), Color(0xFF595E68)],
+    [Color(0xFF2C2E33), Color(0xFF484B54)],
+    [Color(0xFF3C3F45), Color(0xFF666A7A)],
+  ], Color(0xFFE48046)),
 ];
 
 HomeTheme homeTheme(String id) {
@@ -135,7 +135,7 @@ HomeTheme themeFromPixels(Uint8List pixels) {
   final ranked = [for (var b = 0; b < 12; b++) b]..sort((a, b) => weight[b].compareTo(weight[a]));
   final hues = <(double, double)>[
     for (final b in ranked)
-      if (weight[b] > 0) (b * 30.0 + 15, (satSum[b] / weight[b]).clamp(0.45, 0.85)),
+      if (weight[b] > 0) (b * 30.0 + 15, (satSum[b] / weight[b]).clamp(0.35, 0.62)),
   ];
   // A grey picture: soft blues and slates, so the tiles still differ.
   if (hues.isEmpty) hues.addAll(const [(215.0, 0.45), (200.0, 0.35), (230.0, 0.4)]);
@@ -145,7 +145,7 @@ HomeTheme themeFromPixels(Uint8List pixels) {
   }
   List<Color> gradient((double, double) hs) => [
     HSVColor.fromAHSV(1, hs.$1, hs.$2, 0.55).toColor(),
-    HSVColor.fromAHSV(1, hs.$1, (hs.$2 * 0.85).clamp(0.0, 1.0), 0.92).toColor(),
+    HSVColor.fromAHSV(1, hs.$1, (hs.$2 * 0.85).clamp(0.0, 1.0), 0.85).toColor(),
   ];
   final avg = n == 0 ? const Color(0xFF14161C) : Color.fromARGB(255, (r0 / n).round(), (g0 / n).round(), (b0 / n).round());
   final tone = HSVColor.fromColor(avg);
@@ -158,6 +158,6 @@ HomeTheme themeFromPixels(Uint8List pixels) {
       const Color(0xFF0B0D10),
     ],
     [for (final hs in hues.take(6)) gradient(hs)],
-    HSVColor.fromAHSV(1, hues.first.$1, hues.first.$2.clamp(0.6, 0.9), 0.95).toColor(),
+    HSVColor.fromAHSV(1, hues.first.$1, hues.first.$2.clamp(0.45, 0.65), 0.88).toColor(),
   );
 }

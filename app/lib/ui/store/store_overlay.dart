@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../app_container.dart';
 import '../../managers/store/store_manager.dart';
 import '../kit.dart' show PhoenixMark;
+import '../home/home_glass.dart';
 import '../theme.dart';
 
 /// Phoenix Portal's app store: a curated, free catalog for Portals,
@@ -68,12 +69,15 @@ class _StorePageState extends State<_StorePage> {
 
   StoreManager get store => widget.container.store;
 
+  // On the wallpaper in glass, like the Today screen.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => PhoenixGlassPage(container: widget.container, child: Builder(builder: _page));
+
+  Widget _page(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     return Material(
-      color: scheme.surface,
+      color: Colors.transparent,
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

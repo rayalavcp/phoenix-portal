@@ -9,7 +9,7 @@
     --surface-high: #f1eeea;
     --border: #e9e5df; --divider: #e9e5df; --outline: #c9c5be;
     --text: #1b1d22; --muted: #5b606b;
-    --primary: #c4410f; --primary-fill: #c4410f; --primary-ink: #ffffff;
+    --primary: #b4572e; --primary-fill: #b4572e; --primary-ink: #ffffff;
     --primary-soft: #ffe8df;
     --accent: #a8660a;
     --ok: #128a5a; --warn: #a8660a; --error: #c2362f; --error-ink: #ffffff;
@@ -20,7 +20,7 @@
     --error-container: #ffdad6; --on-error-container: #410002;
     --shadow: rgba(20, 12, 8, .10);
     --radius: 26px; --radius-sm: 14px;
-    --flame: linear-gradient(45deg, #d42a1a, #f07a1a 55%, #f5a623);
+    --flame: linear-gradient(45deg, #b8502f, #db7b4e 55%, #e3b261);
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
@@ -28,10 +28,10 @@
     --surface-high: #20242c;
     --border: #262b34; --divider: #262b34; --outline: #3e4552;
     --text: #eceef2; --muted: #a3a9b6;
-    --primary: #f26a1b; --primary-fill: #f26a1b; --primary-ink: #2a0a00;
+    --primary: #db7b4e; --primary-fill: #db7b4e; --primary-ink: #2a0a00;
     --primary-soft: #3a1c12;
-    --accent: #f5a623;
-    --ok: #3ccb8c; --warn: #f5a623; --error: #ff6b6b; --error-ink: #3a0606;
+    --accent: #e3b261;
+    --ok: #5dbe96; --warn: #e3b261; --error: #e88a86; --error-ink: #3a0606;
     --debug: #7d8188;
     --primary-container: #4a1e10; --on-primary-container: #ffdbcf;
     --secondary-container: #4a3510; --on-secondary-container: #ffe3b5;
@@ -183,7 +183,7 @@
   /* The flame, from the logo's ember to its amber; dark ink keeps the
      label above 4.5:1 across the whole gradient. */
   .login-card .btn-primary { width: 100%; color: #2a0a00;
-    background: linear-gradient(45deg, #e8471a, #f07a1a 55%, #f5a623); }
+    background: linear-gradient(45deg, #b8502f, #db7b4e 55%, #e3b261); }
   .login-card { box-shadow: 0 18px 50px var(--shadow); }
   .login-card .logo { filter: drop-shadow(0 8px 22px rgba(242, 106, 27, .35)); }
   .login-card {

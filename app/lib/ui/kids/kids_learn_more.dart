@@ -277,7 +277,7 @@ class CountIt extends StatelessWidget {
   @override
   Widget build(BuildContext context) => KidsQuiz(
     title: 'Count It',
-    colors: const [Color(0xFFFF7A3D), Color(0xFFFFB627)],
+    colors: const [Color(0xFFFF7A3D), Color(0xFFE7B663)],
     scoreKey: 'count',
     icon: Icons.format_list_numbered_rounded,
     pitch: 'Count the pictures and pick the number',

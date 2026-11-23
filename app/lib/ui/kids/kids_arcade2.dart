@@ -25,7 +25,7 @@ Widget arcadeHud(BuildContext context, String label, int score, int lives, IconD
       children: [
         Text(label, style: arcadeText(30, const Color(0xFF39D0FF))),
         const SizedBox(width: 18),
-        Text(score.toString().padLeft(5, '0'), style: arcadeText(36, const Color(0xFFFFE066))),
+        Text(score.toString().padLeft(5, '0'), style: arcadeText(36, const Color(0xFFF3DA8A))),
         const SizedBox(width: 14),
         for (var i = 0; i < 3; i++)
           Padding(
@@ -378,7 +378,7 @@ class _HopAcrossState extends _ArcadeGame<HopAcross> {
     colors: const [Color(0xFF12324A), Color(0xFF2F7B4A)],
     hud: 'STAGE $stage',
     lifeIcon: Icons.egg_rounded,
-    lifeColor: const Color(0xFFFFE066),
+    lifeColor: const Color(0xFFF3DA8A),
     overDetail: 'Score $score · reached stage $stage',
     icon: Icons.directions_walk_rounded,
     pitch: 'Hop the chick over the road and across the river on the logs. Fill all five nests!',
@@ -421,7 +421,7 @@ class _HopPainter extends CustomPainter {
   _HopPainter(this.g);
   final _HopAcrossState g;
 
-  static const _cars = [Color(0xFFFF4D6D), Color(0xFF39D0FF), Color(0xFFFFB627), Color(0xFFB04BFF), Color(0xFF7CFF6B)];
+  static const _cars = [Color(0xFFFF4D6D), Color(0xFF39D0FF), Color(0xFFE7B663), Color(0xFFB04BFF), Color(0xFF7CFF6B)];
 
   void _chick(Canvas canvas, Offset c, double cell, Dir facing, {double squash = 0}) {
     canvas.save();
@@ -430,9 +430,9 @@ class _HopPainter extends CustomPainter {
     canvas.drawCircle(Offset(0, cell * 0.04), cell * 0.36, Paint()..color = const Color(0xFFFFD93D));
     canvas.drawCircle(Offset(-cell * 0.1, -cell * 0.06), cell * 0.12, Paint()..color = const Color(0xFFFFF1A8));
     // A little tuft, wings, beak, eyes.
-    canvas.drawCircle(Offset(0, -cell * 0.36), cell * 0.07, Paint()..color = const Color(0xFFFFB627));
+    canvas.drawCircle(Offset(0, -cell * 0.36), cell * 0.07, Paint()..color = const Color(0xFFE7B663));
     for (final s in const [-1, 1]) {
-      canvas.drawOval(Rect.fromCenter(center: Offset(s * cell * 0.33, cell * 0.1), width: cell * 0.16, height: cell * 0.26), Paint()..color = const Color(0xFFFFB627));
+      canvas.drawOval(Rect.fromCenter(center: Offset(s * cell * 0.33, cell * 0.1), width: cell * 0.16, height: cell * 0.26), Paint()..color = const Color(0xFFE7B663));
     }
     final look = Offset(facing.dx * cell * 0.06, facing.dy * cell * 0.05);
     final beak = Path()
@@ -480,7 +480,7 @@ class _HopPainter extends CustomPainter {
     for (final y in [6, hopRows - 1]) {
       canvas.drawRect(row(y), Paint()..color = const Color(0xFF3E9A4E));
       for (var x = 0; x < hopCols; x++) {
-        canvas.drawCircle(Offset((x + 0.3) * cell, (y + 0.7) * cell), cell * 0.05, Paint()..color = const Color(0xFFFFE066));
+        canvas.drawCircle(Offset((x + 0.3) * cell, (y + 0.7) * cell), cell * 0.05, Paint()..color = const Color(0xFFF3DA8A));
       }
     }
     canvas.drawRect(Rect.fromLTWH(0, 7 * cell, size.width, cell * 5), Paint()..color = const Color(0xFF2B2B3A));
@@ -537,13 +537,13 @@ class _HopPainter extends CustomPainter {
       _text(canvas, 'OOPS!', c - Offset(0, cell * 0.2), cell * 0.8, const Color(0xFFFF4D6D));
       for (var i = 0; i < 6; i++) {
         final a = i * math.pi / 3 + g.time * 3;
-        canvas.drawCircle(c + Offset(math.cos(a), math.sin(a)) * cell * 0.4 * (1.2 - g._hurt), cell * 0.06, Paint()..color = const Color(0xFFFFE066));
+        canvas.drawCircle(c + Offset(math.cos(a), math.sin(a)) * cell * 0.4 * (1.2 - g._hurt), cell * 0.06, Paint()..color = const Color(0xFFF3DA8A));
       }
     } else {
       _chick(canvas, c, cell, g._facing, squash: g._hopAnim > 0 ? 0.12 : 0);
     }
     if (g._banner > 0) {
-      _text(canvas, 'STAGE ${g.stage}', Offset(size.width / 2, 6.5 * cell), cell * 1.1, const Color(0xFFFFE066));
+      _text(canvas, 'STAGE ${g.stage}', Offset(size.width / 2, 6.5 * cell), cell * 1.1, const Color(0xFFF3DA8A));
     }
     canvas.restore();
   }
@@ -808,7 +808,7 @@ class _SkyPainter extends CustomPainter {
           final pt = c + Offset(math.cos(a), math.sin(a)) * r;
           i == 0 ? star.moveTo(pt.dx, pt.dy) : star.lineTo(pt.dx, pt.dy);
         }
-        canvas.drawPath(star..close(), Paint()..color = const Color(0xFFFFE066));
+        canvas.drawPath(star..close(), Paint()..color = const Color(0xFFF3DA8A));
       }
     }
     // Pip: a round sky-puff with a propeller cap.
@@ -828,7 +828,7 @@ class _SkyPainter extends CustomPainter {
         ..strokeWidth = k * 0.35);
       canvas.drawRect(Rect.fromCenter(center: Offset(0, -k * 3.4), width: k * 0.5, height: k * 1.2), Paint()..color = const Color(0xFF39D0FF));
       final spin = math.cos(g.time * 30).abs();
-      canvas.drawOval(Rect.fromCenter(center: Offset(0, -k * 4), width: k * 5 * spin + k * 0.6, height: k * 0.7), Paint()..color = const Color(0xFFFFE066));
+      canvas.drawOval(Rect.fromCenter(center: Offset(0, -k * 4), width: k * 5 * spin + k * 0.6, height: k * 0.7), Paint()..color = const Color(0xFFF3DA8A));
       // A wing that flaps.
       canvas.drawOval(
         Rect.fromCenter(center: Offset(-k * 2.2, k * 0.4 + math.sin(g.time * 18) * k * 0.6), width: k * 2.2, height: k * 1.2),
@@ -838,7 +838,7 @@ class _SkyPainter extends CustomPainter {
     }
     if (g._ready > 0 && g._tracker == null) _text(canvas, 'TAP TO FLY', Offset(size.width / 2, size.height * 0.75), k * 6, Colors.white);
     if (g._banner > 0) {
-      _text(canvas, _skyZones[(g.stage - 1) % _skyZones.length].$1, Offset(size.width / 2, size.height * 0.3), k * 8, const Color(0xFFFFE066));
+      _text(canvas, _skyZones[(g.stage - 1) % _skyZones.length].$1, Offset(size.width / 2, size.height * 0.3), k * 8, const Color(0xFFF3DA8A));
     }
     canvas.restore();
   }
@@ -1180,7 +1180,7 @@ class _RunPainter extends CustomPainter {
     }
     _text(canvas, '${(g._run / 10).floor()} m', Offset(size.width * 0.12, size.height * 0.08), k * 5, Colors.white);
     if (g._banner > 0) {
-      _text(canvas, _runWorlds[(g.stage - 1) % _runWorlds.length].$1, Offset(size.width / 2, size.height * 0.3), k * 8, const Color(0xFFFFE066));
+      _text(canvas, _runWorlds[(g.stage - 1) % _runWorlds.length].$1, Offset(size.width / 2, size.height * 0.3), k * 8, const Color(0xFFF3DA8A));
     }
     canvas.restore();
   }

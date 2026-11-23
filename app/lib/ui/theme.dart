@@ -15,36 +15,38 @@ import 'package:flutter/services.dart';
 /// Dark is the kiosk's home: exact palette values sit on it with comfortable
 /// contrast. On the light background each accent is deepened just enough to
 /// stay legible as text: same hue, deeper tone.
-const _ember = Color(0xFFF26A1B);
-const _emberOnLight = Color(0xFFC4410F);
+// Calmer since 2026.12.19: the same warm hues, a step softer, so no
+// screen shouts.
+const _ember = Color(0xFFDB7B4E);
+const _emberOnLight = Color(0xFFB4572E);
 
 /// Brand constants other screens reach for directly.
 abstract final class Phx {
   static const ember = _ember;
   static const emberOnLight = _emberOnLight;
-  static const gold = Color(0xFFF5A623);
-  static const iris = Color(0xFF8C9BFF);
-  static const mint = Color(0xFF3CCB8C);
-  static const rose = Color(0xFFFF6B6B);
+  static const gold = Color(0xFFE3B261);
+  static const iris = Color(0xFF9AA5E8);
+  static const mint = Color(0xFF5DBE96);
+  static const rose = Color(0xFFE88A86);
 
   /// The flame: the logo's gradient, used for hero accents and primary fills
   /// that should glow rather than sit flat.
   static const flame = LinearGradient(
     begin: Alignment.bottomLeft,
     end: Alignment.topRight,
-    colors: [Color(0xFFD42A1A), Color(0xFFF07A1A), Color(0xFFF5A623)],
+    colors: [Color(0xFFB8502F), Color(0xFFDB7B4E), Color(0xFFE3B261)],
     stops: [0, 0.55, 1],
   );
 
   /// Category badge gradients for the settings rail and tiles, in rail
   /// order. Each pair runs deep to bright so a white glyph reads on both ends.
   static const badges = <List<Color>>[
-    [Color(0xFFD42A1A), Color(0xFFF5922A)], // ember
-    [Color(0xFFE08A00), Color(0xFFF7B733)], // gold
-    [Color(0xFF5B6CFF), Color(0xFF9AA6FF)], // iris
-    [Color(0xFF14A06B), Color(0xFF52D69F)], // mint
-    [Color(0xFFE0446A), Color(0xFFFF8FA3)], // rose
-    [Color(0xFF1C8ED6), Color(0xFF63C3FF)], // sky
+    [Color(0xFFB4553A), Color(0xFFD98C5E)], // ember
+    [Color(0xFFC99545), Color(0xFFE3BC74)], // gold
+    [Color(0xFF6573C9), Color(0xFF9AA5E8)], // iris
+    [Color(0xFF3A9874), Color(0xFF74C4A0)], // mint
+    [Color(0xFFC2617A), Color(0xFFE39AAA)], // rose
+    [Color(0xFF3F86B8), Color(0xFF7DB6DD)], // sky
   ];
 }
 

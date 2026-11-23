@@ -163,7 +163,7 @@ final _games = <_GameInfo>[
   _GameInfo(_Game.opposites, 'Opposites', 'Hot and cold, up and down', Icons.compare_arrows_rounded,
       const [Color(0xFFE0446A), Color(0xFF1C8ED6)], 'opposites', (b) => 'Best: $b of 10', shelf: 'Learn'),
   _GameInfo(_Game.count, 'Count It', 'Count the pictures', Icons.format_list_numbered_rounded,
-      const [Color(0xFFFF7A3D), Color(0xFFFFB627)], 'count', (b) => 'Best: $b of 10', shelf: 'Learn'),
+      const [Color(0xFFFF7A3D), Color(0xFFE7B663)], 'count', (b) => 'Best: $b of 10', shelf: 'Learn'),
   _GameInfo(_Game.letters, 'Letter Sounds', 'Letters and phonics', Icons.abc_rounded,
       const [Color(0xFF8E44FF), Color(0xFFFF6B9A)], 'letters', (b) => 'Best: $b of 10', shelf: 'Learn'),
   _GameInfo(_Game.placevalue, 'Place Value', 'Ones, tens, hundreds', Icons.pin_rounded,
@@ -230,7 +230,7 @@ final _games = <_GameInfo>[
   _GameInfo(_Game.sky, 'Sky Glide', 'Fly through the gaps', Icons.air_rounded,
       const [Color(0xFF2F7BD6), Color(0xFFFF8AD8)], 'sky1', (b) => 'High score: $b', shelf: 'Arcade'),
   _GameInfo(_Game.run, 'Fox Run', 'Jump, run, grab coins', Icons.directions_run_rounded,
-      const [Color(0xFFB0581E), Color(0xFFFFB627)], 'run1', (b) => 'High score: $b', shelf: 'Arcade'),
+      const [Color(0xFFB0581E), Color(0xFFE7B663)], 'run1', (b) => 'High score: $b', shelf: 'Arcade'),
   // Create
   const _GameInfo(_Game.draw, 'Draw Studio', 'Paint whatever you like', Icons.brush_rounded,
       [Color(0xFFD42A1A), Color(0xFFFF4D8D)], null, null, shelf: 'Create'),
@@ -371,7 +371,7 @@ class _KidsHomeState extends State<_KidsHome> {
     final games = _games.where((g) => g.shelf == shelf && !hidden.contains(g.game.name)).toList();
     return _KidsGround(
       key: const ValueKey('home'),
-      colors: _shelfColors[shelf],
+      colors: [for (final c in _shelfColors[shelf]!) kidsSoft(c)],
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(32, 22, 72, 16),
@@ -471,7 +471,7 @@ class _KidsHomeState extends State<_KidsHome> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(_shelfIcons[s], color: s == shelf ? _shelfColors[s]!.first : Colors.white, size: 28),
+                                Icon(_shelfIcons[s], color: s == shelf ? kidsSoft(_shelfColors[s]!.first) : Colors.white, size: 28),
                                 const SizedBox(width: 8),
                                 Text(s, style: kidsText(22, color: s == shelf ? const Color(0xFF2A1F6B) : Colors.white)),
                               ],
@@ -544,7 +544,7 @@ class _ChallengeCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: const Color(0xFF101828).withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: (done ? const Color(0xFF5BE39A) : const Color(0xFFFFD23F)).withValues(alpha: 0.7), width: 2),
+              border: Border.all(color: (done ? const Color(0xFF8FD3AE) : const Color(0xFFF2CF6E)).withValues(alpha: 0.35), width: 1.5),
               boxShadow: const [BoxShadow(color: Color(0x40000000), offset: Offset(0, 8), blurRadius: 14)],
             ),
             child: Row(
@@ -554,7 +554,7 @@ class _ChallengeCard extends StatelessWidget {
                   height: 58,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: LinearGradient(colors: done ? const [Color(0xFF5BE39A), Color(0xFF22B86A)] : const [Color(0xFFFFE066), Color(0xFFFFB627)]),
+                    gradient: LinearGradient(colors: done ? const [Color(0xFF8FD3AE), Color(0xFF4FA57C)] : const [Color(0xFFE9D08C), Color(0xFFCFA25E)]),
                   ),
                   child: Icon(done ? Icons.emoji_events_rounded : Icons.bolt_rounded, color: Colors.white, size: 36),
                 ),
@@ -564,7 +564,7 @@ class _ChallengeCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(done ? 'CHALLENGE DONE!' : "TODAY'S CHALLENGE", style: kidsText(14, color: const Color(0xFFFFD23F), weight: FontWeight.w900)),
+                      Text(done ? 'CHALLENGE DONE!' : "TODAY'S CHALLENGE", style: kidsText(14, color: const Color(0xFFF2CF6E), weight: FontWeight.w900)),
                       Text(challenge.text, maxLines: 1, overflow: TextOverflow.ellipsis, style: kidsText(24)),
                     ],
                   ),
@@ -572,14 +572,14 @@ class _ChallengeCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: [for (var i = 0; i < 3; i++) const Icon(Icons.star_rounded, color: Color(0xFFFFD23F), size: 30)],
+                  children: [for (var i = 0; i < 3; i++) const Icon(Icons.star_rounded, color: Color(0xFFF2CF6E), size: 30)],
                 ),
                 if (!done) ...[
                   const SizedBox(width: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [Color(0xFFFFE066), Color(0xFFFFB627)]),
+                      gradient: const LinearGradient(colors: [Color(0xFFF3DA8A), Color(0xFFE7B663)]),
                       borderRadius: BorderRadius.circular(22),
                     ),
                     child: Row(
@@ -607,7 +607,7 @@ class _GameCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c1 = info.colors.first, c2 = info.colors.last;
+    final c1 = kidsSoft(info.colors.first), c2 = kidsSoft(info.colors.last);
     return KidsBounce(
       onTap: onTap,
       child: Container(
@@ -655,7 +655,7 @@ class _BestLine extends StatelessWidget {
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (best) ...[const Icon(Icons.emoji_events_rounded, color: Color(0xFFFFE066), size: 16), const SizedBox(width: 4)],
+        if (best) ...[const Icon(Icons.emoji_events_rounded, color: Color(0xFFF3DA8A), size: 16), const SizedBox(width: 4)],
         Flexible(child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: kidsText(14, weight: FontWeight.w800))),
       ],
     ),
@@ -683,7 +683,7 @@ class _Wave extends StatefulWidget {
 }
 
 class _WaveState extends State<_Wave> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 2200))..repeat();
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 4200))..repeat();
 
   @override
   void dispose() {
@@ -697,10 +697,11 @@ class _WaveState extends State<_Wave> with SingleTickerProviderStateMixin {
     builder: (context, child) {
       // Two quick waves, then a rest.
       final t = _c.value;
-      final angle = t < 0.4 ? math.sin(t / 0.4 * 4 * math.pi) * 0.35 : 0.0;
+      // One slow wave, then a long rest.
+      final angle = t < 0.3 ? math.sin(t / 0.3 * 2 * math.pi) * 0.22 : 0.0;
       return Transform.rotate(angle: angle, alignment: Alignment.bottomCenter, child: child);
     },
-    child: const Icon(Icons.waving_hand_rounded, color: Color(0xFFFFD23F), size: 40, shadows: [Shadow(color: Color(0x40000000), blurRadius: 6)]),
+    child: const Icon(Icons.waving_hand_rounded, color: Color(0xFFF2CF6E), size: 40, shadows: [Shadow(color: Color(0x40000000), blurRadius: 6)]),
   );
 }
 
@@ -715,17 +716,16 @@ class _StarsPill extends StatelessWidget {
       builder: (context, snap) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [Color(0xFFFFE066), Color(0xFFFFB627)]),
+          color: Colors.white.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(40),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 2),
-          boxShadow: const [BoxShadow(color: Color(0x33000000), offset: Offset(0, 4), blurRadius: 8)],
+          border: Border.all(color: const Color(0xFFF2CF6E).withValues(alpha: 0.35)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.star_rounded, color: Colors.white, size: 30),
+            const Icon(Icons.star_rounded, color: Color(0xFFF2CF6E), size: 28),
             const SizedBox(width: 6),
-            Text('${snap.data ?? 0}', style: kidsText(24, color: const Color(0xFF4A2A00))),
+            Text('${snap.data ?? 0}', style: kidsText(22)),
           ],
         ),
       ),

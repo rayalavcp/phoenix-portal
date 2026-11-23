@@ -263,7 +263,7 @@ class _KidsLeaderboardState extends State<KidsLeaderboard> {
                                       boardScore(game, entries[i].score),
                                       style: kidsText(
                                         18,
-                                        color: const Color(0xFFFFD23F),
+                                        color: const Color(0xFFF2CF6E),
                                       ),
                                     ),
                                   ],
@@ -383,7 +383,7 @@ class _NameDialogState extends State<_NameDialog> {
         children: [
           Text(
             '#${widget.entry.place} in ${boardTitle(widget.entry.game)}: ${boardScore(widget.entry.game, widget.entry.score)}',
-            style: kidsText(18, color: const Color(0xFFFFD23F)),
+            style: kidsText(18, color: const Color(0xFFF2CF6E)),
           ),
           const SizedBox(height: 14),
           TextField(
@@ -431,7 +431,7 @@ class _NameDialogState extends State<_NameDialog> {
       ),
       FilledButton(
         style: FilledButton.styleFrom(
-          backgroundColor: const Color(0xFFFFB020),
+          backgroundColor: const Color(0xFFE7B663),
           foregroundColor: const Color(0xFF2A1A00),
         ),
         onPressed: () => Navigator.pop(context, _field.text),

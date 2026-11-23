@@ -16,6 +16,10 @@ Built from this branch and installed from `install/` (see `install/README.md`).
   calling.
 - **School:** SchoolCafe menus and the Frisco ISD calendar.
 - **Updates:** from this repository; nothing is sent to the original project.
+- **2026.12.19 (calmer):** softer brand colours everywhere (app and remote
+  admin); Smart Home, the app drawer, App Store and Timers stand on the
+  wallpaper in glass like Today; a glass dock; gentler Kids hub colours and
+  animations; a soft single lightning flash.
 - **2026.12.18:** Kids Portal top-ten leaderboards (arcade-style name entry,
   Top 10 page); a Shopping list tile and page (Home Assistant to-do lists);
   quick-start timers (1 to 30 min); a From wallpaper colour theme; several

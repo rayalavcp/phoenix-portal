@@ -325,19 +325,19 @@ class _WallPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 5 * s + 1
-          ..color = const Color(0xFFFFE066),
+          ..color = const Color(0xFFF3DA8A),
       );
     }
     // A bar showing how close the wall is.
     final bar = Rect.fromLTWH(20, size.height - 22, (size.width - 40) * g._t.clamp(0.0, 1.0), 8);
     canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(20, size.height - 22, size.width - 40, 8), const Radius.circular(4)), Paint()..color = Colors.white12);
-    canvas.drawRRect(RRect.fromRectAndRadius(bar, const Radius.circular(4)), Paint()..color = const Color(0xFFFFE066));
+    canvas.drawRRect(RRect.fromRectAndRadius(bar, const Radius.circular(4)), Paint()..color = const Color(0xFFF3DA8A));
     if (g._flash > 0) {
       final ok = g._lastOk;
       canvas.drawRect(full, Paint()..color = (ok ? const Color(0xFF7CFF6B) : const Color(0xFFFF4D6D)).withValues(alpha: g._flash * 0.25));
       _say(canvas, ok ? (g._streak >= 3 ? 'SUPER x${math.min(g._streak, 5)}!' : 'SQUEEZE!') : 'BONK!', Offset(c.dx, size.height * 0.15), 56, ok ? const Color(0xFF7CFF6B) : const Color(0xFFFF4D6D));
     } else if (g._pause > 0 && g._walls == 0) {
-      _say(canvas, 'GET READY', Offset(c.dx, size.height * 0.15), 56, const Color(0xFFFFE066));
+      _say(canvas, 'GET READY', Offset(c.dx, size.height * 0.15), 56, const Color(0xFFF3DA8A));
     }
   }
 
@@ -579,7 +579,7 @@ class _TracePainter extends CustomPainter {
     }
     // The dots: done (gold, joined up), next (glowing), still to go.
     final done = Paint()
-      ..color = const Color(0xFFFFE066)
+      ..color = const Color(0xFFF3DA8A)
       ..strokeWidth = short * 0.03
       ..strokeCap = StrokeCap.round;
     for (var i = 1; i < g._next && i < g._dots.length; i++) {
@@ -589,7 +589,7 @@ class _TracePainter extends CustomPainter {
     for (var i = 0; i < g._dots.length; i++) {
       final o = g._onScreen(g._dots[i]);
       if (i < g._next) {
-        canvas.drawCircle(o, short * 0.018, Paint()..color = const Color(0xFFFFE066));
+        canvas.drawCircle(o, short * 0.018, Paint()..color = const Color(0xFFF3DA8A));
       } else if (i == g._next) {
         final pulse = 1 + 0.25 * math.sin(g.time * 8);
         canvas.drawCircle(o, short * 0.05 * pulse, Paint()..color = const Color(0x66FFFFFF));
@@ -612,7 +612,7 @@ class _TracePainter extends CustomPainter {
       for (var i = 0; i < 14; i++) {
         final a = i * math.pi * 2 / 14;
         final r = short * (0.1 + (1.4 - g._cheer) * 0.4);
-        canvas.drawCircle(size.center(Offset.zero) + Offset(math.cos(a), math.sin(a)) * r, short * 0.015, Paint()..color = const Color(0xFFFFE066));
+        canvas.drawCircle(size.center(Offset.zero) + Offset(math.cos(a), math.sin(a)) * r, short * 0.015, Paint()..color = const Color(0xFFF3DA8A));
       }
     }
   }
@@ -823,7 +823,7 @@ class _DancePainter extends CustomPainter {
     final short = math.min(size.width, size.height);
     if (!g._frozen) {
       // Disco lights sweeping round.
-      const colors = [Color(0xFFFF4D9A), Color(0xFF39D0FF), Color(0xFFFFE066), Color(0xFF7CFF6B), Color(0xFFB04BFF)];
+      const colors = [Color(0xFFFF4D9A), Color(0xFF39D0FF), Color(0xFFF3DA8A), Color(0xFF7CFF6B), Color(0xFFB04BFF)];
       for (var i = 0; i < 5; i++) {
         final a = g.time * (0.8 + i * 0.15) + i * 1.3;
         final beam = Path()
@@ -893,7 +893,7 @@ class _DancePainter extends CustomPainter {
     final big = g._flash > 0 || g._frozen;
     if (big) {
       final text = g._frozen && g._flash <= 0 ? (g._caught ? 'OOPS!' : 'STAY STILL...') : g._message;
-      final color = text.startsWith('YOU') || text == 'OOPS!' ? const Color(0xFFFF4D6D) : (g._frozen ? Colors.white : const Color(0xFFFFE066));
+      final color = text.startsWith('YOU') || text == 'OOPS!' ? const Color(0xFFFF4D6D) : (g._frozen ? Colors.white : const Color(0xFFF3DA8A));
       _say(canvas, text, Offset(c.dx, size.height * 0.14), short * 0.11, color);
     }
   }
