@@ -105,13 +105,12 @@ class UpdateManager extends Manager {
   /// window is a display cap, not a paging cursor: a device further behind
   /// than this gets the newest releases and a pointer to the history.
   ///
-  /// Phoenix Portal publishes its builds in the repository's install folder
-  /// (install/releases.json, the same shape as GitHub's releases list, and
-  /// install/phoenix-portal.apk) rather than as GitHub Releases, so that is
-  /// what a GitHub check reads. See install/UPDATES.md.
+  /// Phoenix Portal publishes each build as a GitHub Release of this
+  /// repository (tag `v<version>`, the APK attached as
+  /// `kiosk-satellite-<version>.armeabi-v7a.apk`). See install/UPDATES.md.
   static const _releasesUrl =
-      'https://raw.githubusercontent.com/rayalavcp/phoenix-portal/'
-      'claude/fervent-hopper-25a7jk/install/releases.json';
+      'https://api.github.com/repos/rayalavcp/phoenix-portal/'
+      'releases?per_page=30';
 
   /// The page that redirects to the newest stable release, and the folder
   /// the APKs of a release download from. What the check falls back to

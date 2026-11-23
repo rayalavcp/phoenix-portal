@@ -1,20 +1,25 @@
 #!/usr/bin/env python3
-"""Writes install/releases.json for the APK in install/phoenix-portal.apk.
+"""Writes install/releases.json for a build published as a GitHub Release.
 
-The Portal's "Check for updates" (Update source: GitHub Repository) reads
-this file from the repository and offers the APK it names when its version
-is newer than the one installed. The file has the shape of GitHub's own
-releases list, which the app already understands.
+Builds are published as GitHub Releases (tag v<version>; see
+install/publish_release.sh), not committed. Portals on 2026.12.14 or newer
+read the releases straight from GitHub's API. Older builds read this file
+from the branch, so it names the newest release's APK on GitHub.
 
-Usage:  python3 install/make_releases.py 2026.12.3 "What changed in this build"
+Usage:  python3 install/make_releases.py 2026.12.14 "What changed" [apk]
 """
 import json
 import os
 import sys
 
-BRANCH = 'claude/fervent-hopper-25a7jk'
 REPO = 'rayalavcp/phoenix-portal'
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def asset_name(version):
+    # The app picks the APK by this name (see release_apk.dart): the
+    # armeabi-v7a split, which every Portal runs.
+    return f'kiosk-satellite-{version}.armeabi-v7a.apk'
 
 
 def main():
@@ -22,20 +27,20 @@ def main():
         sys.exit(__doc__)
     version = sys.argv[1].lstrip('v')
     notes = sys.argv[2] if len(sys.argv) > 2 else ''
-    apk = os.path.join(HERE, 'phoenix-portal.apk')
+    apk = sys.argv[3] if len(sys.argv) > 3 else os.path.join(HERE, 'phoenix-portal.apk')
     size = os.path.getsize(apk)
+    tag = f'v{version}'
     release = {
-        'tag_name': version,
+        'tag_name': tag,
         'name': f'Phoenix Portal {version}',
         'draft': False,
         'prerelease': False,
         'body': notes,
-        'html_url': f'https://github.com/{REPO}/tree/{BRANCH}/install',
+        'html_url': f'https://github.com/{REPO}/releases/tag/{tag}',
         'assets': [
             {
-                # The app picks the APK by this name (see release_apk.dart).
-                'name': f'kiosk-satellite-{version}.apk',
-                'browser_download_url': f'https://raw.githubusercontent.com/{REPO}/{BRANCH}/install/phoenix-portal.apk',
+                'name': asset_name(version),
+                'browser_download_url': f'https://github.com/{REPO}/releases/download/{tag}/{asset_name(version)}',
                 'size': size,
                 'state': 'uploaded',
             }

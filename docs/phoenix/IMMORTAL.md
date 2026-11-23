@@ -12,7 +12,7 @@ do before Immortal is uninstalled from a Portal.
 | **Calls tile** (WhatsApp/Messenger calling through the stock Portal home) | Yes, since 2026.12.10: **Calls** on the Today dock opens the Portal's own calling screen (`portal://launcher/home`), the same way |
 | Photo-frame screensaver | Yes: Phoenix Photo Frame and Immich, plus Weather Mood, Celestial and Clock screensavers |
 | Presence sensor keeps the frame up while someone is there | Yes (person sensor, Meta's presence service) |
-| Self-update | Yes, from this repository (`install/releases.json`) |
+| Self-update | Yes, from this repository's GitHub Releases |
 | Provisioning, Gen-1 installer fix, OTA block, verifier | Yes: `install/install-phoenix.ps1`, `provisioning/phoenix-provision.sh` |
 | App Store | Yes: free apps, installed through Android's installer |
 | Multi-room audio, now playing (Snapcast / Music Assistant) | Yes, in Phoenix's own way: Sendspin / Music Assistant, AirPlay, DLNA |

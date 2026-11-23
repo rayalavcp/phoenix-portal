@@ -1,0 +1,63 @@
+name: Phoenix release
+
+# Publishes a Phoenix Portal build as a GitHub Release (the Releases page of
+# this repository), without the APK staying in git history.
+#
+# install/publish_release.sh pushes one temporary commit on top of the branch
+# that adds install/upload/phoenix-portal.apk. This workflow makes release
+# v<version> (the version in install/releases.json) on the commit below it with
+# the APK attached, moves the branch back to that commit (so the APK leaves the
+# branch again), and deletes releases older than the newest three.
+on:
+  push:
+    paths: ['install/upload/**']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phoenix-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          apk=install/upload/phoenix-portal.apk
+          test -s "$apk"
+          version="$(python3 -c 'import json;print(json.load(open("install/releases.json"))[0]["tag_name"].lstrip("v"))')"
+          notes="$(python3 -c 'import json;print(json.load(open("install/releases.json"))[0]["body"])')"
+          target="$(git rev-parse HEAD^)"
+          sha="$(sha256sum "$apk" | cut -d' ' -f1)"
+          cp "$apk" "kiosk-satellite-$version.armeabi-v7a.apk"
+          cp "$apk" phoenix-portal.apk
+          printf '%s\n\nAPK: armeabi-v7a, runs on every Portal. SHA-256 %s\n' "$notes" "$sha" > notes.md
+          if gh release view "v$version" >/dev/null 2>&1; then
+            gh release upload "v$version" --clobber "kiosk-satellite-$version.armeabi-v7a.apk" phoenix-portal.apk
+          else
+            gh release create "v$version" --target "$target" --title "Phoenix Portal $version" \
+              --notes-file notes.md --latest "kiosk-satellite-$version.armeabi-v7a.apk" phoenix-portal.apk
+          fi
+          echo "Released v$version (SHA-256 $sha)"
+      - name: Take the APK commit off the branch
+        if: always()
+        run: |
+          git push --force-with-lease="refs/heads/${GITHUB_REF_NAME}:${GITHUB_SHA}" origin "${GITHUB_SHA}^:refs/heads/${GITHUB_REF_NAME}"
+      - name: Keep only the newest three releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release list --limit 100 --json tagName,createdAt \
+            --jq 'sort_by(.createdAt) | reverse | .[3:] | .[].tagName' |
+          while read -r tag; do
+            echo "Deleting old release $tag"
+            gh release delete "$tag" --yes --cleanup-tag
+          done

@@ -6,7 +6,6 @@ import 'package:flutter/scheduler.dart';
 
 import '../../app_container.dart';
 import '../../managers/motion/motion_manager.dart';
-import '../../managers/motion/native_motion.dart' show BodyMask;
 import 'kids_activities.dart';
 import 'kids_games.dart';
 import 'kids_logic.dart';
@@ -21,7 +20,7 @@ import 'kids_logic.dart';
 /// steady while the hand or head is nearly still, close to raw when it
 /// moves fast, so the cursor neither jitters nor trails behind.
 class OneEuro {
-  OneEuro({this.minCutoff = 1.7, this.beta = 3.0, this.dCutoff = 1.5});
+  OneEuro({this.minCutoff = 1.0, this.beta = 6.0, this.dCutoff = 1.0});
   final double minCutoff, beta, dCutoff;
   double? _x;
   double _dx = 0;
@@ -64,7 +63,7 @@ class _Track {
   DateTime _last = DateTime.fromMillisecondsSinceEpoch(0);
 
   /// The camera-to-screen delay the look ahead makes up for, seconds.
-  static const lead = 0.06;
+  static const lead = 0.05;
 
   void measure(Offset p, DateTime now) {
     final dt = at == null ? 0.0 : (now.difference(_last).inMicroseconds / 1e6).clamp(0.0, 0.25);
@@ -78,7 +77,7 @@ class _Track {
     final a = at;
     if (a == null) return null;
     final since = (now.difference(_last).inMicroseconds / 1e6).clamp(0.0, 0.12);
-    final p = a + _v * math.min(lead + since, 0.14);
+    final p = a + _v * math.min(lead + since, 0.1);
     return Offset(p.dx.clamp(0.0, 1.0), p.dy.clamp(0.0, 1.0));
   }
 
@@ -90,12 +89,12 @@ class _Track {
   }
 }
 
-/// A camera session for a game: starts the game vision when the game opens
-/// and stops it when it closes (the camera is free again). Follows up to
-/// two hands (their palms, fingers and points, for the glowing hands) or
-/// the head, and, for whole-body games, the body's outline.
+/// A camera session for a game: starts the hand tracker (the game vision,
+/// up to two hands) or the head tracker when the game opens and stops it
+/// when it closes, so the camera is free again. Nothing of the child is
+/// drawn: only a friendly cursor where each hand (or the head) points.
 class KidsHands {
-  KidsHands(this._motion, {this.head = false, bool? body, this.amplify = true}) : body = body ?? head {
+  KidsHands(this._motion, {this.head = false, this.amplify = true}) {
     if (head) {
       if (_motion.headsAvailable) {
         _motion.startHeadTracking();
@@ -103,11 +102,8 @@ class KidsHands {
       }
     } else if (_motion.handsAvailable) {
       _motion.gameHands.addListener(_onHands);
+      _motion.startGameVision(hands: true);
     }
-    if (camera && (!head || this.body)) {
-      _motion.startGameVision(hands: !head, body: this.body);
-    }
-    if (this.body) _motion.bodyMask.addListener(_onBody);
   }
 
   final MotionManager _motion;
@@ -115,11 +111,8 @@ class KidsHands {
   /// Steering by head (the face's position) instead of a hand.
   final bool head;
 
-  /// The body's glowing outline is shown (whole-body games).
-  final bool body;
-
   /// Small movements go a long way (steering games); off, the point is
-  /// where the child really is (games that match the outline).
+  /// where the child really is.
   final bool amplify;
 
   /// Whether the camera is following (false: touch only).
@@ -131,14 +124,8 @@ class KidsHands {
   /// Every hand in view (the first is [point]), for games two hands play.
   final points = ValueNotifier<List<Offset>>(const []);
 
-  /// The hands' 21 points each, mapped like [point], for drawing them.
-  final skeletons = ValueNotifier<List<List<Offset>>>(const []);
-
-  /// The body outline mask (whole-body games), as the camera sees it.
-  final outline = ValueNotifier<BodyMask?>(null);
-
-  /// How much the body outline changed, a share of the picture a second.
-  double bodyChange = 0;
+  /// Each cursor's last few places, newest last, for its sparkle trail.
+  final trails = <List<Offset>>[[], []];
 
   /// Fingers shown (both hands together; null: no hand).
   final fingers = ValueNotifier<int?>(null);
@@ -149,7 +136,6 @@ class KidsHands {
   final _tracks = [_Track(), _Track()];
   Offset? _touch;
   DateTime _seen = DateTime.fromMillisecondsSinceEpoch(0);
-  DateTime _bodySeen = DateTime.fromMillisecondsSinceEpoch(0);
 
   bool get handInView => DateTime.now().difference(_seen) < const Duration(milliseconds: 700);
 
@@ -176,7 +162,6 @@ class KidsHands {
     final now = DateTime.now();
     if (hands.isEmpty) {
       fingers.value = null;
-      skeletons.value = const [];
       return;
     }
     _seen = now;
@@ -194,31 +179,6 @@ class KidsHands {
       _tracks[1].reset();
     }
     fingers.value = hands.take(2).fold<int>(0, (a, h) => a + h.fingers);
-    skeletons.value = [
-      for (final h in hands.take(2))
-        if (h.points.length == 42) [for (var i = 0; i < 21; i++) map(h.point(i))],
-    ];
-  }
-
-  BodyMask? _lastMask;
-
-  void _onBody() {
-    final m = _motion.bodyMask.value;
-    if (m == null) return;
-    final now = DateTime.now();
-    final last = _lastMask;
-    if (last != null && last.cells.length == m.cells.length) {
-      var changed = 0;
-      for (var i = 0; i < m.cells.length; i++) {
-        if ((m.cells[i] > 127) != (last.cells[i] > 127)) changed++;
-      }
-      final dt = (now.difference(_bodySeen).inMicroseconds / 1e6).clamp(0.02, 0.5);
-      final rate = changed / m.cells.length / dt;
-      bodyChange += (rate - bodyChange) * math.min(1.0, dt * 4);
-    }
-    _lastMask = m;
-    _bodySeen = now;
-    outline.value = m;
   }
 
   /// Touch steers too (and is how the game plays without a camera).
@@ -227,20 +187,32 @@ class KidsHands {
     _touch = fraction;
     point.value = fraction;
     points.value = [fraction];
+    _trail(0, fraction);
+  }
+
+  static const _trailLength = 9;
+
+  void _trail(int i, Offset? p) {
+    final t = trails[i];
+    if (p == null) {
+      t.clear();
+      return;
+    }
+    t.add(p);
+    if (t.length > _trailLength) t.removeAt(0);
   }
 
   /// Brings the shown points up to now (call once a frame).
   void step(double dt) {
     if (_touch != null) return;
     final now = DateTime.now();
-    final a = _tracks[0].shown(now), b = _tracks[1].shown(now);
+    final a = _tracks[0].shown(now);
+    final b = handInView ? _tracks[1].shown(now) : null;
     if (a == null) return;
+    _trail(0, a);
+    _trail(1, b);
     point.value = a;
     points.value = [a, ?b];
-    if (!handInView) {
-      skeletons.value = const [];
-      points.value = [a];
-    }
   }
 
   void dispose() {
@@ -249,13 +221,10 @@ class KidsHands {
       _motion.stopHeadTracking();
     } else {
       _motion.gameHands.removeListener(_onHands);
+      _motion.stopGameVision();
     }
-    if (body) _motion.bodyMask.removeListener(_onBody);
-    _motion.stopGameVision();
     point.dispose();
     points.dispose();
-    skeletons.dispose();
-    outline.dispose();
     fingers.dispose();
   }
 }
@@ -302,31 +271,68 @@ class KidsHandHint extends StatelessWidget {
   );
 }
 
-/// The glowing hand that follows the player.
-class _Cursor extends StatelessWidget {
-  const _Cursor({required this.at, required this.size, this.icon = Icons.back_hand_rounded});
-  final Offset at;
-  final double size;
+/// The cursors: a soft pastel bubble with a white rim where each hand (or
+/// the head) points, and a short trail of fading sparkles behind it.
+class _CursorPainter extends CustomPainter {
+  _CursorPainter(this.hands, this.icon) : super(repaint: hands.points);
+  final KidsHands hands;
   final IconData icon;
 
+  static const _hues = [Color(0xFFFF9EC7), Color(0xFF8FD8FF)];
+  static const _headHue = Color(0xFFFFD36E);
+
+  static void _sparkle(Canvas canvas, Offset c, double r, Paint paint) {
+    // A soft four-pointed star.
+    final path = Path()
+      ..moveTo(c.dx, c.dy - r)
+      ..quadraticBezierTo(c.dx, c.dy, c.dx + r, c.dy)
+      ..quadraticBezierTo(c.dx, c.dy, c.dx, c.dy + r)
+      ..quadraticBezierTo(c.dx, c.dy, c.dx - r, c.dy)
+      ..quadraticBezierTo(c.dx, c.dy, c.dx, c.dy - r)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
   @override
-  Widget build(BuildContext context) => Positioned(
-    left: at.dx - size / 2,
-    top: at.dy - size / 2,
-    child: IgnorePointer(
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white.withValues(alpha: 0.25),
-          border: Border.all(color: Colors.white, width: 3),
-          boxShadow: const [BoxShadow(color: Color(0x66FFD23F), blurRadius: 24, spreadRadius: 4)],
+  void paint(Canvas canvas, Size size) {
+    final ps = hands.points.value;
+    final short = math.min(size.width, size.height);
+    for (var i = 0; i < ps.length && i < 2; i++) {
+      final hue = hands.head ? _headHue : _hues[i];
+      final r = short * (i == 0 ? 0.065 : 0.055);
+      Offset px(Offset f) => Offset(f.dx * size.width, f.dy * size.height);
+      // The trail: older sparkles smaller and fainter.
+      final trail = hands.trails[i];
+      for (var k = 0; k < trail.length - 1; k++) {
+        final age = (k + 1) / trail.length;
+        _sparkle(canvas, px(trail[k]), r * 0.45 * age, Paint()..color = Color.lerp(Colors.white, hue, 0.3)!.withValues(alpha: 0.85 * age));
+      }
+      final c = px(ps[i]);
+      canvas.drawCircle(c, r * 1.35, Paint()..color = hue.withValues(alpha: 0.35)..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.5));
+      canvas.drawCircle(
+        c,
+        r,
+        Paint()
+          ..shader = RadialGradient(
+            center: const Alignment(-0.35, -0.4),
+            colors: [Colors.white, Color.lerp(Colors.white, hue, 0.55)!, hue],
+            stops: const [0, 0.45, 1],
+          ).createShader(Rect.fromCircle(center: c, radius: r)),
+      );
+      canvas.drawCircle(c, r, Paint()..style = PaintingStyle.stroke..strokeWidth = math.max(2, r * 0.09)..color = Colors.white);
+      final glyph = TextPainter(
+        text: TextSpan(
+          text: String.fromCharCode(icon.codePoint),
+          style: TextStyle(fontFamily: icon.fontFamily, package: icon.fontPackage, fontSize: r * 1.1, color: Colors.white, shadows: [Shadow(color: hue, blurRadius: 6)]),
         ),
-        child: Icon(icon, color: Colors.white, size: size * 0.55),
-      ),
-    ),
-  );
+        textDirection: TextDirection.ltr,
+      )..layout();
+      glyph.paint(canvas, c - Offset(glyph.width / 2, glyph.height / 2));
+    }
+  }
+
+  @override
+  bool shouldRepaint(_CursorPainter old) => old.icon != icon || old.hands != hands;
 }
 
 // ── Bubble Pop ─────────────────────────────────────────────────────────────
@@ -561,30 +567,8 @@ class KidsMotionArena extends StatelessWidget {
                     ),
                   ),
                   Positioned.fill(child: CustomPaint(painter: painter)),
-                  // What the camera sees of the child: the body's glowing
-                  // outline (whole-body games) and each hand, glowing.
-                  if (hands.body)
-                    Positioned.fill(
-                      child: IgnorePointer(child: CustomPaint(painter: _BodyGlowPainter(hands))),
-                    ),
-                  if (!hands.head)
-                    Positioned.fill(
-                      child: IgnorePointer(child: CustomPaint(painter: _HandGlowPainter(hands))),
-                    ),
                   Positioned.fill(
-                    child: ValueListenableBuilder<List<Offset>>(
-                      valueListenable: hands.points,
-                      builder: (context, ps, _) => Stack(
-                        children: [
-                          for (var i = 0; i < ps.length; i++)
-                            _Cursor(
-                              at: Offset(ps[i].dx * size.width, ps[i].dy * size.height),
-                              size: math.min(size.width, size.height) * (i == 0 ? 0.14 : 0.11),
-                              icon: cursorIcon,
-                            ),
-                        ],
-                      ),
-                    ),
+                    child: IgnorePointer(child: RepaintBoundary(child: CustomPaint(painter: _CursorPainter(hands, cursorIcon)))),
                   ),
                   Positioned(
                     left: 0,
@@ -1616,7 +1600,7 @@ Widget kidsPlayWithChips(int selected, ValueChanged<int> onPick) => Column(
 
 /// Starts tracking for [playWith] (1 hand, 2 head), or none for buttons.
 KidsHands? kidsTrackerFor(AppContainer? container, int playWith) =>
-    container == null || playWith == 0 ? null : KidsHands(container.motion, head: playWith == 2, body: false);
+    container == null || playWith == 0 ? null : KidsHands(container.motion, head: playWith == 2);
 
 /// In place of the arrow buttons while a hand or the head steers: the
 /// stick that shows where it pushes, a left-right swap and a hint.
@@ -1658,211 +1642,4 @@ class _KidsMotionPanelState extends State<KidsMotionPanel> {
       ],
     );
   }
-}
-
-// ── What the camera sees, drawn glowing ──────────────────────────────────
-
-/// The outline of the body in a mask, as line segments in cell units
-/// (0..width across, 0..height down): marching squares at [threshold],
-/// with each crossing placed between two cells by their confidence, so a
-/// soft mask gives a smooth outline rather than steps.
-List<(Offset, Offset)> maskContour(BodyMask m, {double threshold = 0.5}) {
-  final out = <(Offset, Offset)>[];
-  final t = threshold * 255;
-  double v(int x, int y) => x >= 0 && y >= 0 && x < m.width && y < m.height ? m.cells[y * m.width + x].toDouble() : 0;
-  // Where the outline crosses between two cells' centres (0..1 from the first).
-  double cross(double a, double b) => a == b ? 0.5 : ((t - a) / (b - a)).clamp(0.0, 1.0);
-  for (var y = -1; y < m.height; y++) {
-    for (var x = -1; x < m.width; x++) {
-      final va = v(x, y), vb = v(x + 1, y), vc = v(x + 1, y + 1), vd = v(x, y + 1);
-      final code = (va > t ? 8 : 0) | (vb > t ? 4 : 0) | (vc > t ? 2 : 0) | (vd > t ? 1 : 0);
-      if (code == 0 || code == 15) continue;
-      // Cell centres sit at index + 0.5 in cell units.
-      final x0 = x + 0.5, y0 = y + 0.5;
-      final top = Offset(x0 + cross(va, vb), y0);
-      final right = Offset(x0 + 1, y0 + cross(vb, vc));
-      final bottom = Offset(x0 + cross(vd, vc), y0 + 1);
-      final left = Offset(x0, y0 + cross(va, vd));
-      switch (code) {
-        case 1 || 14:
-          out.add((left, bottom));
-        case 2 || 13:
-          out.add((bottom, right));
-        case 3 || 12:
-          out.add((left, right));
-        case 4 || 11:
-          out.add((top, right));
-        case 5:
-          out
-            ..add((left, top))
-            ..add((bottom, right));
-        case 6 || 9:
-          out.add((top, bottom));
-        case 7 || 8:
-          out.add((left, top));
-        case 10:
-          out
-            ..add((top, right))
-            ..add((left, bottom));
-      }
-    }
-  }
-  return out;
-}
-
-/// A gentle twinkle for a pixel at grid cell ([x], [y]): 0..1, each
-/// pixel on its own slow phase.
-double _twinkle(int x, int y, double t) {
-  final h = ((x * 73856093) ^ (y * 19349663)) & 0x3ff;
-  return 0.5 + 0.5 * math.sin(t * 2.2 + h / 1024 * math.pi * 2);
-}
-
-/// One glowing 3D pixel: its front square, how bright it is (0..1, for
-/// the twinkle) and how tall it stands (0..1).
-typedef _Voxel = ({Rect r, double level, double height});
-
-/// Draws glowing 3D pixels: little cubes with a lit top face and a shaded
-/// side, standing taller where [height] is higher, over a soft glow. The
-/// cubes leave room between them, so their faces never overlap and the
-/// order they are drawn in does not matter.
-void _glowPixels(Canvas canvas, List<_Voxel> voxels, Color color, {double glowBlur = 6}) {
-  if (voxels.isEmpty) return;
-  final glow = Path(), top = Path(), side = Path();
-  final fronts = [Path(), Path(), Path()];
-  for (final v in voxels) {
-    final r = v.r;
-    glow.addRect(r);
-    // The depth: up and to the right, more for taller pixels.
-    final e = r.width * (0.25 + 0.45 * v.height);
-    top.addPolygon([r.topLeft, r.topLeft.translate(e, -e), r.topRight.translate(e, -e), r.topRight], true);
-    side.addPolygon([r.topRight, r.topRight.translate(e, -e), r.bottomRight.translate(e, -e), r.bottomRight], true);
-    fronts[v.level < 0.4 ? 0 : (v.level < 0.75 ? 1 : 2)].addRect(r);
-  }
-  canvas.drawPath(
-    glow,
-    Paint()
-      ..color = color.withValues(alpha: 0.32)
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, glowBlur),
-  );
-  final hsl = HSLColor.fromColor(color);
-  Color tone(double lightness, double alpha) => hsl.withLightness(lightness.clamp(0.0, 1.0)).toColor().withValues(alpha: alpha);
-  // Sides in shade, tops in light, fronts by their twinkle.
-  canvas.drawPath(side, Paint()..color = tone(hsl.lightness * 0.62, 0.85));
-  canvas.drawPath(top, Paint()..color = tone(hsl.lightness + (1 - hsl.lightness) * 0.6, 0.9));
-  canvas.drawPath(fronts[0], Paint()..color = tone(hsl.lightness * 0.92, 0.7));
-  canvas.drawPath(fronts[1], Paint()..color = tone(hsl.lightness, 0.85));
-  canvas.drawPath(fronts[2], Paint()..color = tone(hsl.lightness + (1 - hsl.lightness) * 0.4, 0.95));
-}
-
-/// The body the camera sees, as soft glowing pixels: a calm pastel field
-/// that twinkles gently, brighter round its edge. Friendly, never X-ray.
-class _BodyGlowPainter extends CustomPainter {
-  _BodyGlowPainter(this.hands) : super(repaint: hands.outline);
-  final KidsHands hands;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final m = hands.outline.value;
-    if (m == null) return;
-    // Pixels about 20 px across, whatever the mask's resolution.
-    final step = math.max(1, (m.width / (size.width / 20)).round());
-    final cw = size.width / m.width * step, ch = size.height / m.height * step;
-    // Room left for each cube's depth (see _glowPixels).
-    final side = math.min(cw, ch) * 0.56;
-    final t = DateTime.now().millisecondsSinceEpoch / 1000.0;
-    bool inside(int x, int y) => x >= 0 && y >= 0 && x < m.width && y < m.height && m.cells[y * m.width + x] > 127;
-    final pixels = <_Voxel>[];
-    for (var y = 0; y < m.height; y += step) {
-      for (var x = 0; x < m.width; x += step) {
-        if (!inside(x, y)) continue;
-        final edge = !inside(x - step, y) || !inside(x + step, y) || !inside(x, y - step) || !inside(x, y + step);
-        // Taller in the middle of the body: the share of the body round it.
-        var around = 0, seen = 0;
-        for (var dy = -2; dy <= 2; dy++) {
-          for (var dx = -2; dx <= 2; dx++) {
-            seen++;
-            if (inside(x + dx * step, y + dy * step)) around++;
-          }
-        }
-        final height = math.pow(around / seen, 2).toDouble();
-        var cx = (x + step / 2) / m.width * size.width;
-        if (hands.flip) cx = size.width - cx;
-        final cy = (y + step / 2) / m.height * size.height;
-        final level = edge ? 0.8 + 0.2 * _twinkle(x, y, t) : 0.15 + 0.5 * _twinkle(x, y, t);
-        pixels.add((r: Rect.fromCenter(center: Offset(cx, cy), width: side, height: side), level: level, height: height));
-      }
-    }
-    _glowPixels(canvas, pixels, const Color(0xFFB8A8FF), glowBlur: side * 0.6);
-  }
-
-  @override
-  bool shouldRepaint(_BodyGlowPainter old) => false;
-}
-
-/// The bones of a hand: MediaPipe's 21 points, joined as fingers.
-const handBones = [
-  (0, 1), (1, 2), (2, 3), (3, 4), //
-  (0, 5), (5, 6), (6, 7), (7, 8),
-  (5, 9), (9, 10), (10, 11), (11, 12),
-  (9, 13), (13, 14), (14, 15), (15, 16),
-  (13, 17), (0, 17), (17, 18), (18, 19), (19, 20),
-];
-
-/// Each hand the camera sees, as glowing pixels in its shape, with the
-/// fingertips twinkling brightest. Warm and soft; no lines.
-class _HandGlowPainter extends CustomPainter {
-  _HandGlowPainter(this.hands) : super(repaint: hands.skeletons);
-  final KidsHands hands;
-
-  static const _colors = [Color(0xFFFFD27A), Color(0xFFFF9FD6)];
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final all = hands.skeletons.value;
-    final t = DateTime.now().millisecondsSinceEpoch / 1000.0;
-    for (var h = 0; h < all.length; h++) {
-      final pts = [for (final p in all[h]) Offset(p.dx * size.width, p.dy * size.height)];
-      if (pts.length < 21) continue;
-      // The pixel grid scales with the hand: about 9 pixels wrist to knuckle.
-      final span = (pts[0] - pts[9]).distance.clamp(20.0, 400.0);
-      final g = math.max(8.0, span / 7);
-      final cells = <(int, int)>{};
-      void mark(Offset p) => cells.add(((p.dx / g).floor(), (p.dy / g).floor()));
-      // Along every finger, and across the palm.
-      for (final (a, b) in handBones) {
-        final n = math.max(1, ((pts[a] - pts[b]).distance / (g * 0.5)).ceil());
-        for (var k = 0; k <= n; k++) {
-          mark(Offset.lerp(pts[a], pts[b], k / n)!);
-        }
-      }
-      const palm = [0, 1, 5, 9, 13, 17];
-      for (final a in palm) {
-        for (final b in palm) {
-          if (a >= b) continue;
-          final n = math.max(1, ((pts[a] - pts[b]).distance / (g * 0.5)).ceil());
-          for (var k = 0; k <= n; k++) {
-            mark(Offset.lerp(pts[a], pts[b], k / n)!);
-          }
-        }
-      }
-      final tips = {
-        for (final i in const [4, 8, 12, 16, 20]) ((pts[i].dx / g).floor(), (pts[i].dy / g).floor()),
-      };
-      final side = g * 0.56;
-      // The palm stands tallest, the fingertips least.
-      final palmAt = Offset.lerp(pts[0], pts[9], 0.6)!;
-      final pixels = <_Voxel>[
-        for (final (x, y) in cells)
-          (
-            r: Rect.fromCenter(center: Offset((x + 0.5) * g, (y + 0.5) * g), width: side, height: side),
-            level: tips.contains((x, y)) ? 1.0 : 0.3 + 0.45 * _twinkle(x, y, t),
-            height: (1 - (Offset((x + 0.5) * g, (y + 0.5) * g) - palmAt).distance / (span * 1.6)).clamp(0.0, 1.0),
-          ),
-      ];
-      _glowPixels(canvas, pixels, _colors[h % 2], glowBlur: g * 0.7);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_HandGlowPainter old) => false;
 }

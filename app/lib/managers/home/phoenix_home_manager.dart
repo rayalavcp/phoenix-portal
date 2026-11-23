@@ -78,6 +78,8 @@ class HomeWeather {
     required this.isDay,
     required this.days,
     required this.fahrenheit,
+    this.sunrise,
+    this.sunset,
   });
 
   final String place;
@@ -88,6 +90,10 @@ class HomeWeather {
   final bool isDay;
   final List<HomeWeatherDay> days;
   final bool fahrenheit;
+
+  /// Today's sunrise and sunset (local time), for the sun's path across
+  /// the weather effect; null when the forecast did not carry them.
+  final DateTime? sunrise, sunset;
 }
 
 @immutable
@@ -1290,7 +1296,7 @@ class PhoenixHomeManager extends Manager {
         'latitude': '${where.lat}',
         'longitude': '${where.lon}',
         'current': 'temperature_2m,weather_code,is_day',
-        'daily': 'weather_code,temperature_2m_max,temperature_2m_min',
+        'daily': 'weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset',
         'temperature_unit': unit,
         'timezone': 'auto',
         'forecast_days': '5',
@@ -1567,7 +1573,11 @@ HomeWeather? parseOpenMeteo(
   final temp = current['temperature_2m'];
   if (temp is! num) return null;
   final days = <HomeWeatherDay>[];
+  DateTime? sunrise, sunset;
   if (data['daily'] case final Map daily) {
+    DateTime? first(Object? list) => list is List && list.isNotEmpty ? DateTime.tryParse('${list.first}') : null;
+    sunrise = first(daily['sunrise']);
+    sunset = first(daily['sunset']);
     final times = daily['time'];
     final codes = daily['weather_code'];
     final highs = daily['temperature_2m_max'];
@@ -1603,6 +1613,8 @@ HomeWeather? parseOpenMeteo(
     isDay: current['is_day'] != 0,
     days: days,
     fahrenheit: fahrenheit,
+    sunrise: sunrise,
+    sunset: sunset,
   );
 }
 

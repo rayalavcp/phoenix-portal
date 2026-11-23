@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 /// One animation and plain shapes, no blur filters, so a Portal's GPU keeps
 /// up.
 class WeatherBackdrop extends StatefulWidget {
-  const WeatherBackdrop({super.key, required this.code, required this.isDay, this.demo = ''});
+  const WeatherBackdrop({super.key, required this.code, required this.isDay, this.demo = '', this.sunrise, this.sunset});
 
   /// WMO weather code (Open-Meteo), null for no weather yet.
   final int? code;
@@ -18,9 +18,33 @@ class WeatherBackdrop extends StatefulWidget {
   /// A [WeatherFx] name to show instead of the real weather ('' for real).
   final String demo;
 
+  /// Today's sunrise and sunset: the sun rises on the left, crosses the
+  /// sky and sets on the right in between (6:30 to 18:30 when unknown).
+  final DateTime? sunrise, sunset;
+
   @override
   State<WeatherBackdrop> createState() => _WeatherBackdropState();
 }
+
+/// How far through the day the sun is at [now]: 0 at sunrise, 0.5 at
+/// midday, 1 at sunset (clamped), from today's [sunrise] and [sunset] or,
+/// without them, 6:30 and 18:30.
+double sunArc(DateTime now, DateTime? sunrise, DateTime? sunset) {
+  final today = DateTime(now.year, now.month, now.day);
+  final rise = sunrise ?? today.add(const Duration(hours: 6, minutes: 30));
+  final set = sunset ?? today.add(const Duration(hours: 18, minutes: 30));
+  final day = set.difference(rise).inSeconds;
+  if (day <= 0) return 0.5;
+  return (now.difference(rise).inSeconds / day).clamp(0.0, 1.0);
+}
+
+/// Where the sun is drawn for [arc] (see [sunArc]) on a screen of [size]:
+/// low on the left at sunrise, high in the middle at noon, low on the
+/// right at sunset.
+Offset sunPosition(double arc, Size size) => Offset(
+  size.width * (0.06 + 0.88 * arc),
+  size.height * (0.5 - 0.44 * math.sin(math.pi * arc)),
+);
 
 enum WeatherFx { clear, clouds, fog, drizzle, rain, snow, storm }
 
@@ -84,7 +108,7 @@ class _WeatherBackdropState extends State<WeatherBackdrop> with SingleTickerProv
         children: [
           AnimatedContainer(duration: const Duration(seconds: 2), color: weatherGrade(fx, widget.isDay)),
           RepaintBoundary(
-            child: CustomPaint(size: Size.infinite, painter: _WeatherPainter(_clock, fx, widget.isDay, _seed)),
+            child: CustomPaint(size: Size.infinite, painter: _WeatherPainter(_clock, fx, widget.isDay, _seed, widget.sunrise, widget.sunset)),
           ),
         ],
       ),
@@ -93,7 +117,9 @@ class _WeatherBackdropState extends State<WeatherBackdrop> with SingleTickerProv
 }
 
 class _WeatherPainter extends CustomPainter {
-  _WeatherPainter(this.clock, this.fx, this.day, this.seed) : super(repaint: clock);
+  _WeatherPainter(this.clock, this.fx, this.day, this.seed, this.sunrise, this.sunset) : super(repaint: clock);
+
+  final DateTime? sunrise, sunset;
 
   final Animation<double> clock;
   final WeatherFx fx;
@@ -145,53 +171,65 @@ class _WeatherPainter extends CustomPainter {
   }
 
   void _sun(Canvas canvas, Size size, {double dim = 1}) {
-    final c = Offset(size.width * 0.84, size.height * 0.04);
-    final pulse = 0.92 + 0.08 * math.sin(t * 2 * math.pi / 12);
-    final r = size.shortestSide * 0.95 * pulse;
+    final arc = sunArc(DateTime.now(), sunrise, sunset);
+    final c = sunPosition(arc, size);
+    // Near the horizon the light is warmer and a little softer.
+    final high = math.sin(math.pi * arc);
+    final warm = Color.lerp(const Color(0xFFFFA24A), const Color(0xFFFFE7B0), high)!;
+    final core = Color.lerp(const Color(0xFFFFD08A), const Color(0xFFFFFAEB), high)!;
+    final short = size.shortestSide;
+    Color tint(Color c, double a) => c.withValues(alpha: (a * dim).clamp(0.0, 1.0));
+
+    // The sky's glow round the sun, breathing very slowly.
+    final pulse = 0.96 + 0.04 * math.sin(t * 2 * math.pi / 12);
+    final glow = short * 0.9 * pulse;
     canvas.drawCircle(
       c,
-      r,
+      glow,
       Paint()
         ..shader = RadialGradient(
-          colors: [
-            Color.fromRGBO(255, 236, 180, 0.55 * dim),
-            Color.fromRGBO(255, 190, 90, 0.22 * dim),
-            Color.fromRGBO(255, 150, 60, 0.06 * dim),
-            const Color(0x00FF9632),
-          ],
-          stops: const [0, 0.18, 0.5, 1],
-        ).createShader(Rect.fromCircle(center: c, radius: r)),
+          colors: [tint(core, 0.5), tint(warm, 0.2), tint(warm, 0.06), tint(warm, 0)],
+          stops: const [0, 0.14, 0.45, 1],
+        ).createShader(Rect.fromCircle(center: c, radius: glow)),
     );
-    // Slowly turning, soft rays that fade out quickly from the sun.
+
+    // Soft beams fanning out towards the middle of the screen. They do not
+    // spin: each one gently brightens, fades and sways on its own.
     final rays = Paint()..blendMode = BlendMode.plus;
-    final len = size.longestSide * 0.75;
-    for (var i = 0; i < 8; i++) {
-      final a = (i / 8) * 2 * math.pi + t * 2 * math.pi / 90;
-      final spread = 0.09 + 0.05 * s(i);
+    final len = size.longestSide * 0.85;
+    final toward = math.atan2(size.height * 0.62 - c.dy, size.width * 0.5 - c.dx);
+    const beams = 11;
+    for (var i = 0; i < beams; i++) {
+      final spreadAt = (i / (beams - 1) - 0.5) * 2.4; // about ±69 degrees
+      final a = toward + spreadAt + 0.035 * math.sin(t * 2 * math.pi / (20 + 10 * s(i)) + s(i + 3) * 6);
+      final width = 0.018 + 0.03 * s(i + 7);
+      final shimmer = 0.5 + 0.5 * math.sin(t * 2 * math.pi / (9 + 8 * s(i + 11)) + s(i + 13) * 6);
+      final alpha = (0.035 + 0.06 * shimmer) * (0.55 + 0.45 * high);
       final path = Path()
-        ..moveTo(c.dx, c.dy)
-        ..lineTo(c.dx + math.cos(a - spread) * len, c.dy + math.sin(a - spread) * len)
-        ..lineTo(c.dx + math.cos(a + spread) * len, c.dy + math.sin(a + spread) * len)
+        ..moveTo(c.dx + math.cos(a - width) * short * 0.04, c.dy + math.sin(a - width) * short * 0.04)
+        ..lineTo(c.dx + math.cos(a - width) * len, c.dy + math.sin(a - width) * len)
+        ..lineTo(c.dx + math.cos(a + width) * len, c.dy + math.sin(a + width) * len)
+        ..lineTo(c.dx + math.cos(a + width) * short * 0.04, c.dy + math.sin(a + width) * short * 0.04)
         ..close();
       rays.shader = RadialGradient(
-        colors: [Color.fromRGBO(255, 230, 170, (0.07 + 0.04 * s(i + 5)) * dim), Color.fromRGBO(255, 230, 170, 0.02 * dim), const Color(0x00FFE6AA)],
-        stops: const [0, 0.45, 1],
+        colors: [tint(core, alpha), tint(warm, alpha * 0.35), tint(warm, 0)],
+        stops: const [0, 0.4, 1],
       ).createShader(Rect.fromCircle(center: c, radius: len));
       canvas.drawPath(path, rays);
     }
-    // A soft lens flare across the screen.
-    final dir = Offset(size.width * 0.5, size.height * 0.5) - c;
-    for (final (k, rad, a) in const [(0.6, 40.0, 0.10), (0.85, 18.0, 0.14), (1.2, 70.0, 0.06)]) {
-      final p = c + dir * k;
-      canvas.drawCircle(
-        p,
-        rad,
-        Paint()
-          ..shader = RadialGradient(
-            colors: [Color.fromRGBO(255, 220, 160, a * dim), const Color(0x00FFDCA0)],
-          ).createShader(Rect.fromCircle(center: p, radius: rad)),
-      );
-    }
+
+    // The sun itself: a small bright disc with a soft rim.
+    final r = short * 0.045;
+    canvas.drawCircle(
+      c,
+      r * 2.2,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [tint(core, 0.55), tint(warm, 0.18), tint(warm, 0)],
+          stops: const [0.35, 0.6, 1],
+        ).createShader(Rect.fromCircle(center: c, radius: r * 2.2)),
+    );
+    canvas.drawCircle(c, r, Paint()..color = tint(core, 0.85));
   }
 
   void _night(Canvas canvas, Size size, {int stars = 110}) {

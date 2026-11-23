@@ -630,7 +630,9 @@ class _SimonSaysState extends State<SimonSays> {
   }
 
   Future<void> _tap(int pad) async {
-    if (_showing || _over || !_started) return;
+    // Also ignore taps in the pause after a round is done, before the next
+    // sequence shows (a quick extra tap there read past the sequence).
+    if (_showing || _over || !_started || _input >= _seq.length) return;
     unawaited(_flash(pad, millis: 220));
     if (pad != _seq[_input]) {
       final level = _seq.length - 1;

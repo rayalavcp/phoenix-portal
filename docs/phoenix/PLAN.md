@@ -103,13 +103,13 @@ intercom, RTSP, the fleet agent.
 12. **Today home and school, round three: done.** A Today screen with 4K
     wallpapers, glass cards, weather effects, live Home Assistant cameras and
     a doorbell alert; SchoolCafe menus (Miller Elementary) and the Frisco ISD
-    calendar; updates from this repository's `install/releases.json`.
+    calendar; updates from this repository (GitHub Releases since 2026.12.14).
 13. **Kids Portal, round three: done.** Calm redesign; Arcade (Munch Maze,
     Brick Bash, Hop Across, Sky Glide, Fox Run); Move camera games; Maps
     (USA, India, World); five more learning games; quiz levels with stars
     and Next level; Snake stages and Memory sizes.
 14. **Camera games, low lag: done.** A native game mode (`GameVision.kt`),
-    two hands, a body mask, soft 3D glowing pixels; Freeze Dance DJ mixes of
+    two hands, friendly bubble cursors (2026.12.14; the glow renders were removed); Freeze Dance DJ mixes of
     public-domain songs (`kids_dj.dart`).
 15. **Replacing Immortal:** a Calls button on the Today dock (the stock
     Portal home's calling screen). What is still missing and how to remove

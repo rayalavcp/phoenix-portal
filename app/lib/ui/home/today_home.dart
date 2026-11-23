@@ -124,7 +124,7 @@ class _TodayHomeState extends State<TodayHome> {
               children: [
                 HomeWallpaper(container: c),
                 if (home.weatherEffects.value && (w != null || demo.isNotEmpty))
-                  WeatherBackdrop(code: w?.code, isDay: w?.isDay ?? (_now.hour >= 7 && _now.hour < 18), demo: demo),
+                  WeatherBackdrop(code: w?.code, isDay: w?.isDay ?? (_now.hour >= 7 && _now.hour < 18), demo: demo, sunrise: w?.sunrise, sunset: w?.sunset),
                 // Shade behind the text, so it reads over any photo.
                 const DecoratedBox(
                   decoration: BoxDecoration(

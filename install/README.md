@@ -1,8 +1,25 @@
-# Phoenix Portal test build 2026.12.13 (388)
+# Phoenix Portal test build 2026.12.14 (389)
 
-- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 100609682 bytes.
-  SHA-256 `121a14fdb4b27c9364eff5666184482ffccdc14eeb9eb46c34b69e67edf2d4e8`.
+- APK: on the repository's [Releases](https://github.com/rayalavcp/phoenix-portal/releases/latest)
+  page (`phoenix-portal.apk`), armeabi-v7a, runs on every Portal. 100593158 bytes.
+  SHA-256 `cf255a96fe408eccc497e24275b7cf07940a929df158553aa30e1e55c5fcc5d8`.
 - New in this build:
+  - **Camera games, simpler and faster**: no more hand or body renders.
+    Each hand is a soft pastel bubble with a little sparkle trail (pink,
+    and blue for the second hand; a sunny one when steering with the head).
+    The cursor follows quicker moves more closely, and the camera no longer
+    works out the body's outline, which leaves it more time for the hands.
+  - **The sun follows the day** in the weather effect: it rises low on the
+    left, is highest at midday and sets on the right, at the real sunrise
+    and sunset for your city. Its rays are soft beams that gently shimmer
+    instead of spinning wedges; morning and evening light is warmer.
+  - **Tiles like Android widgets**: hold a tile (or tap edit), then drag a
+    tile to move it, drag the round handle on its corner to resize it (it
+    snaps to whole cells and shows the size), tap × to hide it. The old
+    size buttons and the custom size dialog are gone.
+  - **Updates from GitHub Releases**: every build is now a release of the
+    repository (`v<version>`); the Portal reads the releases from GitHub.
+    APKs are no longer stored in the repository.
   - **Review and security pass:** stale files and dead code removed; the
     remote admin's password check is constant-time; an APK installed from a
     link or an upload must really be an APK and is capped at 1 GB.
@@ -23,8 +40,6 @@
     made on the Portal. The record scratches to a stop for each freeze.
   - **Calls** on the Today dock: the Portal's own WhatsApp and Messenger
     calling, the way Immortal's Calls tile opened it.
-  - What the camera sees in the camera games is drawn as soft, glowing
-    3D pixels (body in the whole-body games, hands in the hand games).
   - Fix: a game button could overflow its space on a 1024×600 screen.
   - Docs: `docs/phoenix/IMMORTAL.md` (what Phoenix covers of Immortal and
     how to remove Immortal safely).
@@ -34,10 +49,6 @@
     steady but follows fast moves closely, with a short look ahead.
   - **Two hands**: both are followed; Bubble Pop pops with either hand,
     Finger Math counts the fingers on both.
-  - **What the camera sees**: a soft glowing aura of the body in the
-    whole-body games (Wall Dodge, Freeze Dance, head-steered games) and
-    a warm sparkly glow on each hand in the hand games. Freeze Dance
-    reads movement from the whole body.
   - The camera only runs while a camera game is being played.
   - **Maps** shelf in the Kids Portal: **USA Map** (50 states), **India
     Map** (28 states and 8 union territories, India's official map) and
@@ -73,8 +84,8 @@
   - **Nothing goes to the original project**: analytics send nothing, the
     plugin directory and every guide link use this repository.
   - **Guides**: every Open guide button opens this repository's docs.
-  - **Updates from GitHub**: the Portal checks install/releases.json in this
-    repository and installs new builds itself (see UPDATES.md).
+  - **Updates from GitHub**: the Portal checks this repository's GitHub
+    Releases and installs new builds itself (see UPDATES.md).
   - **Move** shelf in the Kids Portal: Space Blaster (arcade shooter steered
     by head or hand), Bubble Pop, Fruit Catcher, Finger Math, using the
     Portal's camera (on-device hand and head tracking).

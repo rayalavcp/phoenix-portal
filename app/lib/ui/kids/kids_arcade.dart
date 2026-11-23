@@ -765,7 +765,7 @@ class _BrickBashState extends State<BrickBash> with SingleTickerProviderStateMix
 
   void _start() {
     _tracker?.dispose();
-    _tracker = _steer == 0 ? null : KidsHands(widget.container.motion, head: _steer == 2, body: false);
+    _tracker = _steer == 0 ? null : KidsHands(widget.container.motion, head: _steer == 2);
     setState(() {
       _score = 0;
       _lives = 3;

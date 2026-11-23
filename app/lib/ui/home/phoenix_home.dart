@@ -185,6 +185,8 @@ class _HomeScreen extends StatelessWidget {
                 code: container.phoenixHome.weather.value?.code,
                 isDay: container.phoenixHome.weather.value?.isDay ?? true,
                 demo: container.phoenixHome.weatherDemo.value,
+                sunrise: container.phoenixHome.weather.value?.sunrise,
+                sunset: container.phoenixHome.weather.value?.sunset,
               ),
             const DecoratedBox(
               decoration: BoxDecoration(

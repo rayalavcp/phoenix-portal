@@ -10,12 +10,17 @@ Built from this branch and installed from `install/` (see `install/README.md`).
   Play, Arcade, Move, Create); USA, India and World map games; Count It,
   Letter Sounds, Place Value, Story Sums, Telugu Words; quiz levels with stars
   and Next level; arcade games with stages; camera games with a fast game
-  mode, two hands and a soft 3D pixel glow; Freeze Dance DJ mixes.
+  mode, two hands and pastel bubble cursors; Freeze Dance DJ mixes.
 - **Today screen:** 4K wallpapers, glass cards, weather effects, Home
   Assistant cameras, a doorbell alert, a **Calls** button into the Portal's
   calling.
 - **School:** SchoolCafe menus and the Frisco ISD calendar.
 - **Updates:** from this repository; nothing is sent to the original project.
+- **2026.12.14:** camera games draw only a pastel bubble cursor per hand
+  (no hand or body renders) and follow faster; the sun rises on the left,
+  crosses the sky and sets on the right with the real sunrise and sunset;
+  tiles move and resize like Android widgets (drag, corner handle); builds
+  ship as GitHub Releases and the repository no longer stores APKs.
 - **Review (2026.12.13):** stale upstream files and dead code removed; the
   admin password check is constant-time; sideloaded APKs are size-capped and
   checked to be APKs first.

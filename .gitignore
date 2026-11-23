@@ -32,3 +32,7 @@ app/android/ground_control_client.properties
 benchmarks/
 
 AGENTS.md
+
+# Builds ship as GitHub Releases (install/publish_release.sh), never in git.
+install/phoenix-portal.apk
+*.apk

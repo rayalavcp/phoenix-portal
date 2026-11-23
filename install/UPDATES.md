@@ -1,8 +1,7 @@
 # Updating Phoenix Portal from GitHub
 
-Phoenix Portal updates itself from this repository,
-[rayalavcp/phoenix-portal](https://github.com/rayalavcp/phoenix-portal),
-on the branch `claude/fervent-hopper-25a7jk`. No PC is needed once a build
+Phoenix Portal updates itself from this repository's
+[GitHub Releases](https://github.com/rayalavcp/phoenix-portal/releases). No PC is needed once a build
 with this feature is installed.
 
 ## On the Portal
@@ -21,28 +20,52 @@ build gets a new version name.
 
 ## What the Portal reads
 
-| File | What it is |
+| File | What it is## What the Portal reads
+
+Every build is a GitHub Release, tag `v<version>` (for example
+`v2026.12.14`), with the APK attached twice:
+
+| File | For |
 |---|---|
-| [`install/releases.json`](releases.json) | The newest version, its notes and where its APK is. Same shape as GitHub's releases list. |
-| [`install/phoenix-portal.apk`](phoenix-portal.apk) | The APK itself (armeabi-v7a, runs on every Portal). |
+| `kiosk-satellite-<version>.armeabi-v7a.apk` | The Portal's own updater (it picks the APK by this name). |
+| `phoenix-portal.apk` | People and the PC installer. The newest is always at https://github.com/rayalavcp/phoenix-portal/releases/latest/download/phoenix-portal.apk |
+
+Portals on **2026.12.14 or newer** read the releases from GitHub's API.
+Older builds read [`install/releases.json`](releases.json) from the branch,
+which names the same release file, so they update the same way.
+
+APKs are never committed to the repository (each one is about 100 MB, and
+history kept every one of them).
 
 ## Publishing a new version
 
 1. Build the APK with a new version name in `app/pubspec.yaml`
-   (for example `version: 2026.12.4+379`).
-2. Copy it to `install/phoenix-portal.apk`.
-3. Write the release file:
+   (for example `version: 2026.12.15+390`).
+2. Write the release file for older builds:
    ```bash
-   python3 install/make_releases.py 2026.12.4 "What changed in this build"
+   python3 install/make_releases.py 2026.12.15 "What changed in this build" path/to/app.apk
    ```
-4. Update `$Version`, `$ApkSize` and `$ApkSha256` in `install/install-phoenix.ps1`
-   (for PC installs).
-5. Commit and push. Portals offer the update at their next check.
+3. Update `$Version`, `$ApkSize` and `$ApkSha256` in `install/install-phoenix.ps1`
+   (for PC installs). Commit and push the branch.
+4. Publish the release:
+   ```bash
+   install/publish_release.sh path/to/app.apk
+   ```
+   It pushes one temporary commit holding the APK; the **Phoenix release**
+   workflow (`.github/workflows/phoenix-release.yml`) makes release
+   `v2026.12.15` with the APK attached, takes the temporary commit off the
+   branch again and deletes releases older than the newest three. Portals
+   offer the update at their next check.
 
-## Without the Portal's own updater
+## Where the APKs are
 
-- **Install from file**: in the remote admin, Device › Updates › Install from
-  file, pick `phoenix-portal.apk` downloaded from this repository.
+On the repository's **Releases** page:
+https://github.com/rayalavcp/phoenix-portal/releases (on the repository's
+main page: **Releases** in the right-hand column). Only the newest three
+builds are kept; older ones are deleted when a new one is published.
+
+all from file**: in the remote admin, Device › Updates › Install from
+  file, pick `phoenix-portal.apk` downloaded from the Releases page.
 - **From a PC over USB**: run `install/install-phoenix.ps1`
   (see [`LOCAL_AGENT.md`](LOCAL_AGENT.md)).
 - **No internet**: set Update source to Custom Repository and point it at a

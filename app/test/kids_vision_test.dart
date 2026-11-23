@@ -9,16 +9,6 @@ import 'package:kiosk_satellite/ui/kids/kids_motion.dart';
 import 'package:kiosk_satellite/ui/kids/kids_motion2.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-BodyMask _blob(int w, int h, bool Function(int x, int y) inside) {
-  final cells = Uint8List(w * h);
-  for (var y = 0; y < h; y++) {
-    for (var x = 0; x < w; x++) {
-      if (inside(x, y)) cells[y * w + x] = 255;
-    }
-  }
-  return BodyMask(w, h, cells);
-}
-
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -87,33 +77,7 @@ void main() {
     });
   });
 
-  group('the glowing outline', () {
-    test('a square body traces a closed outline round it', () {
-      final m = _blob(20, 16, (x, y) => x >= 5 && x < 15 && y >= 4 && y < 12);
-      final segs = maskContour(m);
-      // 10 × 8 cells: 2 × (10 + 8) = 36 unit steps round it.
-      expect(segs.length, 36);
-      // Every end point is shared by exactly two segments: a closed loop.
-      final ends = <Offset, int>{};
-      for (final (a, b) in segs) {
-        ends[a] = (ends[a] ?? 0) + 1;
-        ends[b] = (ends[b] ?? 0) + 1;
-      }
-      expect(ends.values.every((n) => n == 2), isTrue);
-      // It runs half a cell outside the body's cell centres.
-      final xs = [for (final (a, b) in segs) ...[a.dx, b.dx]];
-      expect(xs.reduce(math.min), 5.0);
-      expect(xs.reduce(math.max), 15.0);
-    });
-
-    test('nothing there, nothing drawn; a body at the edge still closes', () {
-      expect(maskContour(_blob(10, 10, (x, y) => false)), isEmpty);
-      final segs = maskContour(_blob(10, 10, (x, y) => y >= 5));
-      expect(segs, isNotEmpty);
-    });
-  });
-
-  group('the play area draws what the camera sees', () {
+  group('the play area', () {
     late AppContainer c;
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
@@ -121,7 +85,7 @@ void main() {
       await c.settings.init();
     });
 
-    testWidgets('body outline, two glowing hands and two cursors', (tester) async {
+    testWidgets('two pretty cursors with sparkle trails, nothing of the child drawn', (tester) async {
       tester.view.physicalSize = const Size(1280, 800);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
@@ -130,9 +94,8 @@ void main() {
       await tester.pump();
       final state = tester.state(find.byType(WallDodge)) as dynamic;
       final hands = state.hands as KidsHands;
-      hands.outline.value = _blob(64, 48, (x, y) => math.pow(x - 32, 2) / 120 + math.pow(y - 26, 2) / 300 < 1);
-      final hand = [for (var i = 0; i < 21; i++) Offset(0.3 + (i % 5) * 0.02, 0.4 + (i ~/ 5) * 0.03)];
-      hands.skeletons.value = [hand, [for (final p in hand) p + const Offset(0.3, 0)]];
+      hands.trails[0].addAll([const Offset(0.2, 0.4), const Offset(0.25, 0.4)]);
+      hands.trails[1].addAll([const Offset(0.7, 0.4), const Offset(0.65, 0.4)]);
       hands.points.value = [const Offset(0.3, 0.4), const Offset(0.6, 0.4)];
       await tester.pump(const Duration(milliseconds: 100));
       expect(tester.takeException(), isNull);

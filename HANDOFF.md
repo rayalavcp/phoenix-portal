@@ -18,8 +18,8 @@ remove it safely).
 
 - Owner: krayala, GitHub `rayalavcp`. Repository `rayalavcp/phoenix-portal`.
 - Working branch: **`claude/fervent-hopper-25a7jk`** (everything ships from it).
-- Current build: see `install/README.md` (version and SHA-256) and
-  `install/releases.json`.
+- Current build: see `install/README.md` (version and SHA-256) and the
+  repository's GitHub Releases (`v<version>`).
 
 ## Rules the owner set
 
@@ -54,8 +54,8 @@ remove it safely).
 | `app/remote-ui/` | The remote admin (plain JS). Build: `cd app/remote-ui && npm run build` (copies into `app/assets/remote-ui`). |
 | `app/android/app/src/main/kotlin/me/jxl/kiosk_satellite/` | Native code (camera, hand/face tracking, SoundPool instrument, installer bridges). |
 | `app/l10n/` | Strings. After editing `l10n/source/*.arb`: `python3 tool/localization.py generate` then `flutter gen-l10n`. |
-| `install/` | What ships: `phoenix-portal.apk`, `releases.json`, `install-phoenix.ps1`, `README.md`, `LOCAL_AGENT.md`, `UPDATES.md`, `make_releases.py`. |
-| `wallpapers/` | 4K photos the Portal downloads on first use (kept out of the APK for GitHub's 100 MB limit). |
+| `install/` | `releases.json` (for builds older than 2026.12.14), `install-phoenix.ps1`, `README.md`, `LOCAL_AGENT.md`, `UPDATES.md`, `make_releases.py`, `publish_release.sh`. APKs are GitHub Release files, never committed. |
+| `wallpapers/` | 4K photos the Portal downloads on first use (kept out of the APK to keep it small). |
 | `plugins/index.json` | The plugin directory list (empty). |
 | `docs/` | User guides; the app's "Open guide" buttons link here. |
 
@@ -72,9 +72,9 @@ remove it safely).
 | Photos (Immich / folder), photo frame | `managers/home/photo_service.dart`, `ui/home/photo_frame.dart` |
 | Kids Portal hub and frame | `ui/kids/kids_overlay.dart`, `ui/kids/kids_activities.dart` |
 | Kids games | `kids_learn.dart` (quizzes), `kids_games.dart`, `kids_puzzles.dart`, `kids_play.dart` (incl. piano), `kids_motion.dart` (camera games), `kids_arcade.dart` (Munch Maze, Brick Bash), `kids_arcade2.dart` (Hop Across, Sky Glide, Fox Run), `kids_motion2.dart` (Wall Dodge, Air Trace, Freeze Dance), `kids_learn_more.dart` (Count It, Letter Sounds, Place Value, Story Sums, Telugu Words), `kids_maps.dart` (USA, India, World maps; data in `assets/maps`, rebuilt with `tool/kids_maps`) |
-| Hand/head tracking for games | native `GameVision.kt` (game mode: two hands with landmarks, selfie-segmenter body mask, every frame), `FaceDetector.kt`, `CameraMotion.kt` (`game` arg); Dart `motion_manager.dart` (`startGameVision`, `startHeadTracking`), `kids_motion.dart` (`KidsHands`, One Euro smoothing, glow painters) |
+| Hand/head tracking for games | native `GameVision.kt` (game mode: two hands with landmarks, every frame; its body segmenter is no longer asked for), `FaceDetector.kt`, `CameraMotion.kt` (`game` arg); Dart `motion_manager.dart` (`startGameVision`, `startHeadTracking`), `kids_motion.dart` (`KidsHands`, One Euro smoothing, `_CursorPainter`) |
 | App Store, side-loading (any APK by link or upload; GitHub apps Morphe and MicroG-RE with update checks) | `managers/store/store_manager.dart`, `ui/store/store_overlay.dart`, native `StoreInstaller.kt` (`inspect`), admin card in `remote-ui/static/phoenix_home.js`, upload endpoint `POST /api/apps/upload`; PC patching `install/patch-morphe.ps1`, guide `install/MORPHE.md` |
-| Updates from GitHub | `managers/update/update_manager.dart` (`_releasesUrl` = this repo's `install/releases.json`) |
+| Updates from GitHub | `managers/update/update_manager.dart` (`_releasesUrl` = this repo's GitHub Releases API) |
 | Admin Phoenix Home page | `remote-ui/static/phoenix_home.js` (+ CSS in `app.css`, `#tab-phoenix`) |
 
 ## Building (cloud container)
@@ -89,9 +89,10 @@ cd app && flutter build apk --release --split-per-abi --target-platform android-
 
 The APK is debug-signed with the same key every time (certificate SHA-256
 starts `47fff989d4`), so builds install over each other and keep settings.
-Keep the APK under 100 MB (GitHub's file limit, 104,857,600 bytes; 2026.12.12 is
-100,609,682, so about 4.2 MB of room is left): large assets go in
-`wallpapers/` and download at run time.
+APKs ship as GitHub Release files (up to 2 GB each), so the old 100 MB
+git file limit no longer applies; still keep it lean (about 100 MB now):
+large assets go in `wallpapers/` and download at run time. Never commit an
+APK (`.gitignore` blocks `*.apk`).
 
 Before shipping, run the analyzer and the tests that cover what changed.
 `test/kids_all_games_test.dart` opens every Kids game at 1280×800,
@@ -110,13 +111,21 @@ pre-existing problem); it passes on its own.
 
 1. Give it a **new version name** in `app/pubspec.yaml` (e.g.
    `2026.12.13+388`). The Portal's update check compares names.
-2. Build, then check: version, signing key, size under 100 MB.
-3. Copy to `install/phoenix-portal.apk`.
-4. `python3 install/make_releases.py <version> "notes"` writes
-   `install/releases.json`.
-5. Update `$Version`, `$ApkSize`, `$ApkSha256` in `install/install-phoenix.ps1`
+2. Build, then check: version and signing key.
+3. `python3 install/make_releases.py <version> "notes" <apk>` writes
+   `install/releases.json` (read by builds older than 2026.12.14).
+4. Update `$Version`, `$ApkSize`, `$ApkSha256` in `install/install-phoenix.ps1`
    and the size/SHA in `install/README.md`.
-6. Commit and push to `claude/fervent-hopper-25a7jk`.
+5. Commit and push to `claude/fervent-hopper-25a7jk` (no APK in the commit).
+6. `install/publish_release.sh <apk>`: pushes one temporary commit adding
+   `install/upload/phoenix-portal.apk` (tags are refused by this
+   environment's git proxy, only the branch can be pushed). The **Phoenix
+   release** workflow makes release `v<version>` (from releases.json) on
+   the commit below with the APK attached
+   (`kiosk-satellite-<version>.armeabi-v7a.apk` and `phoenix-portal.apk`),
+   force-moves the branch back off the temporary commit and keeps only the
+   newest three releases. Afterwards `git fetch` and check the remote
+   branch equals your HEAD and the release exists (`list_releases`).
 
 Portals on **2026.12.3 or newer** then find it themselves (on start and every
 12 hours; admin Dashboard › Check for updates checks now) and show
@@ -144,10 +153,12 @@ Math, Wall Dodge, Air Trace, Freeze Dance), **Create**.
 - Quizzes (`KidsQuiz`): no repeats within a round, a best and stars per
   level, "Next level" after 2+ stars.
 - Camera games: a **game mode** in the native camera pipeline
-  (`GameVision.kt`: every frame, two hands with 21 points each, selfie
-  segmenter body mask; `CameraMotion.kt` `game` arg), `KidsHands` with a
-  One Euro filter and a 60 ms look ahead, drawn as soft 3D glowing pixels
-  (`_glowPixels`). The camera runs only while a camera game is played.
+  (`GameVision.kt`: every frame, two hands; `CameraMotion.kt` `game` arg),
+  `KidsHands` with a responsive One Euro filter (beta 6) and a 50 ms look
+  ahead. **Nothing of the child is drawn** (the owner found the hand and
+  body renders scary, 2026.12.14): only a pastel bubble cursor per hand
+  (pink, blue; yellow for the head) with a sparkle trail
+  (`_CursorPainter`). The camera runs only while a camera game is played.
 - `test/kids_all_games_test.dart` opens and plays every game at three
   screen sizes with random taps, so a layout bug can show only in some
   game states (Connect Four's 1.6 px button overflow at 1024×600 did:
@@ -167,7 +178,7 @@ Not yet seen on a device:
 - Live HA camera video in the Today card and the doorbell alert (no Home
   Assistant here). The settings and the "no camera" path are tested.
 - Hand and head tracking in the camera games, now through the game mode:
-  the lag, two hands and the body outline need a real check (the log line
+  the lag and two hands need a real check (the log line
   "GameVision ... ms a look" gives the per-look cost). Direction may need
   the in-game ↔ swap; the camera must be on in camera settings.
 - Freeze Dance's DJ music through the native player (rendered to WAV in
@@ -220,8 +231,8 @@ before Android's installer sees them.
 Known and accepted: the remote admin is plain http on the LAN by default
 (HTTPS can be turned on in its settings); cleartext is allowed because most
 Home Assistant dashboards are http; user CAs are trusted for private HA
-certificates. The `.git` folder is about 1.5 GB because every build
-committed a ~100 MB APK; shrinking it means rewriting history (force push),
-only with the owner's OK. Remaining `jxlarrea` mentions are the required
+certificates. With the owner's OK the branch history was rewritten in
+2026.12.14 to drop every committed APK (the repository went from about
+1.5 GB to under 100 MB); builds are GitHub Release files since. Remaining `jxlarrea` mentions are the required
 "Based on Kiosk Satellite" credits, the Echo-only system images (never used
 on a Portal) and upstream changelog history.

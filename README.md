@@ -28,8 +28,8 @@ it to the dock or the Kids Portal, hide it, or open its Android info page.
 
 **Live, resizable tiles and themes.** Every tile shows current data (today's tithi and festival,
 the next school lunch, stars and the kids' challenge, running timers, the next alarm, lights on,
-your photos) and more of it as it grows. Press and hold, or tap the edit button, to resize tiles
-(small, wide, tall, large, extra large or any custom size), reorder or hide them, and pick a theme:
+your photos) and more of it as it grows. Press and hold, or tap the edit button, then work the tiles like Android
+widgets: drag a tile to move it, drag its corner handle to resize it, tap × to hide it, and pick a theme:
 Ember, Ocean, Forest, Midnight, Sunset or Graphite. The background shows the weather: rain, snow,
 clouds, fog, sun, stars or a storm.
 
@@ -65,7 +65,7 @@ volume, sensors, presence, and the new **Profile** switch.
 | **Puzzles** | Sudoku, Maze, Word Search, Word Guess, Memory Pro (6 to 12 pairs), 2048, Lights Out. |
 | **Play** | Snake (walls that change every stage), Whack-a-Mole, Simon Says, Tic-Tac-Toe, Connect Four. |
 | **Arcade** | Munch Maze, Brick Bash, Hop Across, Sky Glide, Fox Run: original retro games with stages. |
-| **Move** | Camera games: Space Blaster, Bubble Pop, Fruit Catcher, Finger Math, Wall Dodge, Air Trace, Freeze Dance (DJ mixes). Two hands, the body shown as soft glowing 3D pixels; every game also plays by touch. |
+| **Move** | Camera games: Space Blaster, Bubble Pop, Fruit Catcher, Finger Math, Wall Dodge, Air Trace, Freeze Dance (DJ mixes). Two hands, each shown as a friendly pastel bubble with a sparkle trail; every game also plays by touch. |
 | **Create** | Draw Studio, Pixel Paint, Piano. |
 
 A **daily challenge** (a new one each day) is worth three bonus stars.
