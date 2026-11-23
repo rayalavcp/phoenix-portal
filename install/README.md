@@ -1,8 +1,11 @@
-# Phoenix Portal test build 2026.12.11 (386)
+# Phoenix Portal test build 2026.12.12 (387)
 
 - `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 100609682 bytes.
-  SHA-256 `b1e3c3a127f44b3132633eb26bd72226be16978b2f4bd60983c50ce422f768e0`.
+  SHA-256 `8f534c5673d01da35c043f41684663621b8ba4aac2623fd7abfbe9dc4fb6de9f`.
 - New in this build:
+  - **Swipe right** on the Today screen opens Smart Home (your Home
+    Assistant dashboard, or whatever the Smart Home button is set to). A
+    swipe in from the very left edge still opens the menu.
   - **Install apps without the browser** (the Portal's browser blocks APK
     downloads): **Morphe** and **MicroG-RE** in the App Store, from their
     GitHub releases, with **Update** when a newer one is out; on the

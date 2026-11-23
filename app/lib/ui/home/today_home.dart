@@ -95,6 +95,8 @@ class _TodayHomeState extends State<TodayHome> {
     );
   }
 
+  double? _swipeFrom;
+
   @override
   Widget build(BuildContext context) {
     final home = c.phoenixHome;
@@ -103,133 +105,150 @@ class _TodayHomeState extends State<TodayHome> {
       builder: (context, _) {
         final w = home.weather.value;
         final demo = home.weatherDemo.value;
-        return GlassScope(
-          opacity: home.glassOpacity.value,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              HomeWallpaper(container: c),
-              if (home.weatherEffects.value && (w != null || demo.isNotEmpty))
-                WeatherBackdrop(code: w?.code, isDay: w?.isDay ?? (_now.hour >= 7 && _now.hour < 18), demo: demo),
-              // Shade behind the text, so it reads over any photo.
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [Color(0x8C000000), Color(0x26000000), Color(0x00000000), Color(0x40000000)],
-                    stops: [0, 0.4, 0.6, 1],
+        // A swipe to the right opens Smart Home (the Home Assistant
+        // dashboard, or whatever the Smart Home button opens). Not from
+        // the very left edge, which pulls out the menu; the camera card's
+        // own swipes win over this one.
+        return GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onHorizontalDragStart: (d) => _swipeFrom = d.globalPosition.dx,
+          onHorizontalDragEnd: (d) {
+            final from = _swipeFrom;
+            _swipeFrom = null;
+            if (isSmartHomeSwipe(from, d.primaryVelocity)) home.openSmartHomeButton();
+          },
+          child: GlassScope(
+            opacity: home.glassOpacity.value,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                HomeWallpaper(container: c),
+                if (home.weatherEffects.value && (w != null || demo.isNotEmpty))
+                  WeatherBackdrop(code: w?.code, isDay: w?.isDay ?? (_now.hour >= 7 && _now.hour < 18), demo: demo),
+                // Shade behind the text, so it reads over any photo.
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [Color(0x8C000000), Color(0x26000000), Color(0x00000000), Color(0x40000000)],
+                      stops: [0, 0.4, 0.6, 1],
+                    ),
                   ),
                 ),
-              ),
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0x33000000), Color(0x00000000), Color(0x00000000), Color(0x8C000000)],
-                    stops: [0, 0.25, 0.7, 1],
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0x33000000), Color(0x00000000), Color(0x00000000), Color(0x8C000000)],
+                      stops: [0, 0.25, 0.7, 1],
+                    ),
                   ),
                 ),
-              ),
-              SafeArea(
-                child: LayoutBuilder(
-                  builder: (context, box) {
-                    final wide = box.maxWidth >= 860 && box.maxWidth > box.maxHeight;
-                    final pad = box.maxWidth < 700 ? 16.0 : 28.0;
-                    final dock = _Dock(
-                      container: c,
-                      onKids: () => unawaited(_command('openKids', 'the Kids Portal')),
-                      onCalls: () => unawaited(_openCalls()),
-                      onPhotos: () => unawaited(_openPhotos()),
-                      onOpenSettings: widget.onOpenSettings,
-                    );
-                    final buttons = _TopButtons(
-                      onNight: () => unawaited(_command('startScreensaver', 'the screensaver')),
-                      onCustomize: () => unawaited(showTodaySetup(context, c)),
-                      onOpenMenu: widget.onOpenMenu,
-                    );
-                    if (wide) {
-                      return Padding(
-                        padding: EdgeInsets.fromLTRB(pad, 18, pad, 14),
-                        child: Column(
-                          children: [
-                            Expanded(
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Expanded(
-                                    child: _Hero(container: c, now: _now, big: box.maxHeight >= 640),
-                                  ),
-                                  const SizedBox(width: 24),
-                                  SizedBox(
-                                    width: (box.maxWidth * 0.32).clamp(320.0, 440.0),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                                      children: [
-                                        Align(alignment: Alignment.centerRight, child: buttons),
-                                        const SizedBox(height: 12),
-                                        Expanded(
-                                          child: _GlanceColumn(container: c, now: _now),
-                                        ),
-                                      ],
+                SafeArea(
+                  child: LayoutBuilder(
+                    builder: (context, box) {
+                      final wide = box.maxWidth >= 860 && box.maxWidth > box.maxHeight;
+                      final pad = box.maxWidth < 700 ? 16.0 : 28.0;
+                      final dock = _Dock(
+                        container: c,
+                        onKids: () => unawaited(_command('openKids', 'the Kids Portal')),
+                        onCalls: () => unawaited(_openCalls()),
+                        onPhotos: () => unawaited(_openPhotos()),
+                        onOpenSettings: widget.onOpenSettings,
+                      );
+                      final buttons = _TopButtons(
+                        onNight: () => unawaited(_command('startScreensaver', 'the screensaver')),
+                        onCustomize: () => unawaited(showTodaySetup(context, c)),
+                        onOpenMenu: widget.onOpenMenu,
+                      );
+                      if (wide) {
+                        return Padding(
+                          padding: EdgeInsets.fromLTRB(pad, 18, pad, 14),
+                          child: Column(
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    Expanded(
+                                      child: _Hero(container: c, now: _now, big: box.maxHeight >= 640),
                                     ),
+                                    const SizedBox(width: 24),
+                                    SizedBox(
+                                      width: (box.maxWidth * 0.32).clamp(320.0, 440.0),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                        children: [
+                                          Align(alignment: Alignment.centerRight, child: buttons),
+                                          const SizedBox(height: 12),
+                                          Expanded(
+                                            child: _GlanceColumn(container: c, now: _now),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              dock,
+                            ],
+                          ),
+                        );
+                      }
+                      return Padding(
+                        padding: EdgeInsets.fromLTRB(pad, 12, pad, 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Align(alignment: Alignment.centerRight, child: buttons),
+                            Expanded(
+                              child: ListView(
+                                padding: EdgeInsets.zero,
+                                children: [
+                                  _Hero(container: c, now: _now, big: false),
+                                  const SizedBox(height: 18),
+                                  if (home.cameraEntities.value.isNotEmpty && home.homeAssistantConfigured) ...[
+                                    SizedBox(
+                                      height: 220,
+                                      child: LiveCamerasCard(
+                                        key: ValueKey(home.cameraEntities.value.join(',')),
+                                        container: c,
+                                        entities: home.cameraEntities.value,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                  ],
+                                  SizedBox(
+                                    height: 230,
+                                    child: _UpNextCard(container: c, now: _now),
                                   ),
+                                  const SizedBox(height: 12),
+                                  SizedBox(
+                                    height: 280,
+                                    child: _SchoolCard(container: c, now: _now),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  SizedBox(
+                                    height: 120,
+                                    child: _WordCard(now: _now, onTap: home.openTelugu),
+                                  ),
+                                  const SizedBox(height: 12),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 10),
                             dock,
                           ],
                         ),
                       );
-                    }
-                    return Padding(
-                      padding: EdgeInsets.fromLTRB(pad, 12, pad, 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Align(alignment: Alignment.centerRight, child: buttons),
-                          Expanded(
-                            child: ListView(
-                              padding: EdgeInsets.zero,
-                              children: [
-                                _Hero(container: c, now: _now, big: false),
-                                const SizedBox(height: 18),
-                                if (home.cameraEntities.value.isNotEmpty && home.homeAssistantConfigured) ...[
-                                  SizedBox(
-                                    height: 220,
-                                    child: LiveCamerasCard(key: ValueKey(home.cameraEntities.value.join(',')), container: c, entities: home.cameraEntities.value),
-                                  ),
-                                  const SizedBox(height: 12),
-                                ],
-                                SizedBox(
-                                  height: 230,
-                                  child: _UpNextCard(container: c, now: _now),
-                                ),
-                                const SizedBox(height: 12),
-                                SizedBox(
-                                  height: 280,
-                                  child: _SchoolCard(container: c, now: _now),
-                                ),
-                                const SizedBox(height: 12),
-                                SizedBox(
-                                  height: 120,
-                                  child: _WordCard(now: _now, onTap: home.openTelugu),
-                                ),
-                                const SizedBox(height: 12),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          dock,
-                        ],
-                      ),
-                    );
-                  },
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -1359,7 +1378,6 @@ class _WallpaperPickerState extends State<WallpaperPicker> {
   }
 }
 
-
 /// "Find my cameras": imports the Home Assistant cameras into the app's
 /// camera setup and lets the parent tick which go on the card.
 class _FindCameras extends StatefulWidget {
@@ -1425,3 +1443,8 @@ class _FindCamerasState extends State<_FindCameras> {
     );
   }
 }
+
+/// Whether a horizontal drag that started at [fromX] and ended moving at
+/// [velocity] (pixels a second, + to the right) is the swipe that opens
+/// Smart Home: quick, to the right, not from the menu's left edge.
+bool isSmartHomeSwipe(double? fromX, double? velocity) => fromX != null && fromX > 40 && velocity != null && velocity > 500;

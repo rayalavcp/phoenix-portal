@@ -21,7 +21,8 @@
 shows the time and weather on a 4K photo with live weather effects, glass cards (Home Assistant
 cameras you can swipe through, what's up next, school, the Telugu word of the day) and a dock:
 Kids Portal, Smart Home, **Calls** (the Portal's own WhatsApp and Messenger calling), Apps,
-School, Calendar, Photos and Settings. A doorbell ring shows its camera full screen for 30 s. Every installed app is one
+School, Calendar, Photos and Settings. **Swipe right** for Smart Home (your Home Assistant
+dashboard); swipe in from the left edge for the menu. A doorbell ring shows its camera full screen for 30 s. Every installed app is one
 tap away in the app drawer, with search, recent and most-used apps; press and hold an app to add
 it to the dock or the Kids Portal, hide it, or open its Android info page.
 

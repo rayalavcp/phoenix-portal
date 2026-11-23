@@ -64,7 +64,7 @@ remove it safely).
 | Feature | Files |
 |---|---|
 | Phoenix Home manager (weather, apps, tiles, wallpapers, glass, cameras, doorbell, Smart Home target, kids settings, remote `phoenixHomeGet/Set`) | `managers/home/phoenix_home_manager.dart` |
-| Today screen (default home) | `ui/home/today_home.dart`, `ui/home/home_glass.dart`, `ui/home/live_cameras.dart` |
+| Today screen (default home; a right swipe opens Smart Home, `isSmartHomeSwipe`) | `ui/home/today_home.dart`, `ui/home/home_glass.dart`, `ui/home/live_cameras.dart` |
 | Tile layout | `ui/home/home_tiles.dart`, `ui/home/phoenix_home.dart` |
 | Weather effects | `ui/home/weather_backdrop.dart` |
 | School (SchoolCafe menus, iCal or HA calendar) | `managers/home/school_service.dart`, `ui/home/school_page.dart` |
@@ -89,7 +89,7 @@ cd app && flutter build apk --release --split-per-abi --target-platform android-
 
 The APK is debug-signed with the same key every time (certificate SHA-256
 starts `47fff989d4`), so builds install over each other and keep settings.
-Keep the APK under 100 MB (GitHub's file limit, 104,857,600 bytes; 2026.12.11 is
+Keep the APK under 100 MB (GitHub's file limit, 104,857,600 bytes; 2026.12.12 is
 100,609,682, so about 4.2 MB of room is left): large assets go in
 `wallpapers/` and download at run time.
 
@@ -109,7 +109,7 @@ pre-existing problem); it passes on its own.
 ## Shipping a build
 
 1. Give it a **new version name** in `app/pubspec.yaml` (e.g.
-   `2026.12.12+387`). The Portal's update check compares names.
+   `2026.12.13+388`). The Portal's update check compares names.
 2. Build, then check: version, signing key, size under 100 MB.
 3. Copy to `install/phoenix-portal.apk`.
 4. `python3 install/make_releases.py <version> "notes"` writes
