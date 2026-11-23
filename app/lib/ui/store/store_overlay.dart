@@ -34,6 +34,8 @@ class StoreOverlay extends StatelessWidget {
 }
 
 const _icons = <String, IconData>{
+  'build': Icons.build_rounded,
+  'key': Icons.key_rounded,
   'videogame': Icons.sports_esports_rounded,
   'kart': Icons.directions_car_filled_rounded,
   'chess': Icons.castle_rounded,
@@ -274,7 +276,15 @@ class _Action extends StatelessWidget {
           if (state.installed) ...[
             Icon(Icons.check_circle_rounded, color: scheme.tertiary, size: 18),
             const SizedBox(width: 6),
-            Expanded(child: Text('Installed ${state.version}', maxLines: 1, overflow: TextOverflow.ellipsis, style: small)),
+            Expanded(
+              child: Text(
+                state.updatable ? '${state.version} → ${state.latest}' : 'Installed ${state.version}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: small,
+              ),
+            ),
+            if (state.updatable) ...[FilledButton(onPressed: onInstall, child: const Text('Update')), const SizedBox(width: 6)],
             FilledButton.tonal(onPressed: onOpen, child: const Text('Open')),
           ] else ...[
             const Spacer(),

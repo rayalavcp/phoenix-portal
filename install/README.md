@@ -1,8 +1,16 @@
-# Phoenix Portal test build 2026.12.10 (385)
+# Phoenix Portal test build 2026.12.11 (386)
 
-- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 100575166 bytes.
-  SHA-256 `65ea5bbdc76495e9c0e3269e461386931c8dc937c388136040bc7d75e2309c6a`.
+- `phoenix-portal.apk`: armeabi-v7a, runs on every Portal. 100609682 bytes.
+  SHA-256 `b1e3c3a127f44b3132633eb26bd72226be16978b2f4bd60983c50ce422f768e0`.
 - New in this build:
+  - **Install apps without the browser** (the Portal's browser blocks APK
+    downloads): **Morphe** and **MicroG-RE** in the App Store, from their
+    GitHub releases, with **Update** when a newer one is out; on the
+    remote admin's Phoenix page, **Install apps on this Portal**: any APK
+    by link or by upload from the computer.
+  - `install/patch-morphe.ps1`: patches YouTube (or YouTube Music) with
+    Morphe Desktop on the Windows PC and installs it on the Portal over USB.
+    Guide: `install/MORPHE.md`.
   - **Freeze Dance DJ**: dance remixes (beat, bass, chords, synth lead,
     an intro with a riser and a drop) of Twinkle Twinkle, Old MacDonald,
     Mary Had a Little Lamb, London Bridge, Jingle Bells and Ode to Joy,

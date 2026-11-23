@@ -2,7 +2,7 @@
 // setting definitions do not cover, kept on the device by PhoenixHomeManager
 // and edited here through phoenixHomeGet / phoenixHomeSet. The definitions'
 // own rows (home screen, weather location, temperature unit) render above.
-import { api, cmd } from './core.js';
+import { api, apiUrl, cmd, state } from './core.js';
 import { showToast } from './widgets.js';
 import { openDrawerItemsPicker } from './drawer_items.js';
 
@@ -365,6 +365,104 @@ function deviceSection() {
       go('openSmartHome', 'Open Smart Home'), go('openKids', 'Open Kids Portal'), go('startScreensaver', 'Start photo frame / screensaver')));
 }
 
+// ── Install apps ─────────────────────────────────────────────────────────
+// The Portal's browser will not download APKs, so apps come from here: the
+// GitHub apps the store tracks (Morphe, MicroG-RE), any APK link (the
+// Portal downloads it itself) or an APK uploaded from this computer, such
+// as a YouTube patched with Morphe Desktop. Android asks on the Portal's
+// screen before it installs (or installs silently through Shizuku).
+
+let installStatus = null;
+let installPoll = null;
+
+async function loadInstallStatus() {
+  const r = await cmd('storeStatus', {}).catch(() => null);
+  if (r?.ok) installStatus = r.data;
+  const host = document.getElementById('phx-install');
+  if (host) host.replaceChildren(...installRows());
+  const busy = ['downloading', 'installing', 'confirm'].includes(installStatus?.sideload?.phase)
+    || (installStatus?.apps || []).some((a) => ['resolving', 'downloading', 'installing', 'confirm'].includes(a.phase));
+  clearTimeout(installPoll);
+  if (busy) installPoll = setTimeout(loadInstallStatus, 1500);
+}
+
+function sideloadLine(s) {
+  if (!s || s.phase === 'idle') return '';
+  const what = s.label || s.package || 'The app';
+  return {
+    downloading: `Getting the APK… ${s.progress != null ? Math.round(s.progress * 100) + '%' : ''}`,
+    installing: `Installing ${what}…`,
+    confirm: `${what}: tap Install on the Portal's screen.`,
+    installed: `${what} ${s.version || ''} is installed.`,
+    failed: `Didn't install: ${s.message || 'unknown error'}`,
+  }[s.phase] || '';
+}
+
+function installRows() {
+  const st = installStatus;
+  const rows = [];
+  for (const a of st?.apps || []) {
+    const ver = a.version == null ? 'Not installed' : (a.updatable ? `Installed ${a.version}, ${a.latest} is out` : `Installed ${a.version}`);
+    const busy = ['resolving', 'downloading', 'installing'].includes(a.phase);
+    const label = busy ? 'Working…' : (a.version == null ? 'Install' : (a.updatable ? 'Update' : 'Reinstall'));
+    const btn = el('button', { class: a.version == null || a.updatable ? 'primary' : '', text: label, onclick: async () => {
+      btn.disabled = true;
+      const r = await cmd('storeInstall', { package: a.package }).catch(() => null);
+      if (!r?.ok) showToast({ title: `Couldn't install ${a.name}`, message: r?.error || '', kind: 'error' });
+      setTimeout(loadInstallStatus, 800);
+    } });
+    if (busy) btn.disabled = true;
+    const extra = a.phase === 'confirm' ? ' · tap Install on the Portal' : (a.phase === 'failed' ? ` · ${a.message || 'failed'}` : '');
+    rows.push(row(a.name, `${a.summary} ${ver}${extra}.`, btn));
+  }
+  const check = el('button', { text: 'Check for updates', onclick: async () => {
+    check.disabled = true;
+    await cmd('storeCheckUpdates', {}).catch(() => null);
+    await loadInstallStatus();
+  } });
+  rows.push(row('GitHub apps', 'The Portal checks GitHub for the newest Morphe and MicroG-RE when the App Store opens.', check));
+
+  const url = el('input', { type: 'url', placeholder: 'https://…/app.apk', style: 'min-width:240px' });
+  const go = el('button', { class: 'primary', text: 'Install', onclick: async () => {
+    const r = await cmd('storeInstallUrl', { url: url.value.trim() }).catch(() => null);
+    if (!r?.ok) showToast({ title: "Couldn't start the install", message: r?.error || '', kind: 'error' });
+    else setTimeout(loadInstallStatus, 600);
+  } });
+  rows.push(row('Install from a link', 'A direct link to an .apk file. The Portal downloads it itself, so the browser block does not apply.', el('div', { class: 'phx-inline' }, url, go)));
+
+  const file = el('input', { type: 'file', accept: '.apk,application/vnd.android.package-archive', style: 'display:none' });
+  const progress = el('span', { class: 'desc' });
+  const pick = el('button', { class: 'primary', text: 'Upload an APK', onclick: () => file.click() });
+  file.addEventListener('change', () => {
+    const f = file.files?.[0];
+    if (!f) return;
+    pick.disabled = true;
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', apiUrl('/api/apps/upload'));
+    xhr.setRequestHeader('Authorization', `Bearer ${state.token}`);
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable) progress.textContent = ` Uploading ${Math.round(e.loaded / e.total * 100)}%`; };
+    xhr.onload = () => {
+      pick.disabled = false;
+      progress.textContent = '';
+      let r = null;
+      try { r = JSON.parse(xhr.responseText); } catch (_) { /* below */ }
+      if (!r?.ok) showToast({ title: "Couldn't install that APK", message: r?.error || `HTTP ${xhr.status}`, kind: 'error' });
+      loadInstallStatus();
+    };
+    xhr.onerror = () => { pick.disabled = false; progress.textContent = ''; showToast({ title: 'The Portal did not answer', kind: 'error' }); };
+    xhr.send(f);
+  });
+  rows.push(row('Upload an APK', 'An app from this computer, such as a YouTube you patched with Morphe Desktop. Split bundles (APKM, APKS, XAPK) must be merged into one APK first.', el('div', { class: 'phx-inline' }, pick, file, progress)));
+  const line = sideloadLine(st?.sideload);
+  if (line) rows.push(el('div', { class: 'desc', style: 'padding:6px 4px', text: line }));
+  return rows;
+}
+
+function installSection() {
+  const host = el('div', { id: 'phx-install' }, ...installRows());
+  return card('Install apps on this Portal', host);
+}
+
 function render() {
   const tab = document.getElementById('tab-phoenix');
   if (!tab || !model) return;
@@ -373,7 +471,7 @@ function render() {
     host = el('div', { id: 'phoenix-editor' });
     tab.append(host);
   }
-  host.replaceChildren(...deviceSection(), ...lookSection(), ...tilesSection(), ...appsSection(), ...kidsSection(), ...schoolSection(), ...photosSection());
+  host.replaceChildren(...deviceSection(), ...lookSection(), ...tilesSection(), ...appsSection(), ...kidsSection(), ...schoolSection(), ...photosSection(), ...installSection());
 }
 
 /** The Phoenix Home tab was opened: read the device's state and draw. */
@@ -388,4 +486,5 @@ export async function phoenixShown() {
   }
   model = r.data;
   render();
+  loadInstallStatus();
 }

@@ -829,6 +829,15 @@ class RemoteManager extends Manager {
           'length': request.contentLength,
         });
         return _json(r.ok ? 200 : 400, r.toJson());
+      // Any app's APK, the raw body: installed on the Portal (Install apps
+      // on the Phoenix page). The browser on a Portal will not download
+      // APKs, so they come from the computer instead.
+      case ('POST', 'api/apps/upload'):
+        final r = await commands.execute('receiveSideloadApk', {
+          'stream': request.read(),
+          'length': request.contentLength,
+        });
+        return _json(r.ok ? 200 : 400, r.toJson());
       // A custom wake word file, the raw body, into the staging folder.
       // commitCustomWakeModels then checks the upload's files together.
       case ('POST', 'api/voice/wake-models/upload'):

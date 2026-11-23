@@ -43,6 +43,35 @@ from GitHub: the PC is only needed again if something goes wrong.
 
 ---
 
+## Morphe: patch an app and install it on the Portal
+
+Give the agent this part when the owner wants a Morphe-patched app (YouTube,
+YouTube Music) on the Portal. Background: `install/MORPHE.md`.
+
+STEP M1. Download the script:
+Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/rayalavcp/phoenix-portal/claude/fervent-hopper-25a7jk/install/patch-morphe.ps1 -OutFile $env:USERPROFILE\patch-morphe.ps1
+
+STEP M2. Run it without a file. It gets Morphe and MicroG-RE and lists the
+supported YouTube versions:
+powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\patch-morphe.ps1
+(For YouTube Music add: -Package com.google.android.apps.youtube.music)
+If it offers to install Java 21 -> Y, then open a NEW PowerShell and run
+STEP M2 again.
+
+STEP M3. Tell me the versions it listed. I will download one from
+APKMirror into %USERPROFILE%\PhoenixMorphe\input (an APK, not a bundle).
+Do not download it yourself unless I say so.
+
+STEP M4. When I say the file is there, run:
+powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\patch-morphe.ps1 -Apk "%USERPROFILE%\PhoenixMorphe\input\<file name>"
+If it says INSTALL_FAILED_UPDATE_INCOMPATIBLE: STOP and ask me (an old
+copy would have to be uninstalled).
+
+STEP M5. Send me the SUMMARY block. Never delete the
+%USERPROFILE%\PhoenixMorphe folder (it holds the signing key).
+
+---
+
 ## Optional: remove Immortal (ONLY when the owner says so)
 
 Give the agent this part only after the owner has decided to remove

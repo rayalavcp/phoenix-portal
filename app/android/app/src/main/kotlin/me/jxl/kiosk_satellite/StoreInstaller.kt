@@ -101,6 +101,36 @@ class StoreInstaller(private val context: Context, messenger: BinaryMessenger) {
                     val packages = call.argument<List<String>>("packages") ?: emptyList()
                     result.success(packages.associateWith { versionOf(it) })
                 }
+                // What an APK file is, before installing it: its package,
+                // version and name (null when it is not a readable APK).
+                "inspect" -> {
+                    val path = call.argument<String>("path")
+                    if (path == null) {
+                        result.error("args", "path is required", null)
+                        return@setMethodCallHandler
+                    }
+                    worker.execute {
+                        val info = try {
+                            context.packageManager.getPackageArchiveInfo(path, 0)
+                        } catch (e: Exception) {
+                            null
+                        }
+                        val out = info?.let { pi ->
+                            val app = pi.applicationInfo
+                            val label = try {
+                                app?.let {
+                                    it.sourceDir = path
+                                    it.publicSourceDir = path
+                                    context.packageManager.getApplicationLabel(it).toString()
+                                }
+                            } catch (_: Exception) {
+                                null
+                            }
+                            mapOf("package" to pi.packageName, "version" to (pi.versionName ?: ""), "label" to (label ?: pi.packageName))
+                        }
+                        main.post { result.success(out) }
+                    }
+                }
                 else -> result.notImplemented()
             }
         }

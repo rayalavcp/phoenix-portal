@@ -73,6 +73,7 @@ remove it safely).
 | Kids Portal hub and frame | `ui/kids/kids_overlay.dart`, `ui/kids/kids_activities.dart` |
 | Kids games | `kids_learn.dart` (quizzes), `kids_games.dart`, `kids_puzzles.dart`, `kids_play.dart` (incl. piano), `kids_motion.dart` (camera games), `kids_arcade.dart` (Munch Maze, Brick Bash), `kids_arcade2.dart` (Hop Across, Sky Glide, Fox Run), `kids_motion2.dart` (Wall Dodge, Air Trace, Freeze Dance), `kids_learn_more.dart` (Count It, Letter Sounds, Place Value, Story Sums, Telugu Words), `kids_maps.dart` (USA, India, World maps; data in `assets/maps`, rebuilt with `tool/kids_maps`) |
 | Hand/head tracking for games | native `GameVision.kt` (game mode: two hands with landmarks, selfie-segmenter body mask, every frame), `FaceDetector.kt`, `CameraMotion.kt` (`game` arg); Dart `motion_manager.dart` (`startGameVision`, `startHeadTracking`), `kids_motion.dart` (`KidsHands`, One Euro smoothing, glow painters) |
+| App Store, side-loading (any APK by link or upload; GitHub apps Morphe and MicroG-RE with update checks) | `managers/store/store_manager.dart`, `ui/store/store_overlay.dart`, native `StoreInstaller.kt` (`inspect`), admin card in `remote-ui/static/phoenix_home.js`, upload endpoint `POST /api/apps/upload`; PC patching `install/patch-morphe.ps1`, guide `install/MORPHE.md` |
 | Updates from GitHub | `managers/update/update_manager.dart` (`_releasesUrl` = this repo's `install/releases.json`) |
 | Admin Phoenix Home page | `remote-ui/static/phoenix_home.js` (+ CSS in `app.css`, `#tab-phoenix`) |
 
@@ -88,8 +89,8 @@ cd app && flutter build apk --release --split-per-abi --target-platform android-
 
 The APK is debug-signed with the same key every time (certificate SHA-256
 starts `47fff989d4`), so builds install over each other and keep settings.
-Keep the APK under 100 MB (GitHub's file limit, 104,857,600 bytes; 2026.12.10 is
-100,575,166, so about 4.3 MB of room is left): large assets go in
+Keep the APK under 100 MB (GitHub's file limit, 104,857,600 bytes; 2026.12.11 is
+100,609,682, so about 4.2 MB of room is left): large assets go in
 `wallpapers/` and download at run time.
 
 Before shipping, run the analyzer and the tests that cover what changed.
@@ -108,7 +109,7 @@ pre-existing problem); it passes on its own.
 ## Shipping a build
 
 1. Give it a **new version name** in `app/pubspec.yaml` (e.g.
-   `2026.12.11+386`). The Portal's update check compares names.
+   `2026.12.12+387`). The Portal's update check compares names.
 2. Build, then check: version, signing key, size under 100 MB.
 3. Copy to `install/phoenix-portal.apk`.
 4. `python3 install/make_releases.py <version> "notes"` writes
@@ -186,5 +187,9 @@ Not yet seen on a device:
 - Immortal features not in Phoenix yet (iCloud/SMB/WebDAV photos, clock
   faces, lamp, bedtime stories, notes, converter, hourly chime, help tour):
   see `docs/phoenix/IMMORTAL.md`. Uninstalling Immortal is the owner's call.
+- Morphe: patching on the Portal itself can run out of memory (32-bit, ~1 GB
+  for the patcher); the PC script is the reliable path. Not yet tried on a
+  real Portal: the App Store's GitHub installs, link/upload installs, the
+  script (written for Windows PowerShell 5.1, not run here).
 - A one-tap "Camera for Kids games only" switch (exclude the HA camera
   entity, turn off the other camera features) was offered, not built.

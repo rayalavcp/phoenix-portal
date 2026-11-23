@@ -1,16 +1,16 @@
 [
   {
-    "tag_name": "2026.12.10",
-    "name": "Phoenix Portal 2026.12.10",
+    "tag_name": "2026.12.11",
+    "name": "Phoenix Portal 2026.12.11",
     "draft": false,
     "prerelease": false,
-    "body": "Freeze Dance DJ mixes with a record-scratch freeze; camera glow as soft 3D pixels; Calls button on the Today dock (Portal calling); button overflow fix. Docs: Immortal comparison and removal steps.",
+    "body": "Install apps without the browser: Morphe and MicroG-RE in the App Store from GitHub with update checks; any APK by link or upload from the remote admin; install/patch-morphe.ps1 patches YouTube with Morphe on a Windows PC and installs it over USB.",
     "html_url": "https://github.com/rayalavcp/phoenix-portal/tree/claude/fervent-hopper-25a7jk/install",
     "assets": [
       {
-        "name": "kiosk-satellite-2026.12.10.apk",
+        "name": "kiosk-satellite-2026.12.11.apk",
         "browser_download_url": "https://raw.githubusercontent.com/rayalavcp/phoenix-portal/claude/fervent-hopper-25a7jk/install/phoenix-portal.apk",
-        "size": 100575166,
+        "size": 100609682,
         "state": "uploaded"
       }
     ]

@@ -3,6 +3,8 @@
   "note": "Phoenix Portal's curated app store. Every entry is free and open source on F-Droid; the app resolves the current APK from F-Droid when it installs, so this file never goes stale. Lemuroid plays games you own or legally redistributable homebrew; no games are shipped.",
   "categories": ["Games", "Kids & learning", "Media", "Smart home", "Tools"],
   "apps": [
+    {"package": "app.morphe.manager", "name": "Morphe", "category": "Tools", "icon": "build", "summary": "Patches YouTube, YouTube Music and Reddit: no ads, background play. Install MicroG-RE too for YouTube sign-in. Patching on a Portal can run out of memory: see the guide for patching on a computer.", "github": "MorpheApp/morphe-manager", "asset": "^morphe-manager-.*\\.apk$"},
+    {"package": "app.revanced.android.gms", "name": "MicroG-RE", "category": "Tools", "icon": "key", "summary": "Google sign-in for Morphe's YouTube and YouTube Music on a Portal, which has no Google services.", "github": "MorpheApp/MicroG-RE", "asset": "^microg-.*\\.apk$"},
     {"package": "com.swordfish.lemuroid", "name": "Lemuroid", "category": "Games", "icon": "videogame", "summary": "Retro console emulator with big touch controls. Play your own cartridges or free homebrew games."},
     {"package": "org.supertuxkart.stk", "name": "SuperTuxKart", "category": "Games", "icon": "kart", "summary": "3D kart racing with Tux and friends. Great with a gamepad."},
     {"package": "org.lichess.mobileV2", "name": "Lichess", "category": "Games", "icon": "chess", "summary": "Play chess, solve puzzles and learn with lessons. No ads."},

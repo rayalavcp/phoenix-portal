@@ -85,7 +85,10 @@ Portal. Night shows a calm bedtime clock. Switch from Home Assistant, Phoenix Co
 admin or the Portal itself.
 
 **App Store.** Free apps picked for Portal (games, learning, media, smart home, tools), installed
-from F-Droid's current builds with one tap.
+from F-Droid's current builds with one tap, plus **Morphe** and **MicroG-RE** from GitHub with
+update checks. The remote admin installs **any APK** by link or upload (the Portal's browser won't
+download APKs), and `install/patch-morphe.ps1` patches YouTube with Morphe on a Windows PC and
+installs it over USB. See [install/MORPHE.md](install/MORPHE.md).
 
 <p align="center"><img src="docs/phoenix/screens/app-store.jpg" alt="App Store" width="640" /></p>
 
