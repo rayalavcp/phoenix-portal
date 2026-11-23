@@ -16,6 +16,9 @@ Built from this branch and installed from `install/` (see `install/README.md`).
   calling.
 - **School:** SchoolCafe menus and the Frisco ISD calendar.
 - **Updates:** from this repository; nothing is sent to the original project.
+- **2026.12.15:** a half sun on the top edge moving left to right;
+  Notification access granted through Shizuku and by the installers (a
+  Portal has no settings screen for it); Localization Credits removed.
 - **2026.12.14:** camera games draw only a pastel bubble cursor per hand
   (no hand or body renders) and follow faster; the sun rises on the left,
   crosses the sky and sets on the right with the real sunrise and sunset;

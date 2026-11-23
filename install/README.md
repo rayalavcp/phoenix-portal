@@ -1,9 +1,18 @@
-# Phoenix Portal test build 2026.12.14 (389)
+# Phoenix Portal test build 2026.12.15 (390)
 
 - APK: on the repository's [Releases](https://github.com/rayalavcp/phoenix-portal/releases/latest)
-  page (`phoenix-portal.apk`), armeabi-v7a, runs on every Portal. 100593158 bytes.
-  SHA-256 `cf255a96fe408eccc497e24275b7cf07940a929df158553aa30e1e55c5fcc5d8`.
+  page (`phoenix-portal.apk`), armeabi-v7a, runs on every Portal. 100592706 bytes.
+  SHA-256 `01c1d5c3dc837349fcc60b5982c24bd9db8b05ee3872689ed2e2d33c87b92ab5`.
 - New in this build:
+  - **The sun sits on the top edge**: a half sun that moves from the left
+    at sunrise to the right at sunset, so it never lands on a wallpaper's
+    hills or behind the tiles. Shorter, softer rays.
+  - **Notification access works on a Portal**: the Portal has no screen
+    for it, so Grant on device now grants it through Shizuku when Shizuku
+    is set up. The PC installer, Phoenix Control and the provisioning
+    script grant it too.
+  - **Localization Credits** removed from About (on the Portal and in the
+    remote admin): Phoenix Portal is English only.
   - **Camera games, simpler and faster**: no more hand or body renders.
     Each hand is a soft pastel bubble with a little sparkle trail (pink,
     and blue for the second hand; a sunny one when steering with the head).

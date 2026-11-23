@@ -48,6 +48,11 @@ class KioskManager extends Manager with WidgetsBindingObserver {
 
   final SettingsManager _settings;
 
+  /// The Media Session listener, as `cmd notification allow_listener`
+  /// names it.
+  static const _notificationListener =
+      'com.phoenix.portal/me.jxl.kiosk_satellite.MediaSessionListener';
+
   /// Armed when the app loses the foreground under lockdown (or under
   /// kiosk mode with Disable home wanted but not pinned); see
   /// [didChangeAppLifecycleState].
@@ -632,13 +637,35 @@ class KioskManager extends Manager with WidgetsBindingObserver {
               which is List && which.contains('notificationAccess');
           if (askNotificationAccess) {
             try {
-              if (await _mediaSessionsChannel.invokeMethod<bool>('hasAccess') ==
-                  true) {
+              Future<bool> has() async =>
+                  await _mediaSessionsChannel.invokeMethod<bool>('hasAccess') ==
+                  true;
+              if (await has()) {
                 results['notificationAccess'] = true;
               } else {
-                await _mediaSessionsChannel.invokeMethod('requestAccess');
-                // Only launched: the user grants (or not) on that screen.
-                results['notificationAccess'] = false;
+                // A Meta Portal has no Notification access screen, so the
+                // button did nothing there: grant it directly through
+                // Shizuku when that is set up (cmd notification
+                // allow_listener), and open the screen only otherwise.
+                await commands.execute('runShizukuAction', {
+                  'action': 'notificationAccess',
+                });
+                if (await has()) {
+                  results['notificationAccess'] = true;
+                } else {
+                  try {
+                    await _mediaSessionsChannel.invokeMethod('requestAccess');
+                  } catch (_) {
+                    log.warn(
+                      name,
+                      'no Notification access screen on this device: set up '
+                      'Shizuku, or over adb run: cmd notification '
+                      'allow_listener $_notificationListener',
+                    );
+                  }
+                  // Only launched (if at all): granted on that screen.
+                  results['notificationAccess'] = false;
+                }
               }
             } catch (_) {
               results['notificationAccess'] = false;

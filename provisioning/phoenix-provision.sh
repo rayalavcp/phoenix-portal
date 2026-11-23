@@ -155,6 +155,7 @@ build_setup_plan() {
   plan "Allow drawing over other apps" "shell appops set $PKG SYSTEM_ALERT_WINDOW allow"
   plan "Allow changing system settings (brightness)" "shell appops set $PKG WRITE_SETTINGS allow"
   plan "Allow usage access (foreground app sensor)" "shell appops set $PKG GET_USAGE_STATS allow"
+  plan "Allow notification access (Now Playing)" "shell cmd notification allow_listener $PKG/me.jxl.kiosk_satellite.MediaSessionListener"
   plan "Exempt from battery optimisation" "shell dumpsys deviceidle whitelist +$PKG"
   plan "Screen-off device admin" "shell dpm set-active-admin $ADMIN_RECEIVER"
 

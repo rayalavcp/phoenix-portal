@@ -27,8 +27,14 @@ git update-index --add --cacheinfo 100644,"$blob",install/upload/phoenix-portal.
 tree="$(git write-tree)"
 unset GIT_INDEX_FILE
 commit="$(git commit-tree "$tree" -p "$head" -m "APK upload for $version (taken off again by the release workflow)")"
-# --force-with-lease: the remote branch may still sit on an earlier upload
-# commit or on history from before APKs left the repository.
-git push --force-with-lease "origin" "$commit:refs/heads/$branch"
+# The remote branch must be this branch's own history (the workflow moves
+# it back off each upload commit); anything else is someone else's work.
+git fetch -q origin "$branch"
+remote="$(git rev-parse "origin/$branch")"
+if ! git merge-base --is-ancestor "$remote" "$head"; then
+  echo "origin/$branch has commits this branch lacks: merge them first." >&2
+  exit 1
+fi
+git push --force-with-lease="refs/heads/$branch:$remote" origin "$commit:refs/heads/$branch"
 echo "Pushed the APK for $version; the Phoenix release workflow publishes it."
 echo "Releases: https://github.com/rayalavcp/phoenix-portal/releases"

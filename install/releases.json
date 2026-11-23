@@ -1,16 +1,16 @@
 [
   {
-    "tag_name": "v2026.12.14",
-    "name": "Phoenix Portal 2026.12.14",
+    "tag_name": "v2026.12.15",
+    "name": "Phoenix Portal 2026.12.15",
     "draft": false,
     "prerelease": false,
-    "body": "Camera games: friendly bubble cursors (no hand or body renders) and faster following. The sun rises on the left and sets on the right with the real sunrise and sunset, with soft shimmering rays. Tiles move and resize like Android widgets. Updates now come from GitHub Releases.",
-    "html_url": "https://github.com/rayalavcp/phoenix-portal/releases/tag/v2026.12.14",
+    "body": "A half sun on the top edge moves from left at sunrise to right at sunset. Notification access is granted through Shizuku (a Portal has no screen for it). Localization Credits removed from About.",
+    "html_url": "https://github.com/rayalavcp/phoenix-portal/releases/tag/v2026.12.15",
     "assets": [
       {
-        "name": "kiosk-satellite-2026.12.14.armeabi-v7a.apk",
-        "browser_download_url": "https://github.com/rayalavcp/phoenix-portal/releases/download/v2026.12.14/kiosk-satellite-2026.12.14.armeabi-v7a.apk",
-        "size": 100593158,
+        "name": "kiosk-satellite-2026.12.15.armeabi-v7a.apk",
+        "browser_download_url": "https://github.com/rayalavcp/phoenix-portal/releases/download/v2026.12.15/kiosk-satellite-2026.12.15.armeabi-v7a.apk",
+        "size": 100592706,
         "state": "uploaded"
       }
     ]

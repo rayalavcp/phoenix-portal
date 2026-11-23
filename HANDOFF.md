@@ -191,6 +191,16 @@ Not yet seen on a device:
 - Whether the HA Bridge app still takes over after a reboot once the
   installer has stopped its boot start.
 
+## Grants a Portal has no screen for
+
+Notification access (Now Playing / Media Session source) has no settings
+screen on a Portal. `requestPermissions` with `notificationAccess` now tries
+Shizuku (`runShizukuAction notificationAccess`, which runs `cmd notification
+allow_listener com.phoenix.portal/me.jxl.kiosk_satellite.MediaSessionListener`)
+before opening the screen; the PC installer, Phoenix Control and
+`phoenix-provision.sh` run that command over adb. Without Shizuku or adb it
+cannot be granted on a Portal.
+
 ## Open ideas the owner mentioned
 
 - More motion games; owner will upload wallpapers.

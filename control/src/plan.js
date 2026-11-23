@@ -74,6 +74,7 @@ export function buildSetupPlan(facts, { setHome = true, blockOta = true, apkName
   add('Allow drawing over other apps', `appops set ${PKG} SYSTEM_ALERT_WINDOW allow`);
   add('Allow changing system settings (brightness)', `appops set ${PKG} WRITE_SETTINGS allow`);
   add('Allow usage access (foreground app sensor)', `appops set ${PKG} GET_USAGE_STATS allow`);
+  add('Allow notification access (Now Playing)', `cmd notification allow_listener ${PKG}/me.jxl.kiosk_satellite.MediaSessionListener`);
   add('Exempt from battery optimisation', `dumpsys deviceidle whitelist +${PKG}`);
   add('Screen-off device admin', `dpm set-active-admin ${ADMIN_RECEIVER}`);
 

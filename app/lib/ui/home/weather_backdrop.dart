@@ -39,12 +39,10 @@ double sunArc(DateTime now, DateTime? sunrise, DateTime? sunset) {
 }
 
 /// Where the sun is drawn for [arc] (see [sunArc]) on a screen of [size]:
-/// low on the left at sunrise, high in the middle at noon, low on the
-/// right at sunset.
-Offset sunPosition(double arc, Size size) => Offset(
-  size.width * (0.06 + 0.88 * arc),
-  size.height * (0.5 - 0.44 * math.sin(math.pi * arc)),
-);
+/// a half sun sitting on the top edge, at the left at sunrise, in the
+/// middle at noon and at the right at sunset. On the edge it never sits
+/// over a wallpaper's hills or behind the tiles.
+Offset sunPosition(double arc, Size size) => Offset(size.width * (0.04 + 0.92 * arc), 0);
 
 enum WeatherFx { clear, clouds, fog, drizzle, rain, snow, storm }
 
@@ -196,11 +194,12 @@ class _WeatherPainter extends CustomPainter {
     // Soft beams fanning out towards the middle of the screen. They do not
     // spin: each one gently brightens, fades and sways on its own.
     final rays = Paint()..blendMode = BlendMode.plus;
-    final len = size.longestSide * 0.85;
-    final toward = math.atan2(size.height * 0.62 - c.dy, size.width * 0.5 - c.dx);
+    final len = size.longestSide * 0.65;
+    // Down into the picture, leaning a little towards the middle.
+    final toward = math.atan2(size.height, (size.width * 0.5 - c.dx) * 0.6);
     const beams = 11;
     for (var i = 0; i < beams; i++) {
-      final spreadAt = (i / (beams - 1) - 0.5) * 2.4; // about ±69 degrees
+      final spreadAt = (i / (beams - 1) - 0.5) * 2.2; // about ±63 degrees
       final a = toward + spreadAt + 0.035 * math.sin(t * 2 * math.pi / (20 + 10 * s(i)) + s(i + 3) * 6);
       final width = 0.018 + 0.03 * s(i + 7);
       final shimmer = 0.5 + 0.5 * math.sin(t * 2 * math.pi / (9 + 8 * s(i + 11)) + s(i + 13) * 6);
@@ -218,8 +217,8 @@ class _WeatherPainter extends CustomPainter {
       canvas.drawPath(path, rays);
     }
 
-    // The sun itself: a small bright disc with a soft rim.
-    final r = short * 0.045;
+    // The sun itself: a bright half disc peeking over the top edge.
+    final r = short * 0.07;
     canvas.drawCircle(
       c,
       r * 2.2,

@@ -5,8 +5,6 @@ import { supportTextMessageIds } from './support_text_ids.js';
 import { voiceText, deviceText, deviceOperationError, supportText, t } from './localization.js';
 import { $, api, apiUrl, cmd, state } from './core.js';
 import { watchUpdates } from './live.js';
-import { subpageEntry } from './tabs.js';
-import { localizationCredits, localizationLanguageNames } from './localization_credits.js';
 import { copyBox, hintRow, messageBox, modalShell, showToast } from './widgets.js';
 
 // The helper group belongs only on devices without native silent installation.
@@ -711,7 +709,6 @@ const githubMark = '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 0C5
 
 export async function loadAboutInfo() {
   const root = $('#about-info');
-  renderLocalizationCredits();
   // Everything is fetched before the container is cleared: an await between
   // clear and append lets a second invocation interleave and the tab ends up
   // rendered twice.
@@ -905,51 +902,7 @@ export async function loadAboutInfo() {
   const p = document.createElement('p');
   p.style.cssText = 'color:var(--muted); font-size:.85rem; margin:4px 4px 0; line-height:1.5;';
   setAboutLabel(p, 'aboutLicenseSummary');
-  const credits = document.createElement('div');
-  credits.className = 'card';
-  const entry = subpageEntry('about', 'Localization Credits');
-  setAboutLabel(entry.querySelector('.name'), 'aboutLocalizationCredits');
-  entry.querySelector('.desc').remove();
-  credits.appendChild(entry);
-  root.appendChild(credits);
   root.appendChild(p);
-}
-
-export function renderLocalizationCredits() {
-  const root = $('#localization-credits');
-  if (!root) return;
-  root.replaceChildren();
-  for (const [locale, contributors] of Object.entries(localizationCredits)) {
-    const heading = document.createElement('h2');
-    heading.className = 'card-title';
-    heading.textContent = localizationLanguageNames[locale] || locale;
-    const group = document.createElement('div');
-    group.className = 'card';
-    for (const contributor of contributors) {
-      const row = document.createElement('div');
-      row.className = 'row';
-      const info = document.createElement('div');
-      info.className = 'info';
-      const label = document.createElement('div');
-      label.className = 'name';
-      label.textContent = contributor.name;
-      info.appendChild(label);
-      row.appendChild(info);
-      if (contributor.login) {
-        const profile = document.createElement('a');
-        profile.href = `https://github.com/${contributor.login}`;
-        profile.target = '_blank';
-        profile.rel = 'noreferrer';
-        profile.innerHTML = githubMark;
-        const username = document.createElement('span');
-        username.textContent = contributor.login;
-        profile.appendChild(username);
-        row.appendChild(profile);
-      }
-      group.appendChild(row);
-    }
-    root.append(heading, group);
-  }
 }
 
 // A dot on the About nav item when the device reports a newer release —

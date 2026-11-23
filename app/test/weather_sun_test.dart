@@ -5,7 +5,7 @@ import 'package:kiosk_satellite/ui/home/weather_backdrop.dart';
 
 void main() {
   final rise = DateTime(2026, 6, 1, 6), set = DateTime(2026, 6, 1, 20);
-  test('the sun rises on the left, is highest at midday and sets on the right', () {
+  test('the sun moves along the top edge from left at sunrise to right at sunset', () {
     const size = Size(1000, 600);
     final morning = sunPosition(sunArc(DateTime(2026, 6, 1, 6, 30), rise, set), size);
     final noon = sunPosition(sunArc(DateTime(2026, 6, 1, 13), rise, set), size);
@@ -13,8 +13,8 @@ void main() {
     expect(morning.dx, lessThan(200));
     expect(evening.dx, greaterThan(800));
     expect(noon.dx, closeTo(500, 1));
-    expect(noon.dy, lessThan(morning.dy));
-    expect(noon.dy, lessThan(evening.dy));
+    // A half sun on the top edge all day.
+    expect([morning.dy, noon.dy, evening.dy], everyElement(0));
   });
 
   test('before sunrise and after sunset it stays at the horizon', () {
