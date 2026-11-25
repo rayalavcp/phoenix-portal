@@ -12,12 +12,11 @@ what is still open.
   and wallpapers all come from `main`).
 - **Work on `main`.** On 2026-11-25 everything was merged into `main`
   (fast-forward; `main` is the default branch to clone).
-- **The old branch `claude/fervent-hopper-25a7jk`** can be deleted once
-  every Portal runs 2026.12.20 or newer (the owner decides; it was kept in
-  step with `main` until then). Builds up to 2026.12.19 read their guides,
-  licence link and plugin list from it (only those links break without it;
-  updates and wallpapers keep working). After it is deleted, drop the
-  "mirror" step from this file and `.cursor/rules/phoenix-portal.mdc`.
+- **The old branch `claude/fervent-hopper-25a7jk` was deleted on the
+  owner's request (2026-11-25).** Builds up to 2026.12.19 opened their
+  guides, licence link and plugin list from it; on those builds only those
+  links fail until the Portal updates to 2026.12.20 or newer (updates and
+  wallpapers keep working). Everything now lives on `main`.
 - **Signing key (critical).** Every build is signed with one key
   (certificate SHA-256 `47:FF:F9:89:D4:2A:FD:80:...:04:2B`). A build signed
   with any other key will not install over the app on the Portals (Android
@@ -182,8 +181,7 @@ Known flaky tests: see "Start here".
    `install/releases.json` (read by builds older than 2026.12.14).
 4. Update `$Version`, `$ApkSize`, `$ApkSha256` in `install/install-phoenix.ps1`
    and the size/SHA in `install/README.md`.
-5. Commit and push to `main` (no APK in the commit). Until the old branch
-   is deleted, also `git push origin main:claude/fervent-hopper-25a7jk`.
+5. Commit and push to `main` (no APK in the commit).
 6. `install/publish_release.sh <apk>`: pushes one temporary commit adding
    `install/upload/phoenix-portal.apk` (the cloud environment's git proxy
    refused tags, so this uses the branch; it works the same from any
