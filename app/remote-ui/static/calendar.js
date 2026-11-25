@@ -270,7 +270,7 @@ export function renderCalendarPage() {
 // The calendar by voice lives in Home Assistant (the blueprint), so this
 // group only points at the guide. Last on the page, as on the device and
 // as Voice Alarms on the Alarms page.
-const VOICE_DOCS_URL = 'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/calendar.md#managing-the-calendar-by-voice';
+const VOICE_DOCS_URL = 'https://github.com/rayalavcp/phoenix-portal/blob/main/docs/calendar.md#managing-the-calendar-by-voice';
 
 function voiceCards() {
   const heading = document.createElement('h2');

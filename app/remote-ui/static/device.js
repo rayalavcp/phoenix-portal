@@ -79,7 +79,7 @@ export function renderUpdateHelper(root, initialStatus) {
     const link = document.createElement('a');
     link.className = 'btn-ghost';
     link.textContent = deviceText('Open guide');
-    link.href = 'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/updates.md#optional-update-helper';
+    link.href = 'https://github.com/rayalavcp/phoenix-portal/blob/main/docs/updates.md#optional-update-helper';
     link.target = '_blank';
     link.rel = 'noreferrer';
     docs.appendChild(link);
@@ -92,7 +92,7 @@ export function renderUpdateHelper(root, initialStatus) {
 // The page's intro and docs link, above its three switches: the same words
 // the device puts there (_analyticsIntro in settings_screen.dart).
 export const ANALYTICS_DOCS_URL =
-  'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/analytics.md';
+  'https://github.com/rayalavcp/phoenix-portal/blob/main/docs/analytics.md';
 
 export function renderAnalyticsIntro(panel) {
   if (!panel) return;
@@ -122,7 +122,7 @@ export function renderAnalyticsIntro(panel) {
 // out, the same words the device puts there (_updateDocsUrl in
 // settings_screen.dart).
 export const UPDATE_DOCS_URL =
-  'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/install/UPDATES.md';
+  'https://github.com/rayalavcp/phoenix-portal/blob/main/install/UPDATES.md';
 
 export function renderUpdateSourceDocs(panel) {
   if (!panel) return;
@@ -898,7 +898,7 @@ export async function loadAboutInfo() {
     ['Portal setup from', link('Immortal by Starbright Lab', 'https://github.com/starbrightlab/immortal')],
     ['Source code', repo],
     ['License', link('CC BY-NC-ND 4.0',
-      'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/LICENSE')],
+      'https://github.com/rayalavcp/phoenix-portal/blob/main/LICENSE')],
   ]);
 
   const p = document.createElement('p');

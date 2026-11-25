@@ -18,7 +18,7 @@ STEP 2. Remove old downloaded copies:
 Remove-Item $env:TEMP\install-phoenix.ps1, $env:TEMP\phoenix-install -Recurse -Force -ErrorAction SilentlyContinue
 
 STEP 3. Download the installer:
-Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/rayalavcp/phoenix-portal/claude/fervent-hopper-25a7jk/install/install-phoenix.ps1 -OutFile $env:TEMP\install-phoenix.ps1
+Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/rayalavcp/phoenix-portal/main/install/install-phoenix.ps1 -OutFile $env:TEMP\install-phoenix.ps1
 
 STEP 4. Run it:
 powershell -ExecutionPolicy Bypass -File $env:TEMP\install-phoenix.ps1
@@ -49,7 +49,7 @@ Give the agent this part when the owner wants a Morphe-patched app (YouTube,
 YouTube Music) on the Portal. Background: `install/MORPHE.md`.
 
 STEP M1. Download the script:
-Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/rayalavcp/phoenix-portal/claude/fervent-hopper-25a7jk/install/patch-morphe.ps1 -OutFile $env:USERPROFILE\patch-morphe.ps1
+Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/rayalavcp/phoenix-portal/main/install/patch-morphe.ps1 -OutFile $env:USERPROFILE\patch-morphe.ps1
 
 STEP M2. Run it without a file. It gets Morphe and MicroG-RE and lists the
 supported YouTube versions:

@@ -14,7 +14,7 @@ import { banner, modalShell } from './widgets.js';
    empty. The list repaints itself on the device's echo, so a change on
    the device or in another admin shows here without rebuilding the tab. */
 
-export const CUSTOM_PAGES_DOCS_URL = 'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/custom-pages.md';
+export const CUSTOM_PAGES_DOCS_URL = 'https://github.com/rayalavcp/phoenix-portal/blob/main/docs/custom-pages.md';
 
 // mdi:application-brackets-outline, the icon every page wears in the pickers
 // and the shape of the page's own entry row.

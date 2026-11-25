@@ -871,7 +871,7 @@ class _PluginSettingsPanelState extends State<PluginSettingsPanel> {
                   onTap: () => _run(() async {
                     final opened = await launchUrl(
                       Uri.parse(
-                        'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/plugins.md',
+                        'https://github.com/rayalavcp/phoenix-portal/blob/main/docs/plugins.md',
                       ),
                       mode: LaunchMode.externalApplication,
                     );

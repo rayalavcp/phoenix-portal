@@ -253,7 +253,7 @@ async function zipBase64(file) {
 // Browse plugins: Community Plugins, the directory kiosksatellite.com builds
 // from the plugins repository. Mirrors the device (plugin_directory.dart).
 const DIRECTORY_PAGE = '_browse';
-const SUBMIT_URL = 'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/plugins/README.md';
+const SUBMIT_URL = 'https://github.com/rayalavcp/phoenix-portal/blob/main/plugins/README.md';
 let directory = null;
 let directoryError = '';
 let directoryReading = null;
@@ -904,7 +904,7 @@ function render(root, state) {
   zipRow.append(upload, fileInput); developerTools.append(zipRow);
   const guideRow = element('a', undefined, 'row plugin-guide-row');
   guideRow.dataset.searchId = 'x:plugins:create';
-  guideRow.href = 'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/plugins.md';
+  guideRow.href = 'https://github.com/rayalavcp/phoenix-portal/blob/main/docs/plugins.md';
   guideRow.target = '_blank'; guideRow.rel = 'noopener noreferrer';
   guideRow.append(info(pluginText('Create a plugin'), pluginText('Learn how to create plugins with the Hello World template and documentation.')));
   const guideIcon = element('span', undefined, 'icon-btn'); guideIcon.setAttribute('aria-hidden', 'true');

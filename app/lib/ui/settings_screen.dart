@@ -219,22 +219,22 @@ const _analyticsIntro =
     'Share anonymized information from your installation to help make '
     'Phoenix Portal better and guide which devices and features get '
     'attention.';
-const _analyticsDocsUrl = 'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/analytics.md';
+const _analyticsDocsUrl = 'https://github.com/rayalavcp/phoenix-portal/blob/main/docs/analytics.md';
 const _voiceAlarmsDocsUrl =
-    'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/alarms.md#setting-alarms-by-voice';
+    'https://github.com/rayalavcp/phoenix-portal/blob/main/docs/alarms.md#setting-alarms-by-voice';
 const _voiceCalendarDocsUrl =
-    'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/calendar.md#managing-the-calendar-by-voice';
+    'https://github.com/rayalavcp/phoenix-portal/blob/main/docs/calendar.md#managing-the-calendar-by-voice';
 const _voiceTimersDocsUrl =
-    'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/timers.md#setting-timers-by-voice';
+    'https://github.com/rayalavcp/phoenix-portal/blob/main/docs/timers.md#setting-timers-by-voice';
 const _voiceMusicDocsUrl =
-    'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/music-library.md#playing-music-by-voice';
+    'https://github.com/rayalavcp/phoenix-portal/blob/main/docs/music-library.md#playing-music-by-voice';
 
 // The Updates page closes with a link to the custom repository guide: the
 // folder layout, the releases file and the APK names live in the docs, not
 // in a row description. Mirrored on the remote (renderUpdateSourceDocs in
 // device.js).
 const _updateDocsUrl =
-    'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/install/UPDATES.md';
+    'https://github.com/rayalavcp/phoenix-portal/blob/main/install/UPDATES.md';
 
 /// (defs category, page title, icon, subtitle)
 // The icon is a Material [IconData], or the path of an SVG asset for a
@@ -2430,7 +2430,7 @@ class _CategoryContentState extends State<_CategoryContent> {
             supportText(context, 'License'),
             'CC BY-NC-ND 4.0',
             onTap: () => _openLink(
-              'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/LICENSE',
+              'https://github.com/rayalavcp/phoenix-portal/blob/main/LICENSE',
             ),
           ),
         ],

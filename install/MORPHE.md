@@ -22,7 +22,7 @@ store opens). The remote admin has the same, on the **Phoenix** page under
 `install/patch-morphe.ps1` does it all on the PC that has the Portal on USB:
 
 ```
-Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/rayalavcp/phoenix-portal/claude/fervent-hopper-25a7jk/install/patch-morphe.ps1 -OutFile $env:USERPROFILE\patch-morphe.ps1
+Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/rayalavcp/phoenix-portal/main/install/patch-morphe.ps1 -OutFile $env:USERPROFILE\patch-morphe.ps1
 powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\patch-morphe.ps1
 ```
 

@@ -15,7 +15,7 @@ import { banner, hintRow, messageBox, localizedMessageBox, modalShell, showToast
    socket. An invitation is answered here, on Overview or on the kiosk
    screen. */
 
-const DOCS_URL = 'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/fleet.md';
+const DOCS_URL = 'https://github.com/rayalavcp/phoenix-portal/blob/main/docs/fleet.md';
 
 let status = null;
 let busy = false;

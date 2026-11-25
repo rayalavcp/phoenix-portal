@@ -607,7 +607,7 @@ export async function renderAlarmsPage({ fetch = true } = {}) {
 // Voice alarms live in Home Assistant (the blueprint), so this group only
 // points at the guide. Last on the page, after the defaults, as on the
 // device.
-const VOICE_DOCS_URL = 'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/alarms.md#setting-alarms-by-voice';
+const VOICE_DOCS_URL = 'https://github.com/rayalavcp/phoenix-portal/blob/main/docs/alarms.md#setting-alarms-by-voice';
 
 function voiceCards() {
   const heading = document.createElement('h2');

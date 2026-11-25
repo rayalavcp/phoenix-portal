@@ -13,7 +13,7 @@ import 'settings_screen.dart' show SettingTile;
 import 'settings_search.dart';
 
 /// The custom pages guide on the docs site.
-const customPagesDocsUrl = 'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/docs/custom-pages.md';
+const customPagesDocsUrl = 'https://github.com/rayalavcp/phoenix-portal/blob/main/docs/custom-pages.md';
 
 /// Settings > Home Assistant > Custom Pages: the Share Home Assistant
 /// connection switch, then the person's own HTML pages, in Home Assistant's

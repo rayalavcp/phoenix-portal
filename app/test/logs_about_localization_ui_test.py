@@ -160,7 +160,7 @@ try:
         expect(root).to_contain_text('2026.9.59-RAW (258)')
         expect(root).to_contain_text('me.jxl.kiosk_satellite')
         expect(root).to_contain_text('CC BY-NC-ND 4.0')
-        expect(root.get_by_role('link', name='CC BY-NC-ND 4.0')).to_have_attribute('href', 'https://github.com/rayalavcp/phoenix-portal/blob/claude/fervent-hopper-25a7jk/LICENSE')
+        expect(root.get_by_role('link', name='CC BY-NC-ND 4.0')).to_have_attribute('href', 'https://github.com/rayalavcp/phoenix-portal/blob/main/LICENSE')
         expect(root.get_by_role('link', name='Immortal by Starbright Lab')).to_have_attribute('href', 'https://github.com/starbrightlab/immortal')
         install = root.get_by_role('button', name=translated['deviceInstallVersion'].replace('{version}', update['availableVersion']))
         expect(install).to_be_visible()

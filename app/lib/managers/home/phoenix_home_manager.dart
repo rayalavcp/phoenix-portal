@@ -62,7 +62,7 @@ String builtinWallpaperThumb(String id) => 'assets/wallpapers/thumbs/$id.jpg';
 /// Where a built-in 4K photo is downloaded from (the wallpapers folder of
 /// the repository: the branch this build came from, then main).
 List<Uri> builtinWallpaperUrls(String id) => [
-  for (final branch in const ['claude/fervent-hopper-25a7jk', 'main'])
+  for (final branch in const ['main', 'claude/fervent-hopper-25a7jk'])
     Uri.parse('https://raw.githubusercontent.com/rayalavcp/phoenix-portal/$branch/wallpapers/$id.jpg'),
 ];
 

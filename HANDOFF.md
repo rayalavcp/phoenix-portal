@@ -6,12 +6,17 @@ what is still open.
 
 ## Start here (handed over 2026-11-25)
 
-- **Latest release: 2026.12.19 (versionCode 394)**, commit `e0156e4` on
-  branch `claude/fervent-hopper-25a7jk`, published as GitHub Release
-  `v2026.12.19`. The working tree was clean at hand-over.
-- **Keep working on `claude/fervent-hopper-25a7jk`** and ship from it:
-  Portals older than 2026.12.14 read `install/releases.json` from this
-  branch, and the release workflow is on it.
+- **Latest release: 2026.12.19 (versionCode 394)**, published as GitHub
+  Release `v2026.12.19`.
+- **Work on `main`.** On 2026-11-25 everything was merged into `main`
+  (fast-forward; `main` is the default branch to clone).
+- **Keep `claude/fervent-hopper-25a7jk` in step with `main`** after every
+  push: `git push origin main:claude/fervent-hopper-25a7jk`. Builds up to
+  2026.12.19 open their guides, licence, plugin list and wallpapers from that
+  branch, and builds older than 2026.12.14 read `install/releases.json`
+  there. Builds from 2026.12.20 on link to `main` (wallpapers try `main`
+  first, then the old branch). Do not delete the old branch while any
+  Portal runs 2026.12.19 or older.
 - **Signing key (critical).** Every build is signed with one key
   (certificate SHA-256 `47:FF:F9:89:D4:2A:FD:80:...:04:2B`). A build signed
   with any other key will not install over the app on the Portals (Android
@@ -78,7 +83,7 @@ administration. Home Assistant is optional. It replaces **Immortal**
 remove it safely).
 
 - Owner: krayala, GitHub `rayalavcp`. Repository `rayalavcp/phoenix-portal`.
-- Working branch: **`claude/fervent-hopper-25a7jk`** (everything ships from it).
+- Working branch: **`main`** (mirror every push to `claude/fervent-hopper-25a7jk`, see Start here).
 - Current build: see `install/README.md` (version and SHA-256) and the
   repository's GitHub Releases (`v<version>`).
 
@@ -176,7 +181,8 @@ Known flaky tests: see "Start here".
    `install/releases.json` (read by builds older than 2026.12.14).
 4. Update `$Version`, `$ApkSize`, `$ApkSha256` in `install/install-phoenix.ps1`
    and the size/SHA in `install/README.md`.
-5. Commit and push to `claude/fervent-hopper-25a7jk` (no APK in the commit).
+5. Commit and push to `main` (no APK in the commit), then mirror it:
+   `git push origin main:claude/fervent-hopper-25a7jk`.
 6. `install/publish_release.sh <apk>`: pushes one temporary commit adding
    `install/upload/phoenix-portal.apk` (the cloud environment's git proxy
    refused tags, so this uses the branch; it works the same from any
