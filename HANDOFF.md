@@ -1,8 +1,69 @@
 # Phoenix Portal: agent hand-off
 
-Read this first. It is the state of the project for the next agent (cloud or
-local): what it is, where things live, how to build and ship, and what is
-still open.
+Read this first. It is the state of the project for the next agent (Cursor,
+cloud or local): what it is, where things live, how to build and ship, and
+what is still open.
+
+## Start here (handed over 2026-11-25)
+
+- **Latest release: 2026.12.19 (versionCode 394)**, commit `e0156e4` on
+  branch `claude/fervent-hopper-25a7jk`, published as GitHub Release
+  `v2026.12.19`. The working tree was clean at hand-over.
+- **Keep working on `claude/fervent-hopper-25a7jk`** and ship from it:
+  Portals older than 2026.12.14 read `install/releases.json` from this
+  branch, and the release workflow is on it.
+- **Signing key (critical).** Every build is signed with one key
+  (certificate SHA-256 `47:FF:F9:89:D4:2A:FD:80:...:04:2B`). A build signed
+  with any other key will not install over the app on the Portals (Android
+  refuses; the only way round is uninstalling, which wipes the Portal's
+  settings). The owner has the key file (`phoenix-signing.jks`, given to them
+  at hand-over, NOT in git). Put it at `app/android/phoenix-signing.jks` and
+  create `app/android/key.properties` (both git-ignored):
+
+  ```properties
+  storeFile=../phoenix-signing.jks
+  storePassword=android
+  keyAlias=androiddebugkey
+  keyPassword=android
+  ```
+
+  (It is an Android debug-type key with the standard passwords.) Check every
+  build: `apksigner verify --print-certs <apk>` must show `47fff989d4...`.
+  Never commit the key or key.properties (`.gitignore` blocks `*.jks` and
+  `key.properties`).
+- **Toolchain used:** Flutter 3.44.6 stable (Dart ^3.12), Android SDK
+  platform 36 / build-tools 36.0.0, Java 21, Node 22 (remote admin build and
+  JS tests).
+- **Owner's latest asks, all done:** calmer UI everywhere (2026.12.19);
+  leaderboards, shopping list, quick timers, wallpaper colours, home screens,
+  random mazes (2026.12.18). Decisions still waiting for the owner are under
+  "Open decisions" below.
+
+### Open decisions (ask the owner first)
+
+1. Delete the old `test-build` branch on GitHub: it holds the last APK in
+   the repository (about 90 MB).
+2. Rewrite the working branch's history once more to drop about 32 MB of
+   files deleted since (original project screenshots and GIFs): a fresh
+   clone would go from 96 MB to about 60 MB. Needs a force push.
+3. Remove the unused body segmenter from `GameVision.kt` and its model
+   `selfie_segmenter.tflite` (about 250 KB).
+4. Google Home Mini "pucks" as intercom targets: one-way announcements to
+   Home Assistant media players (Google Cast) from the Portal broadcast was
+   offered; the owner has not said yes. Two-way is impossible (Google locks
+   the mic).
+5. CC BY-NC-ND's NoDerivatives term and public release downloads: flagged to
+   the owner (keep the repo private or ask Xavier Larrea); not resolved.
+
+### Known flaky or failing tests (not caused by recent work)
+
+- `test/settings_search_navigation_test.dart`: the 1200 px case does not
+  complete when run after the 600 px case in the same file; passes alone.
+  Pre-existing.
+- Under full parallel runs only, now and then: `isolate_engine_test`,
+  `dlna_port_test`, `immich_cache_clear_test` (all pass on rerun).
+- `test/logs_about_localization_ui_test.py` needs Python Playwright (not
+  installed in the cloud container; never run there recently).
 
 ## What it is
 
@@ -77,18 +138,18 @@ remove it safely).
 | Updates from GitHub | `managers/update/update_manager.dart` (`_releasesUrl` = this repo's GitHub Releases API) |
 | Admin Phoenix Home page | `remote-ui/static/phoenix_home.js` (+ CSS in `app.css`, `#tab-phoenix`) |
 
-## Building (cloud container)
-
-Flutter and the Android SDK live in the session scratchpad (not in git).
-The build script used:
+## Building
 
 ```bash
-cd app && flutter build apk --release --split-per-abi --target-platform android-arm
+cd app/remote-ui && npm install && npm run build   # admin UI into app/assets
+cd .. && flutter build apk --release --split-per-abi --target-platform android-arm
 # output: build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
 ```
 
-The APK is debug-signed with the same key every time (certificate SHA-256
-starts `47fff989d4`), so builds install over each other and keep settings.
+Sign with the release key from "Start here" (key.properties); without it the
+build falls back to that machine's own debug key, which does NOT update the
+Portals. Check: version (`aapt dump badging`) and signer SHA-256
+`47fff989d4...` (`apksigner verify --print-certs`).
 APKs ship as GitHub Release files (up to 2 GB each), so the old 100 MB
 git file limit no longer applies; still keep it lean (about 100 MB now):
 large assets go in `wallpapers/` and download at run time. Never commit an
@@ -104,8 +165,7 @@ flutter test test/<area>_test.dart
 for t in test/*.mjs; do node --test "$t"; done   # admin JS tests
 ```
 
-`settings_search_navigation_test.dart` crashes flutter_tester (a known,
-pre-existing problem); it passes on its own.
+Known flaky tests: see "Start here".
 
 ## Shipping a build
 
@@ -118,8 +178,9 @@ pre-existing problem); it passes on its own.
    and the size/SHA in `install/README.md`.
 5. Commit and push to `claude/fervent-hopper-25a7jk` (no APK in the commit).
 6. `install/publish_release.sh <apk>`: pushes one temporary commit adding
-   `install/upload/phoenix-portal.apk` (tags are refused by this
-   environment's git proxy, only the branch can be pushed). The **Phoenix
+   `install/upload/phoenix-portal.apk` (the cloud environment's git proxy
+   refused tags, so this uses the branch; it works the same from any
+   machine with push access). The **Phoenix
    release** workflow makes release `v<version>` (from releases.json) on
    the commit below with the APK attached
    (`kiosk-satellite-<version>.armeabi-v7a.apk` and `phoenix-portal.apk`),
@@ -131,6 +192,9 @@ Portals on **2026.12.3 or newer** then find it themselves (on start and every
 12 hours; admin Dashboard › Check for updates checks now) and show
 "Update available" in the menu. Older Portals need the PC installer
 (`install/LOCAL_AGENT.md`).
+
+Commit messages so far end with the cloud agent's attribution lines; a new
+agent may use its own. Never put model names in commits.
 
 ## Device facts
 

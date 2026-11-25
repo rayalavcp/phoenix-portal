@@ -1,0 +1,35 @@
+---
+description: Phoenix Portal project rules and hand-off (always read HANDOFF.md first)
+alwaysApply: true
+---
+
+# Phoenix Portal
+
+Read `HANDOFF.md` at the repository root before any change. It has the
+project map, the build and release steps, the signing key setup, open
+decisions and known flaky tests.
+
+Rules the owner set (details in HANDOFF.md):
+
+- Work and ship on branch `claude/fervent-hopper-25a7jk`. Commit and push
+  only there unless the owner says otherwise. Never force-push or rewrite
+  history without the owner's OK.
+- Sign every APK with the release key (`app/android/key.properties`,
+  certificate SHA-256 starting `47fff989d4`). Never commit the key, key
+  files or any APK.
+- Ship builds as GitHub Releases with `install/publish_release.sh` after
+  bumping the version in `app/pubspec.yaml` and running
+  `install/make_releases.py`; never commit an APK.
+- Nothing may be sent to the original Kiosk Satellite project (no analytics,
+  links or update checks to it).
+- Keep the CC BY-NC-ND 4.0 licence, the "Based on Kiosk Satellite by Xavier
+  Larrea" credit and Immortal's MIT notice. Do not relicense.
+- Ask before uninstalling, disabling or deleting anything on a Portal.
+- Keep the calm look: wallpaper and frosted glass (`PhoenixGlassPage`,
+  `PhoenixPageBackdrop` in `app/lib/ui/home/home_glass.dart`), softened
+  colours (`Phx` tokens in `app/lib/ui/theme.dart`, `kidsSoft()` for Kids).
+  No loud saturated fills.
+- Kids content: no copyrighted characters or songs; English only.
+- Before shipping: `flutter analyze lib test`, the tests for what changed
+  (`app/test/kids_all_games_test.dart` for any Kids game), and the admin JS
+  tests (`node --test app/test/*_test.mjs`).
