@@ -16,6 +16,9 @@ Built from this branch and installed from `install/` (see `install/README.md`).
   calling.
 - **School:** SchoolCafe menus and the Frisco ISD calendar.
 - **Updates:** from this repository; nothing is sent to the original project.
+- **2026.12.20:** with no photos set up, the Phoenix Photo Frame shows the
+  built-in 4K landscapes, slowly drifting, with their credits; everything
+  (guides, licence, plugin list, wallpapers) now comes from `main`.
 - **2026.12.19 (calmer):** softer brand colours everywhere (app and remote
   admin); Smart Home, the app drawer, App Store and Timers stand on the
   wallpaper in glass like Today; a glass dock; gentler Kids hub colours and

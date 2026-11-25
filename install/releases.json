@@ -1,16 +1,16 @@
 [
   {
-    "tag_name": "v2026.12.19",
-    "name": "Phoenix Portal 2026.12.19",
+    "tag_name": "v2026.12.20",
+    "name": "Phoenix Portal 2026.12.20",
     "draft": false,
     "prerelease": false,
-    "body": "Calmer everywhere: softer colours on every screen and in the remote admin; Smart Home, All apps, App Store and Timers stand on the wallpaper in glass like the Today screen; a glass dock; gentler Kids hub; a soft single lightning flash.",
-    "html_url": "https://github.com/rayalavcp/phoenix-portal/releases/tag/v2026.12.19",
+    "body": "With no photos set up, the Phoenix Photo Frame shows the built-in 4K landscapes, slowly drifting, with their credits. Guides, the licence link, the plugin list and wallpapers now come from the main branch.",
+    "html_url": "https://github.com/rayalavcp/phoenix-portal/releases/tag/v2026.12.20",
     "assets": [
       {
-        "name": "kiosk-satellite-2026.12.19.armeabi-v7a.apk",
-        "browser_download_url": "https://github.com/rayalavcp/phoenix-portal/releases/download/v2026.12.19/kiosk-satellite-2026.12.19.armeabi-v7a.apk",
-        "size": 100707922,
+        "name": "kiosk-satellite-2026.12.20.armeabi-v7a.apk",
+        "browser_download_url": "https://github.com/rayalavcp/phoenix-portal/releases/download/v2026.12.20/kiosk-satellite-2026.12.20.armeabi-v7a.apk",
+        "size": 100707766,
         "state": "uploaded"
       }
     ]

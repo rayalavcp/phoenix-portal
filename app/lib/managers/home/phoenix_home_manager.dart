@@ -59,12 +59,15 @@ String builtinWallpaperAsset(String id) => 'assets/wallpapers/$id.jpg';
 /// A small picture of a wallpaper, for the picker.
 String builtinWallpaperThumb(String id) => 'assets/wallpapers/thumbs/$id.jpg';
 
-/// Where a built-in 4K photo is downloaded from (the wallpapers folder of
-/// the repository: the branch this build came from, then main).
+/// Where a built-in 4K photo is downloaded from: the wallpapers folder of
+/// the repository's main branch.
 List<Uri> builtinWallpaperUrls(String id) => [
-  for (final branch in const ['main', 'claude/fervent-hopper-25a7jk'])
-    Uri.parse('https://raw.githubusercontent.com/rayalavcp/phoenix-portal/$branch/wallpapers/$id.jpg'),
+  Uri.parse('https://raw.githubusercontent.com/rayalavcp/phoenix-portal/main/wallpapers/$id.jpg'),
 ];
+
+/// The built-in 4K landscapes (id, name, credit), for the Scenic photo frame
+/// shown when no photos are set up.
+List<(String, String, String)> get scenicWallpapers => _photoWallpapers;
 
 final _photoWallpapers = [for (final w in builtinWallpapers) if (w.$3.isNotEmpty) w];
 
@@ -639,6 +642,17 @@ class PhoenixHomeManager extends Manager {
           } catch (_) {}
         }
       }
+    }
+  }
+
+  /// A built-in 4K landscape for the Scenic photo frame: downloaded once,
+  /// then from the cache; null when it cannot be had (offline, first time).
+  Future<Uint8List?> scenicPhoto(String id) async {
+    try {
+      return await _builtin(id);
+    } catch (e) {
+      log.warn(name, 'scenic photo $id: $e');
+      return null;
     }
   }
 

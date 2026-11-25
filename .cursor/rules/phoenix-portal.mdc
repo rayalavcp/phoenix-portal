@@ -11,10 +11,10 @@ decisions and known flaky tests.
 
 Rules the owner set (details in HANDOFF.md):
 
-- Work and ship on `main`. After every push to `main`, mirror it to the old
-  branch installed Portals still read: `git push origin
-  main:claude/fervent-hopper-25a7jk`. Never force-push, rewrite history or
-  delete branches without the owner's OK.
+- Work and ship on `main`. Until the owner deletes the old branch
+  `claude/fervent-hopper-25a7jk`, also push each `main` commit to it
+  (`git push origin main:claude/fervent-hopper-25a7jk`). Never force-push,
+  rewrite history or delete branches without the owner's OK.
 - Sign every APK with the release key (`app/android/key.properties`,
   certificate SHA-256 starting `47fff989d4`). Never commit the key, key
   files or any APK.

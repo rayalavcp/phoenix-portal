@@ -6,17 +6,18 @@ what is still open.
 
 ## Start here (handed over 2026-11-25)
 
-- **Latest release: 2026.12.19 (versionCode 394)**, published as GitHub
-  Release `v2026.12.19`.
+- **Latest release: 2026.12.20 (versionCode 395)**, published as GitHub
+  Release `v2026.12.20` from `main`. It is the first build that needs
+  nothing from `claude/fervent-hopper-25a7jk` (guides, licence, plugin list
+  and wallpapers all come from `main`).
 - **Work on `main`.** On 2026-11-25 everything was merged into `main`
   (fast-forward; `main` is the default branch to clone).
-- **Keep `claude/fervent-hopper-25a7jk` in step with `main`** after every
-  push: `git push origin main:claude/fervent-hopper-25a7jk`. Builds up to
-  2026.12.19 open their guides, licence, plugin list and wallpapers from that
-  branch, and builds older than 2026.12.14 read `install/releases.json`
-  there. Builds from 2026.12.20 on link to `main` (wallpapers try `main`
-  first, then the old branch). Do not delete the old branch while any
-  Portal runs 2026.12.19 or older.
+- **The old branch `claude/fervent-hopper-25a7jk`** can be deleted once
+  every Portal runs 2026.12.20 or newer (the owner decides; it was kept in
+  step with `main` until then). Builds up to 2026.12.19 read their guides,
+  licence link and plugin list from it (only those links break without it;
+  updates and wallpapers keep working). After it is deleted, drop the
+  "mirror" step from this file and `.cursor/rules/phoenix-portal.mdc`.
 - **Signing key (critical).** Every build is signed with one key
   (certificate SHA-256 `47:FF:F9:89:D4:2A:FD:80:...:04:2B`). A build signed
   with any other key will not install over the app on the Portals (Android
@@ -83,7 +84,7 @@ administration. Home Assistant is optional. It replaces **Immortal**
 remove it safely).
 
 - Owner: krayala, GitHub `rayalavcp`. Repository `rayalavcp/phoenix-portal`.
-- Working branch: **`main`** (mirror every push to `claude/fervent-hopper-25a7jk`, see Start here).
+- Working branch: **`main`**.
 - Current build: see `install/README.md` (version and SHA-256) and the
   repository's GitHub Releases (`v<version>`).
 
@@ -181,8 +182,8 @@ Known flaky tests: see "Start here".
    `install/releases.json` (read by builds older than 2026.12.14).
 4. Update `$Version`, `$ApkSize`, `$ApkSha256` in `install/install-phoenix.ps1`
    and the size/SHA in `install/README.md`.
-5. Commit and push to `main` (no APK in the commit), then mirror it:
-   `git push origin main:claude/fervent-hopper-25a7jk`.
+5. Commit and push to `main` (no APK in the commit). Until the old branch
+   is deleted, also `git push origin main:claude/fervent-hopper-25a7jk`.
 6. `install/publish_release.sh <apk>`: pushes one temporary commit adding
    `install/upload/phoenix-portal.apk` (the cloud environment's git proxy
    refused tags, so this uses the branch; it works the same from any
@@ -282,6 +283,15 @@ The family calendar (`calendar_overlay.dart`), School and Telugu calendar
 pages stand on the wallpaper in glass like the Today screen
 (`PhoenixPageBackdrop`, `phoenixGlassTheme` and the `glassFill` colours in
 `home_glass.dart`; the calendar takes the home theme's accent).
+
+## Scenic photo frame (2026.12.20)
+
+With no photos set up (no Immich or folder), the Phoenix Photo Frame
+(screensaver mode `phoenix_photos`, the Photos page) shows the built-in 4K
+landscapes instead of a setup message: `scenicWallpapers` and
+`scenicPhoto()` in `phoenix_home_manager.dart` (downloaded once from
+`main/wallpapers`, then cached), the slow zoom-and-drift `_Drift` and the
+credit line in `photo_frame.dart`.
 
 ## Calm look (2026.12.19)
 

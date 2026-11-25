@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../app_container.dart';
+import '../../managers/home/phoenix_home_manager.dart' show scenicWallpapers;
 import '../../managers/home/photo_service.dart';
 import '../../managers/settings/definitions.dart' as defs;
 import '../theme.dart';
@@ -36,6 +37,12 @@ class _PhoenixPhotoFrameState extends State<PhoenixPhotoFrame> {
   Timer? _timer;
   bool _loading = true;
 
+  /// No photos set up (or none found): the built-in 4K landscapes instead,
+  /// slowly drifting, with their credit. Nothing to configure.
+  bool _scenic = false;
+  List<(String, String, String)> _scenicOrder = const [];
+  String _credit = '';
+
   @override
   void initState() {
     super.initState();
@@ -43,10 +50,14 @@ class _PhoenixPhotoFrameState extends State<PhoenixPhotoFrame> {
   }
 
   Future<void> _start() async {
-    _list = await photos.photos();
+    _list = photos.configured ? await photos.photos() : const [];
     if (!mounted) return;
+    if (_list.isEmpty) {
+      _scenic = true;
+      _scenicOrder = [...scenicWallpapers]..shuffle();
+    }
     setState(() => _loading = false);
-    if (_list.isEmpty) return;
+    if (_list.isEmpty && _scenicOrder.isEmpty) return;
     await _advance();
     _timer = Timer.periodic(
       Duration(seconds: widget.seconds ?? photos.settings.value.seconds),
@@ -55,6 +66,7 @@ class _PhoenixPhotoFrameState extends State<PhoenixPhotoFrame> {
   }
 
   Future<void> _advance() async {
+    if (_scenic) return _advanceScenic();
     if (_list.isEmpty) return;
     // Skip what will not load (a removed file) rather than stall on it.
     for (var tries = 0; tries < 5; tries++) {
@@ -62,6 +74,21 @@ class _PhoenixPhotoFrameState extends State<PhoenixPhotoFrame> {
       _index++;
       if (bytes != null && mounted) {
         setState(() => _shown = bytes);
+        return;
+      }
+    }
+  }
+
+  Future<void> _advanceScenic() async {
+    for (var tries = 0; tries < _scenicOrder.length; tries++) {
+      final (id, _, credit) = _scenicOrder[_index % _scenicOrder.length];
+      _index++;
+      final bytes = await widget.container.phoenixHome.scenicPhoto(id);
+      if (bytes != null && mounted) {
+        setState(() {
+          _shown = bytes;
+          _credit = credit;
+        });
         return;
       }
     }
@@ -81,7 +108,18 @@ class _PhoenixPhotoFrameState extends State<PhoenixPhotoFrame> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (shown != null)
+          if (shown != null && _scenic)
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 2400),
+              child: _Drift(
+                key: ValueKey(shown.hashCode),
+                bytes: shown,
+                seconds: widget.seconds ?? photos.settings.value.seconds,
+                // Alternate the drift, so it never feels like a loop.
+                fromLeft: _index.isEven,
+              ),
+            )
+          else if (shown != null)
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 900),
               child: Stack(
@@ -98,6 +136,9 @@ class _PhoenixPhotoFrameState extends State<PhoenixPhotoFrame> {
                 ],
               ),
             )
+          else if (_scenic)
+            // The first landscape is still on its way: quiet black.
+            const SizedBox.shrink()
           else
             Center(
               child: _loading
@@ -115,10 +156,42 @@ class _PhoenixPhotoFrameState extends State<PhoenixPhotoFrame> {
                     ),
             ),
           if (widget.showClock) const Positioned(left: 40, bottom: 32, child: _FrameClock()),
+          // The landscape's credit (their licences ask for it), small.
+          if (_scenic && _credit.isNotEmpty && widget.showClock)
+            Positioned(
+              right: 24,
+              bottom: 18,
+              child: Text(
+                _credit,
+                style: const TextStyle(color: Colors.white54, fontSize: 12, shadows: [Shadow(blurRadius: 8, color: Colors.black87)]),
+              ),
+            ),
         ],
       ),
     );
   }
+}
+
+/// One landscape, slowly zooming and drifting across (the "Ken Burns"
+/// effect) for as long as it shows: calm movement, never a jump.
+class _Drift extends StatelessWidget {
+  const _Drift({super.key, required this.bytes, required this.seconds, required this.fromLeft});
+  final Uint8List bytes;
+  final int seconds;
+  final bool fromLeft;
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+    tween: Tween(begin: 0, end: 1),
+    duration: Duration(seconds: seconds.clamp(8, 600) + 3),
+    curve: Curves.easeInOut,
+    builder: (context, t, child) => Transform.scale(
+      scale: 1.04 + 0.06 * t,
+      alignment: Alignment(fromLeft ? -0.6 + 1.2 * t : 0.6 - 1.2 * t, 0),
+      child: child,
+    ),
+    child: Image.memory(bytes, fit: BoxFit.cover, gaplessPlayback: true, filterQuality: FilterQuality.medium),
+  );
 }
 
 class _FrameClock extends StatefulWidget {

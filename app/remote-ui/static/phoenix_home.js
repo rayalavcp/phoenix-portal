@@ -338,7 +338,7 @@ function photosSection() {
     row('Source', p.immichConfigured ? 'Immich is set up' : 'Immich server and API key: Screensaver > Immich Media screensaver', source),
     row('Network folder', 'A folder your server lists over http (nginx, Apache, Caddy, rclone serve http). Add a login as http://user:password@host/…', folder),
     row('Seconds per photo', null, seconds),
-    row('Use as the screensaver', 'The Phoenix Photo Frame starts after the idle time under Screensaver', screensaver),
+    row('Use as the screensaver', 'The Phoenix Photo Frame starts after the idle time under Screensaver. With no photos set up it shows the built-in landscapes.', screensaver),
     el('div', { class: 'phx-actions' }, el('button', {
       class: 'btn-primary', type: 'button', text: 'Save photos',
       onclick: async () => {

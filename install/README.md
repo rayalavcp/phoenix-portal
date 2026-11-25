@@ -1,9 +1,16 @@
-# Phoenix Portal test build 2026.12.19 (394)
+# Phoenix Portal test build 2026.12.20 (395)
 
 - APK: on the repository's [Releases](https://github.com/rayalavcp/phoenix-portal/releases/latest)
-  page (`phoenix-portal.apk`), armeabi-v7a, runs on every Portal. 100707922 bytes.
-  SHA-256 `60c38462c9940ae32e71b8df311a35279651e9ee90a9c354c9199b851d680efa`.
+  page (`phoenix-portal.apk`), armeabi-v7a, runs on every Portal. 100707766 bytes.
+  SHA-256 `fc74a86e3d048d702de64b4fa7d4c77ca2bb7f90c9d8e8a6df0f4a789454e556`.
 - New in this build:
+  - **Scenic photo frame**: with no photos set up, the Phoenix Photo Frame
+    screensaver shows the built-in 4K landscapes (Lake Louise, Gokyo,
+    Zhangjiajie ...) slowly zooming and drifting, with the clock, the date
+    and each photo's credit. Pick **Phoenix Photo Frame** under
+    Settings > Screensaver.
+  - Guides, the licence link, the plugin list and wallpapers now come from
+    the repository's `main` branch.
   - **Calmer everywhere**: the orange, gold, blue, green and rose accents
     are a step softer on every screen and in the remote admin. Smart Home,
     All apps, the App Store and Timers now stand on your wallpaper in the
