@@ -311,6 +311,26 @@ void main() {
         expect(find.text('Smart Home'), findsOneWidget);
         expect(find.text('All apps'), findsWidgets);
       });
+
+      testWidgets('custom tiles show, edit and delete at $size', (tester) async {
+        c.phoenixHome.layout.value = 'tiles';
+        final made = await c.phoenixHome.addCustomTile('web', 'School site', 'https://school.example');
+        await c.phoenixHome.addCustomTile('entity', 'Porch light', 'light.porch');
+        await pump(tester, size);
+        expect(tester.takeException(), isNull);
+        expect(find.text('School site'), findsOneWidget);
+        expect(find.text('Porch light'), findsOneWidget);
+        // Edit mode offers New tile and a pencil on the family's tiles.
+        c.phoenixHome.editing.value = true;
+        await tester.pump();
+        expect(find.text('New tile'), findsOneWidget);
+        expect(find.byTooltip('Change tile'), findsNWidgets(2));
+        c.phoenixHome.editing.value = false;
+        await c.phoenixHome.removeCustomTile(made!.id);
+        await tester.pump();
+        expect(find.text('School site'), findsNothing);
+        expect(c.phoenixHome.tiles.value.any((t) => t.id == made.id), isFalse);
+      });
     }
 
     testWidgets('Smart Home without Home Assistant explains, not blocks', (

@@ -12,6 +12,7 @@ import '../../managers/home/telugu_words.dart';
 import '../theme.dart';
 import '../toast.dart';
 import '../settings_screen.dart' show pickDrawerMenuItems;
+import 'clock_faces.dart';
 import 'home_glass.dart';
 import 'live_cameras.dart';
 import 'home_themes.dart';
@@ -101,7 +102,7 @@ class _TodayHomeState extends State<TodayHome> {
   Widget build(BuildContext context) {
     final home = c.phoenixHome;
     return ListenableBuilder(
-      listenable: Listenable.merge([home.weather, home.weatherEffects, home.weatherDemo, home.cameraEntities, home.glassOpacity, home.telugu]),
+      listenable: Listenable.merge([home.weather, home.weatherEffects, home.weatherDemo, home.cameraEntities, home.glassOpacity, home.telugu, home.clockFace]),
       builder: (context, _) {
         final w = home.weather.value;
         final demo = home.weatherDemo.value;
@@ -345,9 +346,6 @@ class _Hero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final home = container.phoenixHome;
-    final h24 = MediaQuery.alwaysUse24HourFormatOf(context);
-    final time = DateFormat(h24 ? 'HH:mm' : 'h:mm').format(now);
-    final period = h24 ? '' : DateFormat('a').format(now);
     final w = home.weather.value;
     final calc = home.panchang;
     final today = calc.day(now);
@@ -365,25 +363,12 @@ class _Hero extends StatelessWidget {
           _greeting,
           style: const TextStyle(color: Phx.gold, fontSize: 22, fontWeight: FontWeight.w600, shadows: _shadow),
         ),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                time,
-                style: TextStyle(color: Colors.white, fontSize: clockSize, fontWeight: FontWeight.w200, letterSpacing: -4, height: 1.02, shadows: _shadow),
-              ),
-              if (period.isNotEmpty) ...[
-                const SizedBox(width: 12),
-                Text(
-                  period,
-                  style: TextStyle(color: Colors.white70, fontSize: clockSize * 0.24, fontWeight: FontWeight.w500, shadows: _shadow),
-                ),
-              ],
-            ],
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: home.clockFace.value == 'classic' || home.clockFace.value == 'bold' ? 0 : 8),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: ClockFace(face: home.clockFace.value, now: now, size: home.clockFace.value == 'analog' ? clockSize * 0.85 : clockSize),
           ),
         ),
         Text(
@@ -1055,6 +1040,7 @@ Future<void> showTodaySetup(BuildContext context, AppContainer c) {
         home.smartHomeTarget,
         home.glassOpacity,
         home.telugu,
+        home.clockFace,
       ]),
       builder: (dialog, _) => AlertDialog(
         title: const Text('Customize home'),
@@ -1124,6 +1110,15 @@ Future<void> showTodaySetup(BuildContext context, AppContainer c) {
                       ('fog', 'Fog'),
                     ])
                       ChoiceChip(label: Text(label), selected: home.weatherDemo.value == id, onSelected: (_) => home.weatherDemo.value = id),
+                  ],
+                ),
+                heading('Clock'),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final MapEntry(key: id, value: label) in clockFaces.entries)
+                      ChoiceChip(label: Text(label), selected: home.clockFace.value == id, onSelected: (_) => unawaited(home.setClockFace(id))),
                   ],
                 ),
                 heading('Telugu calendar'),

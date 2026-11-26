@@ -93,4 +93,22 @@ void main() {
       expect(w.cells[0], 1);
     });
   });
+
+  group('pose and duel games', () {
+    test('a pose needs a hand in each spot, either way round', () {
+      final pose = dancePoses.first;
+      expect(poseFilled(pose, [pose.left, pose.right], 0.1), isTrue);
+      expect(poseFilled(pose, [pose.right, pose.left], 0.1), isTrue);
+      expect(poseFilled(pose, [pose.left], 0.1), isFalse);
+      expect(poseFilled(pose, [pose.left, pose.left], 0.1), isFalse);
+    });
+
+    test('Simon zones and duel sides', () {
+      expect(inSimonZone('UP HIGH', [const Offset(0.5, 0.1)]), isTrue);
+      expect(inSimonZone('UP HIGH', [const Offset(0.5, 0.6)]), isFalse);
+      expect(inSimonZone('TO THE LEFT', [const Offset(0.9, 0.5), const Offset(0.1, 0.5)]), isTrue);
+      expect(duelSide(const Offset(0.2, 0.5)), 0);
+      expect(duelSide(const Offset(0.8, 0.5)), 1);
+    });
+  });
 }

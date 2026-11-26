@@ -74,7 +74,8 @@ function tilesSection() {
       const size = (n, max, key) => select(Array.from({ length: max }, (_, k) => [k + 1, `${k + 1}`]), t[key], (v) => { t[key] = Number(v); });
       const up = el('button', { class: 'btn-text', type: 'button', title: 'Move up', text: '↑', onclick: () => { if (i > 0) { [tiles[i - 1], tiles[i]] = [tiles[i], tiles[i - 1]]; draw(); } } });
       const down = el('button', { class: 'btn-text', type: 'button', title: 'Move down', text: '↓', onclick: () => { if (i < tiles.length - 1) { [tiles[i + 1], tiles[i]] = [tiles[i], tiles[i + 1]]; draw(); } } });
-      return row(TILE_NAMES[t.id] || t.id, null, el('div', { class: 'phx-tile-controls' },
+      const custom = (model.customTiles || []).find((c) => c.id === t.id);
+      return row(TILE_NAMES[t.id] || (custom && custom.title) || t.id, null, el('div', { class: 'phx-tile-controls' },
         el('label', {}, checkbox(!t.hidden, (on) => { t.hidden = !on; }), ' Shown'),
         el('span', { text: ' Width ' }), size(t.w, 6, 'w'),
         el('span', { text: ' Height ' }), size(t.h, 4, 'h'),
@@ -104,6 +105,50 @@ function tilesSection() {
     el('div', { class: 'phx-actions' }, saveBtn, reset));
 }
 
+/* ---- Custom tiles ---- */
+
+const CUSTOM_KINDS = [['entity', 'Smart home device'], ['web', 'Web page'], ['camera', 'Camera'], ['app', 'App']];
+const CUSTOM_HINTS = {
+  entity: 'light.kitchen, sensor.outdoor_temperature',
+  web: 'https://example.com',
+  camera: 'camera.front_door',
+  app: 'com.example.app',
+};
+
+function customTilesSection() {
+  const tiles = (model.customTiles || []).map((c) => ({ ...c }));
+  const list = el('div');
+  const send = (next, what) => save({ customTiles: next.map(({ id, kind, title, target }) => ({ id, kind, title, target })) }, what);
+  const draw = () => {
+    list.replaceChildren(...(tiles.length ? tiles.map((t, i) => {
+      const title = el('input', { type: 'text', class: 'field', value: t.title || '' });
+      const target = el('input', { type: 'text', class: 'field', value: t.target || '', placeholder: CUSTOM_HINTS[t.kind] || '' });
+      const kind = (CUSTOM_KINDS.find(([k]) => k === t.kind) || [t.kind, t.kind])[1];
+      return row(`${kind}: ${t.title || t.target}`, null, el('div', { class: 'phx-inline' }, title, target,
+        el('button', { class: 'btn-ghost', type: 'button', text: 'Save', onclick: () => { tiles[i] = { ...t, title: title.value.trim(), target: target.value.trim() }; send(tiles, 'Tile'); } }),
+        el('button', { class: 'btn-text', type: 'button', text: 'Delete', onclick: () => { tiles.splice(i, 1); send(tiles, 'Tile deleted'); } })));
+    }) : [el('div', { class: 'desc', text: 'No custom tiles yet.' })]));
+  };
+  draw();
+  let kind = 'entity';
+  const target = el('input', { type: 'text', class: 'field', placeholder: CUSTOM_HINTS.entity });
+  const title = el('input', { type: 'text', class: 'field', placeholder: 'Name on the tile' });
+  const kindPick = select(CUSTOM_KINDS, kind, (v) => { kind = v; target.placeholder = CUSTOM_HINTS[v]; });
+  const add = el('button', {
+    class: 'btn-primary', type: 'button', text: 'Add tile',
+    onclick: () => {
+      let t = target.value.trim();
+      if (!t) { showToast({ title: 'Type what the tile shows', kind: 'error' }); return; }
+      if (kind === 'web' && !t.includes('://')) t = `https://${t}`;
+      send([...tiles, { kind, title: title.value.trim(), target: t }], 'Tile added');
+    },
+  });
+  return card('Custom tiles',
+    el('div', { class: 'desc', text: 'Your own tiles on the Tiles home screen: a Home Assistant device or sensor (its state; tap to switch it), a web page, a Home Assistant camera, or an app (its package name, from Apps). Also made on the Portal: Edit home > New tile.' }),
+    list,
+    row('New tile', null, el('div', { class: 'phx-inline' }, kindPick, target, title, add)));
+}
+
 function lookSection() {
   const camera = el('input', { type: 'text', class: 'field', value: (model.cameras || (model.camera ? [model.camera] : [])).join(', '), placeholder: 'camera.front_door, camera.driveway' });
   const bell = model.doorbell || {};
@@ -116,6 +161,9 @@ function lookSection() {
   return card('Look',
     row('Home layout', 'Today: glass cards over the photo of the day. Tiles: the resizable tile grid.',
       select([['today', 'Today (recommended)'], ['tiles', 'Tiles']], model.layout || 'today', (v) => save({ layout: v }, 'Layout'))),
+    row('Clock face', 'The clock on the Today screen and the photo frame',
+      select([['classic', 'Classic'], ['bold', 'Bold'], ['flip', 'Flip cards'], ['analog', 'Analogue'], ['words', 'Words']],
+        model.clockFace || 'classic', (v) => save({ clockFace: v }, 'Clock face'))),
     row('Wallpaper', 'A built-in 4K photo, all of them rotating, Bing 4K, your photos, a link or plain colours',
       select([['builtin', 'All photos, rotating'], ...(model.wallpapers || []).map((w) => [w.id, w.name]),
         ['bing', 'Bing 4K, rotating'], ['photos', 'My photos (Immich or folder)'], ['url', 'Image link'], ['theme', 'Colours only']],
@@ -269,14 +317,14 @@ function schoolSection() {
 /* ---- Kids Portal ---- */
 
 const KIDS_GAMES = [
-  ['Learn', [['math', 'Math Blitz'], ['times', 'Times Tables'], ['clock', 'Telling the Time'], ['flags', 'Flag Quiz'], ['words', 'Word Scramble'],
+  ['Learn', [['homework', 'Homework'], ['math', 'Math Blitz'], ['times', 'Times Tables'], ['clock', 'Telling the Time'], ['flags', 'Flag Quiz'], ['words', 'Word Scramble'],
     ['patterns', 'Patterns'], ['fractions', 'Fractions'], ['money', 'Money'], ['science', 'Science'], ['spelling', 'Spelling'], ['opposites', 'Opposites'],
     ['count', 'Count It'], ['letters', 'Letter Sounds'], ['placevalue', 'Place Value'], ['story', 'Story Sums'], ['telugu', 'Telugu Words']]],
   ['Maps', [['usamap', 'USA Map'], ['indiamap', 'India Map'], ['worldmap', 'World Map']]],
   ['Puzzles', [['sudoku', 'Sudoku'], ['maze', 'Maze'], ['wordsearch', 'Word Search'], ['guess', 'Word Guess'], ['memory', 'Memory Pro'], ['g2048', '2048'], ['lights', 'Lights Out']]],
   ['Play', [['snake', 'Snake'], ['mole', 'Whack-a-Mole'], ['simon', 'Simon Says'], ['ttt', 'Tic-Tac-Toe'], ['connect4', 'Connect Four'], ['swipe', 'Star Swipe'], ['stack', 'Stack Up']]],
   ['Arcade', [['munch', 'Munch Maze'], ['bricks', 'Brick Bash'], ['hop', 'Hop Across'], ['sky', 'Sky Glide'], ['run', 'Fox Run']]],
-  ['Move (camera)', [['blaster', 'Space Blaster'], ['bubbles', 'Bubble Pop'], ['catcher', 'Fruit Catcher'], ['fingermath', 'Finger Math'], ['walls', 'Wall Dodge'], ['trace', 'Air Trace'], ['dance', 'Freeze Dance'], ['goalie', 'Goalie'], ['wipe', 'Window Wipe']]],
+  ['Move (camera)', [['blaster', 'Space Blaster'], ['bubbles', 'Bubble Pop'], ['catcher', 'Fruit Catcher'], ['fingermath', 'Finger Math'], ['walls', 'Wall Dodge'], ['trace', 'Air Trace'], ['dance', 'Freeze Dance'], ['goalie', 'Goalie'], ['wipe', 'Window Wipe'], ['pose', 'Pose Match'], ['simonpose', 'Simon Poses'], ['duel', 'Pop Duel']]],
   ['Create', [['draw', 'Draw Studio'], ['pixel', 'Pixel Paint'], ['piano', 'Piano']]],
 ];
 
@@ -326,6 +374,30 @@ function kidsSection() {
       el('button', { class: 'btn-ghost', type: 'button', text: 'Reset stars and best scores', onclick: () => {
         if (confirm('Clear every best score, today\'s stars and the daily challenge?')) save({ kids: { resetScores: true } }, 'Scores reset');
       } })));
+}
+
+/* ---- Homework ---- */
+
+function homeworkSection() {
+  const h = (model.kids || {}).homework || {};
+  const words = el('textarea', { class: 'field', rows: '3', placeholder: 'friend, because, people, beautiful' });
+  words.value = (h.words || []).join(', ');
+  const tables = new Set(h.tables || []);
+  const chips = el('div', { class: 'phx-inline phx-wrap' }, ...Array.from({ length: 12 }, (_, i) => i + 1).map((t) =>
+    el('label', { class: 'phx-chip' }, checkbox(tables.has(t), (on) => { if (on) tables.add(t); else tables.delete(t); }), ` ×${t}`)));
+  const fmt = ([done, right]) => (done ? `${right} of ${done} right` : '—');
+  const report = el('table', { class: 'phx-report' },
+    el('tr', {}, el('th', { text: 'Day' }), el('th', { text: 'Spelling' }), el('th', { text: 'Times tables' })),
+    ...(h.report || []).map((d) => el('tr', {}, el('td', { text: d.day }), el('td', { text: fmt(d.spelling || [0, 0]) }), el('td', { text: fmt(d.times || [0, 0]) }))));
+  return card('Homework',
+    el('div', { class: 'desc', text: 'Practised in the Kids Portal\'s Homework game (Learn shelf). Spelling is look, cover, write, check; times tables are typed answers.' }),
+    row('Spelling words', 'Commas or new lines between them, up to 40', words),
+    row('Times tables', null, chips),
+    el('div', { class: 'phx-actions' }, el('button', {
+      class: 'btn-primary', type: 'button', text: 'Save homework',
+      onclick: () => save({ kids: { homework: { words: words.value, tables: [...tables].sort((a, b) => a - b) } } }, 'Homework'),
+    })),
+    row('Last 7 days', null, report));
 }
 
 /* ---- Photos ---- */
@@ -474,7 +546,7 @@ function render() {
     host = el('div', { id: 'phoenix-editor' });
     tab.append(host);
   }
-  host.replaceChildren(...deviceSection(), ...lookSection(), ...tilesSection(), ...appsSection(), ...kidsSection(), ...schoolSection(), ...photosSection(), ...installSection());
+  host.replaceChildren(...deviceSection(), ...lookSection(), ...tilesSection(), ...customTilesSection(), ...appsSection(), ...kidsSection(), ...homeworkSection(), ...schoolSection(), ...photosSection(), ...installSection());
 }
 
 /** The Phoenix Home tab was opened: read the device's state and draw. */

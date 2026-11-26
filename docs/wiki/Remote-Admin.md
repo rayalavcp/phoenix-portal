@@ -4,8 +4,9 @@ Every Portal runs a remote admin page: open `http://<portal-ip>:2324` in a brows
 network. The first visit sets an admin password.
 
 - **Dashboard**: a live screenshot, health, **Check for updates**, restart.
-- **Phoenix**: Phoenix Home (layout, tiles and screens, theme, wallpaper, glass, cameras,
-  doorbell), the Kids Portal (profile, name, screen time, bedtime, PIN, games, reset scores),
+- **Phoenix**: Phoenix Home (layout, clock face, tiles and screens, custom tiles, theme,
+  wallpaper, glass, cameras, doorbell), the Kids Portal (profile, name, screen time, bedtime,
+  PIN, games, reset scores), homework (spelling words, times tables, the last seven days),
   school, photos, and **Install apps on this Portal**.
 - **Settings pages** for everything else (screen and audio, screensaver, Home Assistant, voice,
   music, cameras, intercom, alarms, kiosk lockdown, gestures).

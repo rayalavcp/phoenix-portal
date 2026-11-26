@@ -61,9 +61,12 @@ abstract class _MoveGame<T extends StatefulWidget> extends State<T> with SingleT
   /// point being where the child really is.
   bool get amplify => true;
 
+  /// Follow two hands (games played with both, or by two children).
+  bool get twoHands => false;
+
   void begin() {
     hands?.dispose();
-    hands = KidsHands(container.motion, head: steer == 0, amplify: amplify);
+    hands = KidsHands(container.motion, head: steer == 0 && !twoHands, amplify: amplify, twoHands: twoHands);
     setState(() {
       score = 0;
       lives = 3;
@@ -1424,4 +1427,454 @@ class _WipePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_WipePainter old) => true;
+}
+
+// ── Pose Match ────────────────────────────────────────────────────────────
+
+/// A dance move: where each hand goes (fractions of the play area, as the
+/// child sees themself) and what it is called.
+typedef DancePose = ({String name, Offset left, Offset right});
+
+const dancePoses = <DancePose>[
+  (name: 'ARMS UP!', left: Offset(0.3, 0.18), right: Offset(0.7, 0.18)),
+  (name: 'ARMS OUT!', left: Offset(0.1, 0.5), right: Offset(0.9, 0.5)),
+  (name: 'HANDS DOWN!', left: Offset(0.28, 0.82), right: Offset(0.72, 0.82)),
+  (name: 'DISCO!', left: Offset(0.25, 0.8), right: Offset(0.78, 0.15)),
+  (name: 'OTHER WAY!', left: Offset(0.22, 0.15), right: Offset(0.75, 0.8)),
+  (name: 'ROBOT!', left: Offset(0.3, 0.5), right: Offset(0.7, 0.5)),
+  (name: 'STAR!', left: Offset(0.12, 0.25), right: Offset(0.88, 0.25)),
+  (name: 'TOUCHDOWN!', left: Offset(0.42, 0.12), right: Offset(0.58, 0.12)),
+];
+
+/// Whether [points] fill both of [pose]'s spots (either hand in either).
+bool poseFilled(DancePose pose, List<Offset> points, double radius) {
+  bool inside(Offset p, Offset t) => (p - t).distance <= radius;
+  if (points.length < 2) return false;
+  final a = points[0], b = points[1];
+  return (inside(a, pose.left) && inside(b, pose.right)) || (inside(b, pose.left) && inside(a, pose.right));
+}
+
+/// Dance along: two glowing spots show where your hands go; put a hand in
+/// each and hold the move. A new move every few seconds, faster as you go.
+class PoseMatch extends StatefulWidget {
+  const PoseMatch({super.key, required this.container, required this.onBack});
+  final AppContainer container;
+  final VoidCallback onBack;
+
+  @override
+  State<PoseMatch> createState() => _PoseMatchState();
+}
+
+class _PoseMatchState extends _MoveGame<PoseMatch> {
+  static const _seconds = 75.0;
+  final _rng = math.Random();
+  late DancePose pose = dancePoses.first;
+  double left = _seconds, poseLeft = 0, flash = 0;
+  final holds = [0.0, 0.0]; // per spot, seconds a hand has been in it
+  int moves = 0;
+  String message = '';
+
+  @override
+  bool get twoHands => true;
+  @override
+  bool get amplify => false;
+  @override
+  AppContainer get container => widget.container;
+  @override
+  VoidCallback get onBack => widget.onBack;
+  @override
+  String get scoreKey => 'pose${level + 1}';
+  @override
+  int starsFor(int s) => s >= 20 ? 3 : (s >= 12 ? 2 : (s >= 5 ? 1 : 0));
+
+  double get radius => const [0.15, 0.12, 0.1][level];
+  double get holdFor => const [0.5, 0.7, 0.9][level];
+
+  void _nextPose() {
+    var next = pose;
+    while (identical(next, pose)) {
+      next = dancePoses[_rng.nextInt(dancePoses.length)];
+    }
+    pose = next;
+    holds.fillRange(0, 2, 0);
+    poseLeft = math.max(3.0, const [7.0, 6.0, 5.0][level] - moves * 0.12);
+  }
+
+  @override
+  void reset() {
+    left = _seconds;
+    moves = 0;
+    message = 'GET READY!';
+    flash = 1;
+    _nextPose();
+  }
+
+  @override
+  void step(double dt) {
+    left -= dt;
+    flash = math.max(0, flash - dt);
+    if (left <= 0) {
+      unawaited(finish());
+      return;
+    }
+    final points = hands?.points.value ?? const <Offset>[];
+    final camera = hands?.camera ?? false;
+    final spots = [pose.left, pose.right];
+    for (var i = 0; i < 2; i++) {
+      final hit = points.any((p) => (p - spots[i]).distance <= radius);
+      // By touch a tapped spot stays lit; with the camera the hand must stay.
+      holds[i] = hit ? holds[i] + dt : (camera ? math.max(0, holds[i] - dt * 2) : holds[i]);
+    }
+    if (holds.every((h) => h >= holdFor)) {
+      moves++;
+      score += 1 + (poseLeft > 3 ? 1 : 0);
+      message = poseLeft > 3 ? 'PERFECT! +2' : 'NICE MOVE!';
+      flash = 0.9;
+      _nextPose();
+      return;
+    }
+    poseLeft -= dt;
+    if (poseLeft <= 0) {
+      message = 'NEXT MOVE!';
+      flash = 0.7;
+      _nextPose();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => moveFrame(
+    title: 'Pose Match',
+    colors: const [Color(0xFF3A1F6B), Color(0xFF00A8A8)],
+    hud: '${left.ceil()}s',
+    icon: Icons.accessibility_new_rounded,
+    pitch: 'Dance along! Two glowing spots show where your hands go. Put one hand in each and hold the move.',
+    options: kidsLevelChips(const ['Easy', 'Medium', 'Hard'], level, (i) => setState(() => level = i)),
+    overDetail: '$moves moves matched',
+    painter: _PosePainter(this),
+  );
+}
+
+class _PosePainter extends CustomPainter {
+  _PosePainter(this.g);
+  final _PoseMatchState g;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final short = math.min(size.width, size.height);
+    // A soft silhouette guide: shoulders and arms reaching to the spots.
+    final body = Offset(size.width / 2, size.height * 0.62);
+    final guide = Paint()
+      ..color = Colors.white.withValues(alpha: 0.12)
+      ..strokeWidth = short * 0.05
+      ..strokeCap = StrokeCap.round;
+    canvas.drawCircle(body - Offset(0, short * 0.22), short * 0.08, Paint()..color = Colors.white.withValues(alpha: 0.12));
+    canvas.drawLine(body - Offset(0, short * 0.12), body + Offset(0, short * 0.2), guide);
+    for (final (i, spot) in [g.pose.left, g.pose.right].indexed) {
+      final c = Offset(spot.dx * size.width, spot.dy * size.height);
+      final shoulder = body + Offset((i == 0 ? -1 : 1) * short * 0.07, -short * 0.1);
+      canvas.drawLine(shoulder, c, guide);
+      final r = g.radius * short;
+      final pulse = 1 + math.sin(g.time * 5) * 0.05;
+      final fill = (g.holds[i] / g.holdFor).clamp(0.0, 1.0);
+      final hue = i == 0 ? const Color(0xFFFF9EC7) : const Color(0xFF8FD8FF);
+      canvas.drawCircle(c, r * pulse, Paint()..color = hue.withValues(alpha: 0.18 + 0.4 * fill));
+      canvas.drawCircle(
+        c,
+        r * pulse,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 5
+          ..color = hue,
+      );
+      if (fill > 0) {
+        canvas.drawArc(Rect.fromCircle(center: c, radius: r * 0.7), -math.pi / 2, fill * 2 * math.pi, false, Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 8
+          ..strokeCap = StrokeCap.round
+          ..color = Colors.white);
+      }
+    }
+    _say(canvas, g.pose.name, Offset(size.width / 2, size.height * 0.08), short * 0.09, const Color(0xFFF3DA8A));
+    if (g.flash > 0) {
+      _say(canvas, g.message, Offset(size.width / 2, size.height * 0.2), short * 0.07, Colors.white.withValues(alpha: g.flash.clamp(0.0, 1.0)));
+    }
+  }
+
+  @override
+  bool shouldRepaint(_PosePainter old) => true;
+}
+
+// ── Simon Poses ───────────────────────────────────────────────────────────
+
+/// Where Simon's instructions send your hands: a zone of the play area.
+const simonZones = <String, Rect>{
+  'UP HIGH': Rect.fromLTRB(0, 0, 1, 0.3),
+  'DOWN LOW': Rect.fromLTRB(0, 0.7, 1, 1),
+  'TO THE LEFT': Rect.fromLTRB(0, 0, 0.28, 1),
+  'TO THE RIGHT': Rect.fromLTRB(0.72, 0, 1, 1),
+  'IN THE MIDDLE': Rect.fromLTRB(0.34, 0.3, 0.66, 0.7),
+};
+
+/// Whether a hand is in [zone].
+bool inSimonZone(String zone, List<Offset> points) => points.any((p) => simonZones[zone]!.contains(p));
+
+/// Simon says... put your hands up high! Do it only when Simon says so:
+/// when he doesn't, stay where you are.
+class SimonPoses extends StatefulWidget {
+  const SimonPoses({super.key, required this.container, required this.onBack});
+  final AppContainer container;
+  final VoidCallback onBack;
+
+  @override
+  State<SimonPoses> createState() => _SimonPosesState();
+}
+
+class _SimonPosesState extends _MoveGame<SimonPoses> {
+  final _rng = math.Random();
+  String zone = 'UP HIGH';
+  bool simonSays = true;
+  double countdown = 0, flash = 0;
+  bool wasIn = false;
+  String message = '';
+  int round = 0;
+
+  @override
+  bool get twoHands => true;
+  @override
+  bool get amplify => false;
+  @override
+  AppContainer get container => widget.container;
+  @override
+  VoidCallback get onBack => widget.onBack;
+  @override
+  String get scoreKey => 'simonpose${level + 1}';
+  @override
+  int starsFor(int s) => s >= 20 ? 3 : (s >= 12 ? 2 : (s >= 5 ? 1 : 0));
+
+  double get _time => math.max(1.6, const [3.6, 3.0, 2.4][level] - round * 0.05);
+
+  void _next() {
+    round++;
+    final zones = simonZones.keys.toList();
+    var z = zone;
+    while (z == zone) {
+      z = zones[_rng.nextInt(zones.length)];
+    }
+    zone = z;
+    // Simon tricks you about one time in four (more on harder levels).
+    simonSays = _rng.nextDouble() > const [0.2, 0.28, 0.35][level];
+    wasIn = inSimonZone(zone, hands?.points.value ?? const []);
+    countdown = _time;
+  }
+
+  @override
+  void reset() {
+    round = 0;
+    message = 'LISTEN TO SIMON!';
+    flash = 1.2;
+    _next();
+    countdown += 1.2;
+  }
+
+  @override
+  void step(double dt) {
+    flash = math.max(0, flash - dt);
+    countdown -= dt;
+    if (countdown > 0) return;
+    final inZone = inSimonZone(zone, hands?.points.value ?? const []);
+    final right = simonSays ? inZone : (!inZone || wasIn);
+    if (right) {
+      score++;
+      message = simonSays ? 'YES!' : 'NOT TRICKED!';
+    } else {
+      message = simonSays ? 'TOO SLOW!' : 'SIMON DIDN\'T SAY!';
+      if (!loseLife()) return;
+    }
+    flash = 1;
+    _next();
+  }
+
+  @override
+  Widget build(BuildContext context) => moveFrame(
+    title: 'Simon Poses',
+    colors: const [Color(0xFF1F4D7A), Color(0xFFE8A33D)],
+    hud: 'SCORE',
+    icon: Icons.record_voice_over_rounded,
+    pitch: 'Do what Simon says with your hands: up high, down low, left, right or in the middle. But only when he says "Simon says"!',
+    options: kidsLevelChips(const ['Easy', 'Medium', 'Hard'], level, (i) => setState(() => level = i)),
+    overDetail: 'Score $score',
+    painter: _SimonPainter(this),
+  );
+}
+
+class _SimonPainter extends CustomPainter {
+  _SimonPainter(this.g);
+  final _SimonPosesState g;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final short = math.min(size.width, size.height);
+    final z = simonZones[g.zone]!;
+    final rect = Rect.fromLTRB(z.left * size.width, z.top * size.height, z.right * size.width, z.bottom * size.height);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect.deflate(8), const Radius.circular(24)),
+      Paint()..color = const Color(0xFFF3DA8A).withValues(alpha: 0.16 + 0.06 * math.sin(g.time * 6)),
+    );
+    final said = g.simonSays ? 'SIMON SAYS:' : 'HANDS...';
+    _say(canvas, said, Offset(size.width / 2, size.height * 0.36), short * 0.07, g.simonSays ? const Color(0xFF7CE38B) : Colors.white70);
+    _say(canvas, 'HANDS ${g.zone}!', Offset(size.width / 2, size.height * 0.48), short * 0.1, Colors.white);
+    // The countdown as a shrinking bar.
+    final share = (g.countdown / g._time).clamp(0.0, 1.0);
+    final bar = Rect.fromLTWH(size.width * 0.3, size.height * 0.58, size.width * 0.4, 12);
+    canvas.drawRRect(RRect.fromRectAndRadius(bar, const Radius.circular(6)), Paint()..color = Colors.white24);
+    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(bar.left, bar.top, bar.width * share, bar.height), const Radius.circular(6)),
+        Paint()..color = const Color(0xFFF3DA8A));
+    if (g.flash > 0) {
+      final good = g.message == 'YES!' || g.message == 'NOT TRICKED!' || g.message == 'LISTEN TO SIMON!';
+      _say(canvas, g.message, Offset(size.width / 2, size.height * 0.7), short * 0.08,
+          (good ? const Color(0xFF7CE38B) : const Color(0xFFFF6B6B)).withValues(alpha: g.flash.clamp(0.0, 1.0)));
+    }
+  }
+
+  @override
+  bool shouldRepaint(_SimonPainter old) => true;
+}
+
+// ── Pop Duel ──────────────────────────────────────────────────────────────
+
+/// Which side of the play area a point is on: 0 left, 1 right.
+int duelSide(Offset p) => p.dx < 0.5 ? 0 : 1;
+
+/// Two players, one each side: pop the bubbles in your colour on your
+/// half before the other player pops theirs. The camera follows both.
+class PopDuel extends StatefulWidget {
+  const PopDuel({super.key, required this.container, required this.onBack});
+  final AppContainer container;
+  final VoidCallback onBack;
+
+  @override
+  State<PopDuel> createState() => _PopDuelState();
+}
+
+class _DuelBubble {
+  _DuelBubble(this.side, this.x, this.y, this.r, this.speed);
+  final int side;
+  double x, y;
+  final double r, speed;
+  double pop = -1;
+}
+
+class _PopDuelState extends _MoveGame<PopDuel> {
+  static const _seconds = 60.0;
+  final _rng = math.Random();
+  final bubbles = <_DuelBubble>[];
+  final scores = [0, 0];
+  double left = _seconds, _spawn = 0;
+
+  static const colors = [Color(0xFFFF9EC7), Color(0xFF8FD8FF)];
+
+  @override
+  bool get twoHands => true;
+  @override
+  bool get amplify => false;
+  @override
+  AppContainer get container => widget.container;
+  @override
+  VoidCallback get onBack => widget.onBack;
+  @override
+  String get scoreKey => 'duel';
+  @override
+  int starsFor(int s) => s >= 30 ? 3 : (s >= 18 ? 2 : (s >= 8 ? 1 : 0));
+
+  @override
+  void reset() {
+    bubbles.clear();
+    scores.fillRange(0, 2, 0);
+    left = _seconds;
+    _spawn = 0.5;
+  }
+
+  @override
+  void step(double dt) {
+    left -= dt;
+    if (left <= 0) {
+      score = math.max(scores[0], scores[1]);
+      unawaited(finish());
+      return;
+    }
+    _spawn -= dt;
+    if (_spawn <= 0) {
+      _spawn = const [0.8, 0.6, 0.45][level];
+      // One for each side, so it stays fair.
+      for (final side in const [0, 1]) {
+        bubbles.add(_DuelBubble(side, side * 0.5 + 0.06 + _rng.nextDouble() * 0.38, 1.12, 0.05 + _rng.nextDouble() * 0.03,
+            (0.12 + _rng.nextDouble() * 0.06) * (1 + level * 0.35)));
+      }
+    }
+    final points = hands?.points.value ?? const <Offset>[];
+    final short = math.min(size.width, size.height);
+    for (final b in bubbles) {
+      if (b.pop >= 0) {
+        b.pop += dt;
+        continue;
+      }
+      b.y -= b.speed * dt;
+      if (size == Size.zero) continue;
+      for (final p in points) {
+        if (duelSide(p) != b.side) continue;
+        final d = Offset((b.x - p.dx) * size.width, (b.y - p.dy) * size.height).distance;
+        if (d < b.r * short + short * 0.06) {
+          b.pop = 0;
+          scores[b.side]++;
+          break;
+        }
+      }
+    }
+    bubbles.removeWhere((b) => b.y < -0.2 || b.pop > 0.35);
+  }
+
+  String get _winner => scores[0] == scores[1] ? "It's a tie!" : (scores[0] > scores[1] ? 'Pink wins!' : 'Blue wins!');
+
+  @override
+  Widget build(BuildContext context) => moveFrame(
+    title: 'Pop Duel',
+    colors: const [Color(0xFF6B1F4D), Color(0xFF1F4D7A)],
+    hud: '${left.ceil()}s  ${scores[0]} : ${scores[1]}',
+    icon: Icons.people_alt_rounded,
+    pitch: 'Two players! Stand side by side. Pink pops the pink bubbles on the left, Blue pops the blue ones on the right. Most pops wins.',
+    options: kidsLevelChips(const ['Easy', 'Medium', 'Hard'], level, (i) => setState(() => level = i)),
+    overDetail: '$_winner  Pink ${scores[0]} · Blue ${scores[1]}',
+    painter: _DuelPainter(this),
+  );
+}
+
+class _DuelPainter extends CustomPainter {
+  _DuelPainter(this.g);
+  final _PopDuelState g;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final short = math.min(size.width, size.height);
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width / 2, size.height), Paint()..color = _PopDuelState.colors[0].withValues(alpha: 0.07));
+    canvas.drawRect(Rect.fromLTWH(size.width / 2, 0, size.width / 2, size.height), Paint()..color = _PopDuelState.colors[1].withValues(alpha: 0.07));
+    canvas.drawLine(Offset(size.width / 2, 0), Offset(size.width / 2, size.height), Paint()
+      ..color = Colors.white24
+      ..strokeWidth = 3);
+    for (final b in g.bubbles) {
+      final c = Offset(b.x * size.width, b.y * size.height);
+      final r = b.r * short * (b.pop >= 0 ? 1 + b.pop * 2.5 : 1);
+      final fade = b.pop >= 0 ? (1 - b.pop / 0.35).clamp(0.0, 1.0) : 1.0;
+      final hue = _PopDuelState.colors[b.side];
+      canvas.drawCircle(c, r, Paint()..color = hue.withValues(alpha: 0.35 * fade));
+      canvas.drawCircle(c, r, Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3
+        ..color = Colors.white.withValues(alpha: 0.8 * fade));
+    }
+    _say(canvas, '${g.scores[0]}', Offset(size.width * 0.25, size.height * 0.1), short * 0.12, _PopDuelState.colors[0]);
+    _say(canvas, '${g.scores[1]}', Offset(size.width * 0.75, size.height * 0.1), short * 0.12, _PopDuelState.colors[1]);
+  }
+
+  @override
+  bool shouldRepaint(_DuelPainter old) => true;
 }

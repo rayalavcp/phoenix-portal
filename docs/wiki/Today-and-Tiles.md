@@ -35,8 +35,26 @@ of it as it grows.
 - **Another home screen:** tap the handle on its top-right corner, then **Move to Home 2** (or a
   new home screen). Swipe between home screens; dots show which one is up. Up to five.
 
+### Your own tiles
+
+In edit mode, tap **New tile** on the edit bar and pick what it shows:
+
+- **Smart home device:** any Home Assistant entity. The tile shows its state (a temperature, a door,
+  a light) and a tap switches lights, switches, fans, locks, covers, scenes and scripts.
+- **Web page:** a tap opens it over the home screen.
+- **Camera:** a Home Assistant camera; the tile shows a still every 10 seconds and a tap shows it
+  big.
+- **App:** opens the app.
+
+The pencil on a custom tile (bottom left, in edit mode) changes or deletes it.
+
 The remote admin's **Phoenix** page edits the same tiles: size, order, screen and whether each
-shows.
+shows, and adds, changes or deletes your own tiles under **Custom tiles**.
+
+## Clock faces
+
+**Customize** › **Clock**: Classic, Bold, Flip cards, Analogue or Words ("It's twenty to ten").
+The Phoenix Photo Frame uses the same face. Also in the remote admin (**Phoenix** › **Look**).
 
 ## Themes and wallpapers
 

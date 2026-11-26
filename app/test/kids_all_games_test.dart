@@ -11,6 +11,7 @@ import 'package:kiosk_satellite/ui/kids/kids_maps.dart';
 import 'package:kiosk_satellite/ui/kids/kids_motion.dart';
 import 'package:kiosk_satellite/ui/kids/kids_motion2.dart';
 import 'package:kiosk_satellite/ui/kids/kids_touch.dart';
+import 'package:kiosk_satellite/ui/kids/kids_homework.dart';
 import 'package:kiosk_satellite/ui/kids/kids_play.dart';
 import 'package:kiosk_satellite/ui/kids/kids_puzzles.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -72,6 +73,10 @@ void main() {
     'Window Wipe': () => WindowWipe(container: c, onBack: back),
     'Star Swipe': () => StarSwipe(onBack: back),
     'Stack Up': () => StackUp(onBack: back),
+    'Homework': () => HomeworkGame(container: c, onBack: back),
+    'Pose Match': () => PoseMatch(container: c, onBack: back),
+    'Simon Poses': () => SimonPoses(container: c, onBack: back),
+    'Pop Duel': () => PopDuel(container: c, onBack: back),
     'Draw Studio': () => KidsDraw(onBack: back),
     'Pixel Paint': () => PixelPaint(onBack: back),
     'Piano': () => KidsPiano(onBack: back, tones: tones),

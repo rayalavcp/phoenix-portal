@@ -19,6 +19,7 @@ import '../settings/settings_manager.dart';
 import '../screensaver/immich_manager.dart';
 import 'panchang.dart';
 import 'photo_service.dart';
+import 'homework.dart';
 import 'school_service.dart';
 import 'todo_service.dart';
 
@@ -194,10 +195,63 @@ const defaultHomeTiles = [
   HomeTileSpec('shopping', 1, 1),
 ];
 
+/// A tile the family made: a Home Assistant entity, a web page, a Home
+/// Assistant camera or an app. Its layout id starts with `c_`.
+@immutable
+class CustomTile {
+  const CustomTile({required this.id, required this.kind, required this.title, required this.target});
+
+  final String id;
+
+  /// 'entity', 'web', 'camera' or 'app'.
+  final String kind;
+  final String title;
+
+  /// The entity id, the address, the camera entity id or the app package.
+  final String target;
+
+  static const kinds = ['entity', 'web', 'camera', 'app'];
+
+  /// The size a new tile of this kind starts at.
+  HomeTileSpec get spec => switch (kind) {
+    'camera' => HomeTileSpec(id, 2, 2),
+    'web' => HomeTileSpec(id, 2, 1),
+    _ => HomeTileSpec(id, 1, 1),
+  };
+
+  Map<String, Object?> toJson() => {'id': id, 'kind': kind, 'title': title, 'target': target};
+
+  static CustomTile? fromJson(Object? raw) {
+    if (raw is! Map) return null;
+    final id = '${raw['id'] ?? ''}', kind = '${raw['kind'] ?? ''}';
+    final title = '${raw['title'] ?? ''}'.trim(), target = '${raw['target'] ?? ''}'.trim();
+    if (!id.startsWith('c_') || !kinds.contains(kind) || target.isEmpty) return null;
+    if (kind == 'web' && !(Uri.tryParse(target)?.hasScheme ?? false)) return null;
+    return CustomTile(id: id, kind: kind, title: title.isEmpty ? target : title, target: target);
+  }
+}
+
+/// Custom tiles from their stored JSON; malformed ones are skipped.
+List<CustomTile> decodeCustomTiles(String? raw) {
+  try {
+    final data = raw == null ? null : jsonDecode(raw);
+    if (data is! List) return const [];
+    final out = <CustomTile>[];
+    for (final t in data) {
+      final c = CustomTile.fromJson(t);
+      if (c != null && !out.any((o) => o.id == c.id)) out.add(c);
+    }
+    return out;
+  } catch (_) {
+    return const [];
+  }
+}
+
 /// The stored layout: known tiles in the stored order and size, then any
-/// tile added since, so an update's new tiles appear.
-List<HomeTileSpec> decodeTileLayout(String? raw) {
-  final known = {for (final t in defaultHomeTiles) t.id: t};
+/// tile added since, so an update's new tiles appear. [custom] are the
+/// family's own tiles, known too.
+List<HomeTileSpec> decodeTileLayout(String? raw, {List<CustomTile> custom = const []}) {
+  final known = {for (final t in defaultHomeTiles) t.id: t, for (final c in custom) c.id: c.spec};
   final out = <HomeTileSpec>[];
   try {
     final data = raw == null ? null : jsonDecode(raw);
@@ -212,7 +266,7 @@ List<HomeTileSpec> decodeTileLayout(String? raw) {
       }
     }
   } catch (_) {}
-  for (final t in defaultHomeTiles) {
+  for (final t in [...defaultHomeTiles, for (final c in custom) c.spec]) {
     if (!out.any((o) => o.id == t.id)) out.add(t);
   }
   return out;
@@ -386,6 +440,9 @@ class PhoenixHomeManager extends Manager {
 
   /// Kids Portal activities a parent has hidden (their ids, e.g. 'snake').
   final kidsHiddenGames = ValueNotifier<List<String>>(const []);
+
+  /// Homework a grown-up sets for the Kids Portal's Homework game.
+  late final homework = HomeworkStore(_prefs);
 
   Future<void> setKidsHiddenGames(List<String> ids) async {
     kidsHiddenGames.value = List.unmodifiable(ids.toSet());
@@ -793,6 +850,56 @@ class PhoenixHomeManager extends Manager {
     await (await _prefs()).setString(_tilesKey, jsonEncode([for (final t in next) t.toJson()]));
   }
 
+  /// The family's own tiles.
+  final customTiles = ValueNotifier<List<CustomTile>>(const []);
+
+  static const _customTilesKey = 'phx.home.custom_tiles';
+
+  Future<void> _saveCustom(List<CustomTile> next) async {
+    customTiles.value = next;
+    await (await _prefs()).setString(_customTilesKey, jsonEncode([for (final c in next) c.toJson()]));
+  }
+
+  /// Adds a tile (at the end of the first home screen it fits) and
+  /// answers it; [kind], [title] and [target] as in [CustomTile].
+  Future<CustomTile?> addCustomTile(String kind, String title, String target) async {
+    var n = 1;
+    while (customTiles.value.any((c) => c.id == 'c_$n')) {
+      n++;
+    }
+    final tile = CustomTile.fromJson({'id': 'c_$n', 'kind': kind, 'title': title, 'target': target});
+    if (tile == null) return null;
+    await _saveCustom([...customTiles.value, tile]);
+    await setTiles([...tiles.value, tile.spec]);
+    return tile;
+  }
+
+  /// Changes a tile's title or target.
+  Future<void> updateCustomTile(String id, {String? title, String? target}) async {
+    final next = [
+      for (final c in customTiles.value)
+        if (c.id == id)
+          CustomTile.fromJson({...c.toJson(), 'title': ?title, 'target': ?target}) ?? c
+        else
+          c,
+    ];
+    await _saveCustom(next);
+  }
+
+  /// Deletes a tile for good (hiding keeps it for later).
+  Future<void> removeCustomTile(String id) async {
+    await _saveCustom([for (final c in customTiles.value) if (c.id != id) c]);
+    await setTiles([for (final t in tiles.value) if (t.id != id) t]);
+    if (hiddenTiles.value.contains(id)) await setTileHidden(id, false);
+  }
+
+  CustomTile? customTile(String id) {
+    for (final c in customTiles.value) {
+      if (c.id == id) return c;
+    }
+    return null;
+  }
+
   Future<void> setTileHidden(String id, bool hide) async {
     final next = {...hiddenTiles.value};
     hide ? next.add(id) : next.remove(id);
@@ -806,7 +913,8 @@ class PhoenixHomeManager extends Manager {
   }
 
   Future<void> resetTiles() async {
-    await setTiles(defaultHomeTiles);
+    // The family's own tiles stay, at the end.
+    await setTiles([...defaultHomeTiles, for (final c in customTiles.value) c.spec]);
     hiddenTiles.value = const {};
     await (await _prefs()).remove(_hiddenTilesKey);
   }
@@ -840,6 +948,18 @@ class PhoenixHomeManager extends Manager {
   static const _wallpaperKey = 'phx.home.wallpaper';
   static const _smartTargetKey = 'phx.home.smart_target';
   static const _glassKey = 'phx.home.glass';
+  /// The clock's look on the Today screen and the photo frame (see
+  /// clock_faces.dart): classic, bold, flip, analog or words.
+  final clockFace = ValueNotifier<String>('classic');
+  static const _clockFaceKey = 'phx.home.clock_face';
+  static const clockFaceIds = ['classic', 'bold', 'flip', 'analog', 'words'];
+
+  Future<void> setClockFace(String id) async {
+    if (!clockFaceIds.contains(id)) return;
+    clockFace.value = id;
+    await (await _prefs()).setString(_clockFaceKey, id);
+  }
+
   static const _teluguKey = 'phx.home.telugu';
 
   /// The Telugu calendar on Phoenix Home: the word of the day, festivals in
@@ -1021,6 +1141,7 @@ class PhoenixHomeManager extends Manager {
     'tiles': [
       for (final t in tiles.value) {'id': t.id, 'w': t.w, 'h': t.h, 'p': t.page, 'hidden': hiddenTiles.value.contains(t.id)},
     ],
+    'customTiles': [for (final c in customTiles.value) c.toJson()],
     'theme': theme.value,
     'themes': themeIds,
     'weatherEffects': weatherEffects.value,
@@ -1033,6 +1154,7 @@ class PhoenixHomeManager extends Manager {
     'smartHome': smartHomeTarget.value,
     'glass': glassOpacity.value,
     'telugu': telugu.value,
+    'clockFace': clockFace.value,
     'wallpapers': [for (final (id, name, credit) in builtinWallpapers) {'id': 'builtin:$id', 'name': name, 'credit': credit}],
     'smartHomePage': smartHomePage,
     'wallpaperUrl': wallpaperUrl.value,
@@ -1048,6 +1170,7 @@ class PhoenixHomeManager extends Manager {
       'hasPin': _settings.get(defs.kidsPin).isNotEmpty,
       'profile': _settings.get(defs.phoenixProfile),
       'hiddenGames': kidsHiddenGames.value,
+      'homework': homework.toJson(),
     },
     'apps': [for (final a in _launcher.installed) {'package': a.package, 'label': a.label}],
     'school': school.config.value.toJson(),
@@ -1064,8 +1187,27 @@ class PhoenixHomeManager extends Manager {
   /// skipped.
   Future<void> applyRemote(Map<String, Object?> p) async {
     final prefs = await _prefs();
+    // The family's own tiles: added (no id), changed or deleted (left out).
+    if (p['customTiles'] is List) {
+      final sent = p['customTiles'] as List;
+      final keep = <String>{};
+      for (final raw in sent) {
+        if (raw is! Map) continue;
+        final id = '${raw['id'] ?? ''}';
+        if (customTile(id) != null) {
+          keep.add(id);
+          await updateCustomTile(id, title: '${raw['title'] ?? ''}', target: '${raw['target'] ?? ''}');
+        } else {
+          final made = await addCustomTile('${raw['kind'] ?? ''}', '${raw['title'] ?? ''}', '${raw['target'] ?? ''}');
+          if (made != null) keep.add(made.id);
+        }
+      }
+      for (final c in [...customTiles.value]) {
+        if (!keep.contains(c.id)) await removeCustomTile(c.id);
+      }
+    }
     if (p['tiles'] is List) {
-      final known = {for (final t in defaultHomeTiles) t.id};
+      final known = {for (final t in defaultHomeTiles) t.id, for (final c in customTiles.value) c.id};
       final next = <HomeTileSpec>[
         for (final t in p['tiles'] as List)
           if (t is Map && known.contains(t['id']))
@@ -1104,6 +1246,7 @@ class PhoenixHomeManager extends Manager {
     }
     if (p['glass'] is num) await setGlassOpacity((p['glass'] as num).toDouble());
     if (p['telugu'] is bool) await setTelugu(p['telugu'] as bool);
+    if (p['clockFace'] is String) await setClockFace(p['clockFace'] as String);
     if (p['smartHome'] is String || p['smartHomePage'] is String) {
       await setSmartHomeTarget(
         p['smartHome'] is String ? p['smartHome'] as String : smartHomeTarget.value,
@@ -1134,10 +1277,19 @@ class PhoenixHomeManager extends Manager {
       if (k['pin'] is String) await _settings.set(defs.kidsPin, (k['pin'] as String).trim());
       if (k['hiddenGames'] is List) await setKidsHiddenGames([for (final g in k['hiddenGames'] as List) '$g']);
       if (k['resetScores'] == true) await resetKidsScores();
+      if (k['homework'] is Map) {
+        final h = (k['homework'] as Map).cast<String, Object?>();
+        if (h['words'] is String) await homework.setWords(HomeworkStore.parseWords(h['words'] as String));
+        if (h['words'] is List) await homework.setWords(HomeworkStore.parseWords((h['words'] as List).join(' ')));
+        if (h['tables'] is List) {
+          await homework.setTables([for (final t in h['tables'] as List) if (t is num) t.toInt() else ?int.tryParse('$t')]);
+        }
+      }
     }
     if (p['kidsApps'] is List) {
       kidsApps.value = _strings(p['kidsApps']);
     kidsHiddenGames.value = prefs.getStringList(_kidsHiddenKey) ?? const [];
+    await homework.load();
       await prefs.setStringList(_kidsAppsKey, kidsApps.value);
     }
     if (p['school'] is Map) {
@@ -1508,7 +1660,8 @@ class PhoenixHomeManager extends Manager {
     hidden.value = {...?prefs.getStringList(_hiddenKey)};
     pinnedEntities.value = prefs.getStringList(_pinnedKey) ?? const [];
     kidsApps.value = prefs.getStringList(_kidsAppsKey) ?? const [];
-    tiles.value = decodeTileLayout(prefs.getString(_tilesKey));
+    customTiles.value = decodeCustomTiles(prefs.getString(_customTilesKey));
+    tiles.value = decodeTileLayout(prefs.getString(_tilesKey), custom: customTiles.value);
     hiddenTiles.value = {...?prefs.getStringList(_hiddenTilesKey)};
     theme.value = prefs.getString(_themeKey) ?? 'ember';
     weatherEffects.value = prefs.getBool(_weatherFxKey) ?? true;
@@ -1526,6 +1679,8 @@ class PhoenixHomeManager extends Manager {
     smartHomeTarget.value = prefs.getString(_smartTargetKey) == 'phoenix' ? 'phoenix' : 'ha';
     wallpaperUrl.value = prefs.getString(_wallpaperUrlKey) ?? '';
     usage.value = decodeUsage(prefs.getString(_usageKey));
+    final face = prefs.getString(_clockFaceKey);
+    if (face != null && clockFaceIds.contains(face)) clockFace.value = face;
     final savedTelugu = prefs.getBool(_teluguKey);
     if (savedTelugu != null) {
       telugu.value = savedTelugu;
@@ -1550,6 +1705,7 @@ class PhoenixHomeManager extends Manager {
     schoolOpen.dispose();
     teluguOpen.dispose();
     telugu.dispose();
+    clockFace.dispose();
     shoppingOpen.dispose();
     todo.dispose();
     school.dispose();
@@ -1562,6 +1718,7 @@ class PhoenixHomeManager extends Manager {
     pinnedEntities.dispose();
     kidsApps.dispose();
     tiles.dispose();
+    customTiles.dispose();
     hiddenTiles.dispose();
     theme.dispose();
     weatherEffects.dispose();
@@ -1578,6 +1735,7 @@ class PhoenixHomeManager extends Manager {
     wallpaper.dispose();
     smartHomeTarget.dispose();
     kidsHiddenGames.dispose();
+    homework.dispose();
     kidsScoresReset.dispose();
     glassOpacity.dispose();
     wallpaperUrl.dispose();

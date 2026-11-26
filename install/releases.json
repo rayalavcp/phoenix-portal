@@ -1,16 +1,16 @@
 [
   {
-    "tag_name": "v2026.12.23",
-    "name": "Phoenix Portal 2026.12.23",
+    "tag_name": "v2026.12.24",
+    "name": "Phoenix Portal 2026.12.24",
     "draft": false,
     "prerelease": false,
-    "body": "Up to date with Kiosk Satellite 2026.11.32: Ground Control Vision Match (face recognition, presence, skip the PIN by face), Vercel AI Gateway voice, flashlight, skip next alarm, timer and screensaver options and many fixes.",
-    "html_url": "https://github.com/rayalavcp/phoenix-portal/releases/tag/v2026.12.23",
+    "body": "Custom tiles (smart home device, web page, camera, app), clock faces, Homework (spelling and times tables set by a grown-up), and camera games Pose Match, Simon Poses and Pop Duel.",
+    "html_url": "https://github.com/rayalavcp/phoenix-portal/releases/tag/v2026.12.24",
     "assets": [
       {
-        "name": "kiosk-satellite-2026.12.23.armeabi-v7a.apk",
-        "browser_download_url": "https://github.com/rayalavcp/phoenix-portal/releases/download/v2026.12.23/kiosk-satellite-2026.12.23.armeabi-v7a.apk",
-        "size": 101285534,
+        "name": "kiosk-satellite-2026.12.24.armeabi-v7a.apk",
+        "browser_download_url": "https://github.com/rayalavcp/phoenix-portal/releases/download/v2026.12.24/kiosk-satellite-2026.12.24.armeabi-v7a.apk",
+        "size": 101451722,
         "state": "uploaded"
       }
     ]

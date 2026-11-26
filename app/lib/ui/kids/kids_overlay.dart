@@ -11,6 +11,7 @@ import 'kids_activities.dart';
 import 'kids_arcade.dart';
 import 'kids_arcade2.dart';
 import 'kids_games.dart';
+import 'kids_homework.dart';
 import 'kids_leaderboard.dart';
 import 'kids_learn.dart';
 import 'kids_learn_more.dart';
@@ -109,14 +110,14 @@ const _shelfIcons = <String, IconData>{
 };
 
 enum _Game {
-  math, words, g2048, connect4, memory, draw,
+  homework, math, words, g2048, connect4, memory, draw,
   times, clock, flags, patterns,
   sudoku, maze, wordsearch, guess,
   ttt, snake, simon, pixel, piano,
   fractions, money, science, spelling, opposites, mole, lights,
   bubbles, catcher, fingermath, blaster,
   munch, bricks, hop, sky, run,
-  walls, trace, dance, goalie, wipe,
+  walls, trace, dance, goalie, wipe, pose, simonpose, duel,
   swipe, stack,
   count, letters, placevalue, story, telugu,
   usamap, indiamap, worldmap,
@@ -142,6 +143,8 @@ String _mmss(int s) => '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
 
 final _games = <_GameInfo>[
   // Learn
+  _GameInfo(_Game.homework, 'Homework', 'Spelling words and times tables', Icons.menu_book_rounded,
+      const [Color(0xFF2F6F5E), Color(0xFF5B8DEF)], null, null, shelf: 'Learn'),
   _GameInfo(_Game.math, 'Math Blitz', 'Beat the 60-second clock', Icons.calculate_rounded,
       const [Color(0xFFE0446A), Color(0xFFF28A1E)], 'math', (b) => 'Best: $b solved', shelf: 'Learn'),
   _GameInfo(_Game.times, 'Times Tables', 'Master ×2 to ×12', Icons.close_rounded,
@@ -223,6 +226,12 @@ final _games = <_GameInfo>[
       const [Color(0xFF14532D), Color(0xFF2F7BD6)], 'goalie1', (b) => 'High score: $b', shelf: 'Move'),
   _GameInfo(_Game.wipe, 'Window Wipe', 'Wave to wipe the frost away', Icons.cleaning_services_rounded,
       const [Color(0xFF1E3A5F), Color(0xFF7FB8E6)], 'wipe1', (b) => 'Best: $b windows', shelf: 'Move'),
+  _GameInfo(_Game.pose, 'Pose Match', 'Dance along with both hands', Icons.accessibility_new_rounded,
+      const [Color(0xFF3A1F6B), Color(0xFF00A8A8)], 'pose1', (b) => 'High score: $b', shelf: 'Move'),
+  _GameInfo(_Game.simonpose, 'Simon Poses', 'Only when Simon says!', Icons.record_voice_over_rounded,
+      const [Color(0xFF1F4D7A), Color(0xFFE8A33D)], 'simonpose1', (b) => 'High score: $b', shelf: 'Move'),
+  _GameInfo(_Game.duel, 'Pop Duel', 'Two players, side by side', Icons.people_alt_rounded,
+      const [Color(0xFF6B1F4D), Color(0xFF1F4D7A)], null, null, shelf: 'Move'),
   // Maps: states, territories and countries.
   _GameInfo(_Game.usamap, 'USA Map', 'All 50 states', Icons.flag_rounded,
       const [Color(0xFF1C3D9E), Color(0xFFD42A1A)], null, null, shelf: 'Maps'),
@@ -307,6 +316,7 @@ class _KidsHomeState extends State<_KidsHome> {
       _Game.g2048 => Game2048(key: const ValueKey('2048'), onBack: _back),
       _Game.connect4 => ConnectFour(key: const ValueKey('c4'), onBack: _back),
       _Game.memory => MemoryPro(key: const ValueKey('memory'), onBack: _back),
+      _Game.homework => HomeworkGame(key: const ValueKey('homework'), container: widget.container, onBack: _back),
       _Game.draw => KidsDraw(key: const ValueKey('draw'), onBack: _back),
       _Game.times => TimesTables(key: const ValueKey('times'), onBack: _back),
       _Game.clock => TellingTime(key: const ValueKey('clock'), onBack: _back),
@@ -348,6 +358,9 @@ class _KidsHomeState extends State<_KidsHome> {
       _Game.dance => FreezeDance(key: const ValueKey('dance'), container: widget.container, onBack: _back, tones: _tones),
       _Game.goalie => GoalieGame(key: const ValueKey('goalie'), container: widget.container, onBack: _back),
       _Game.wipe => WindowWipe(key: const ValueKey('wipe'), container: widget.container, onBack: _back),
+      _Game.pose => PoseMatch(key: const ValueKey('pose'), container: widget.container, onBack: _back),
+      _Game.simonpose => SimonPoses(key: const ValueKey('simonpose'), container: widget.container, onBack: _back),
+      _Game.duel => PopDuel(key: const ValueKey('duel'), container: widget.container, onBack: _back),
       _Game.swipe => StarSwipe(key: const ValueKey('swipe'), onBack: _back),
       _Game.stack => StackUp(key: const ValueKey('stack'), onBack: _back),
       _Game.sky => SkyGlide(key: const ValueKey('sky'), container: widget.container, onBack: _back),
@@ -956,6 +969,13 @@ class _ParentMenu extends StatelessWidget {
       actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel'))],
     );
   }
+}
+
+/// Asks a grown-up for the parent PIN (true without one set).
+Future<bool> askKidsParentPin(BuildContext context, KidsManager kids) async {
+  if (!kids.hasPin) return true;
+  final ok = await showDialog<bool>(context: context, builder: (context) => _PinPad(check: kids.checkPin));
+  return ok == true;
 }
 
 class _PinPad extends StatefulWidget {

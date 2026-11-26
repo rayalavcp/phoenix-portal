@@ -2246,3 +2246,5 @@
   }
   .phx-inline .field { margin-bottom: 0; }
   .phx-chip { display: inline-flex; align-items: center; gap: 6px; margin-right: 14px; }
+  .phx-report { border-collapse: collapse; width: 100%; max-width: 520px; }
+  .phx-report th, .phx-report td { text-align: left; padding: 4px 10px 4px 0; border-bottom: 1px solid var(--border, rgba(127,127,127,.25)); }

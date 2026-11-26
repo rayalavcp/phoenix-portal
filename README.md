@@ -32,7 +32,9 @@ live weather effects: rain, snow, fog, a storm, and a half sun that moves along 
 sunrise on the left to sunset on the right. Frosted glass cards show what's up next and
 school. The dock opens the Kids Portal, Smart Home, **Calls** (the Portal's
 own WhatsApp and Messenger calling), apps, school, the calendar, photos and settings. **Swipe
-right** for Smart Home; swipe in from the left edge for the menu.
+right** for Smart Home; swipe in from the left edge for the menu. Pick a **clock face** under
+Customize: Classic, Bold, Flip cards, Analogue or a Words clock ("It's quarter past seven"); the
+photo frame wears it too.
 
 <p align="center">
   <img src="docs/phoenix/screens/home-tiles.jpg" alt="Tiles and themes" width="640" />
@@ -41,6 +43,8 @@ right** for Smart Home; swipe in from the left edge for the menu.
 **Tiles, like Android widgets.** Prefer tiles? Pick them under **Customize** (the sliders button
 on the Today screen). Each tile shows live data and more of it as it
 grows. Hold a tile, then drag it to move it, drag its corner to resize it, or tap × to hide it.
+**Make your own tiles** with **New tile**: a Home Assistant device or sensor (its state; tap to
+switch it), a web page, a Home Assistant camera or an app.
 Spread tiles over **several home screens** and swipe between them. Pick a colour theme (Ember,
 Ocean, Forest, Midnight, Sunset, Graphite) or **From wallpaper**, which takes its colours from
 the photo on screen.
@@ -90,12 +94,12 @@ the built-in 4K landscapes, slowly drifting, with the clock and each photographe
 
 | Shelf | Games |
 |---|---|
-| **Learn** | Math Blitz, Times Tables, Telling the Time, Flag Quiz, Word Scramble, Patterns, Fractions, Money, Science, Spelling, Opposites, Count It, Letter Sounds, Place Value, Story Sums, Telugu Words. Levels with stars and **Next level** after a good round. |
+| **Learn** | **Homework** (the spelling words and times tables a grown-up sets, practised look-cover-write-check, with a daily report in the remote admin), Math Blitz, Times Tables, Telling the Time, Flag Quiz, Word Scramble, Patterns, Fractions, Money, Science, Spelling, Opposites, Count It, Letter Sounds, Place Value, Story Sums, Telugu Words. Levels with stars and **Next level** after a good round. |
 | **Maps** | USA (50 states), India (28 states and 8 union territories) and World: find it, name it, capitals, continents, flags, fill the map, shape memory. |
 | **Puzzles** | Sudoku, Maze, Word Search, Word Guess, Memory Pro (6 to 12 pairs), 2048, Lights Out: a new puzzle every round. |
 | **Play** | Snake, Whack-a-Mole, Simon Says, Tic-Tac-Toe, Connect Four, Star Swipe (swipe through the stars, miss the storm clouds), Stack Up (drop each block to build a tower). |
 | **Arcade** | Munch Maze (a new maze every stage), Brick Bash (a new wall every stage), Hop Across, Sky Glide, Fox Run: original retro games. |
-| **Move** | Camera games: Space Blaster, Bubble Pop, Fruit Catcher, Finger Math, Wall Dodge, Air Trace, Freeze Dance, Goalie (save the shots), Window Wipe (wipe the frost off a window). Each hand is a soft bubble cursor; the camera keeps to one player even with other children in view, and the same arm movement reaches the whole screen near or far. Every game also plays by touch. |
+| **Move** | Camera games: Space Blaster, Bubble Pop, Fruit Catcher, Finger Math, Wall Dodge, Air Trace, Freeze Dance, Goalie (save the shots), Window Wipe (wipe the frost off a window), Pose Match (dance along with both hands), Simon Poses (only when Simon says!), Pop Duel (two players side by side). Each hand is a soft bubble cursor; the camera keeps to one player even with other children in view, and the same arm movement reaches the whole screen near or far. Every game also plays by touch. |
 | **Create** | Draw Studio, Pixel Paint, Piano. |
 
 <p align="center">

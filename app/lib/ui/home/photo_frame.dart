@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../app_container.dart';
+import 'clock_faces.dart';
 import '../../managers/home/phoenix_home_manager.dart' show scenicWallpapers;
 import '../../managers/home/photo_service.dart';
 import '../../managers/settings/definitions.dart' as defs;
@@ -155,7 +156,7 @@ class _PhoenixPhotoFrameState extends State<PhoenixPhotoFrame> {
                       ],
                     ),
             ),
-          if (widget.showClock) const Positioned(left: 40, bottom: 32, child: _FrameClock()),
+          if (widget.showClock) Positioned(left: 40, bottom: 32, child: _FrameClock(face: widget.container.phoenixHome.clockFace)),
           // The landscape's credit (their licences ask for it), small.
           if (_scenic && _credit.isNotEmpty && widget.showClock)
             Positioned(
@@ -195,7 +196,8 @@ class _Drift extends StatelessWidget {
 }
 
 class _FrameClock extends StatefulWidget {
-  const _FrameClock();
+  const _FrameClock({required this.face});
+  final ValueNotifier<String> face;
 
   @override
   State<_FrameClock> createState() => _FrameClockState();
@@ -223,10 +225,7 @@ class _FrameClockState extends State<_FrameClock> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          DateFormat(MediaQuery.alwaysUse24HourFormatOf(context) ? 'HH:mm' : 'h:mm').format(now),
-          style: const TextStyle(color: Colors.white, fontSize: 84, fontWeight: FontWeight.w300, shadows: shadow, height: 1),
-        ),
+        ClockFace(face: widget.face.value, now: now, size: 84),
         Text(
           DateFormat('EEEE, MMMM d').format(now),
           style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w500, shadows: shadow),

@@ -147,14 +147,14 @@ remove it safely).
 | Feature | Files |
 |---|---|
 | Phoenix Home manager (weather, apps, tiles, wallpapers, glass, cameras, doorbell, Smart Home target, kids settings, remote `phoenixHomeGet/Set`) | `managers/home/phoenix_home_manager.dart` |
-| Today screen (default home; a right swipe opens Smart Home, `isSmartHomeSwipe`) | `ui/home/today_home.dart`, `ui/home/home_glass.dart`, `ui/home/live_cameras.dart` |
-| Tile layout | `ui/home/home_tiles.dart`, `ui/home/phoenix_home.dart` |
+| Today screen (default home; a right swipe opens Smart Home, `isSmartHomeSwipe`) | `ui/home/today_home.dart`, `ui/home/home_glass.dart`, `ui/home/live_cameras.dart`, clock faces `ui/home/clock_faces.dart` (`phx.home.clock_face`) |
+| Tile layout | `ui/home/home_tiles.dart`, `ui/home/phoenix_home.dart`; custom tiles `ui/home/custom_tiles.dart` (`CustomTile`, ids `c_<n>`, stored in `phx.home.custom_tiles`) |
 | Weather effects | `ui/home/weather_backdrop.dart` |
 | School (SchoolCafe menus, iCal or HA calendar) | `managers/home/school_service.dart`, `ui/home/school_page.dart` |
 | Telugu calendar (panchangam), word of the day | `managers/home/panchang.dart`, `managers/home/telugu_words.dart`, `ui/home/telugu_calendar_page.dart` |
 | Photos (Immich / folder), photo frame | `managers/home/photo_service.dart`, `ui/home/photo_frame.dart` |
 | Kids Portal hub and frame | `ui/kids/kids_overlay.dart`, `ui/kids/kids_activities.dart` |
-| Kids games | `kids_learn.dart` (quizzes), `kids_games.dart`, `kids_puzzles.dart`, `kids_play.dart` (incl. piano), `kids_motion.dart` (camera games), `kids_arcade.dart` (Munch Maze, Brick Bash), `kids_arcade2.dart` (Hop Across, Sky Glide, Fox Run), `kids_motion2.dart` (Wall Dodge, Air Trace, Freeze Dance, Goalie, Window Wipe), `kids_touch.dart` (Star Swipe, Stack Up), `kids_learn_more.dart` (Count It, Letter Sounds, Place Value, Story Sums, Telugu Words), `kids_maps.dart` (USA, India, World maps; data in `assets/maps`, rebuilt with `tool/kids_maps`) |
+| Kids games | `kids_learn.dart` (quizzes), `kids_games.dart`, `kids_puzzles.dart`, `kids_play.dart` (incl. piano), `kids_motion.dart` (camera games), `kids_arcade.dart` (Munch Maze, Brick Bash), `kids_arcade2.dart` (Hop Across, Sky Glide, Fox Run), `kids_motion2.dart` (Wall Dodge, Air Trace, Freeze Dance, Goalie, Window Wipe), `kids_touch.dart` (Star Swipe, Stack Up), `kids_homework.dart` (Homework; data in `managers/home/homework.dart`); Pose Match, Simon Poses and Pop Duel in `kids_motion2.dart`, `kids_learn_more.dart` (Count It, Letter Sounds, Place Value, Story Sums, Telugu Words), `kids_maps.dart` (USA, India, World maps; data in `assets/maps`, rebuilt with `tool/kids_maps`) |
 | Hand/head tracking for games | native `GameVision.kt` (game mode: two hands with landmarks, every frame; its body segmenter is no longer asked for), `FaceDetector.kt`, `CameraMotion.kt` (`game` arg); Dart `motion_manager.dart` (`startGameVision`, `startHeadTracking`), `kids_motion.dart` (`KidsHands`, One Euro smoothing, `_CursorPainter`) |
 | App Store, side-loading (any APK by link or upload; GitHub apps Morphe and MicroG-RE with update checks) | `managers/store/store_manager.dart`, `ui/store/store_overlay.dart`, native `StoreInstaller.kt` (`inspect`), admin card in `remote-ui/static/phoenix_home.js`, upload endpoint `POST /api/apps/upload`; PC patching `install/patch-morphe.ps1`, guide `install/MORPHE.md` |
 | Updates from GitHub | `managers/update/update_manager.dart` (`_releasesUrl` = this repo's GitHub Releases API) |

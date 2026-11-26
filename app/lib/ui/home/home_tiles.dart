@@ -15,6 +15,7 @@ import '../kids/kids_logic.dart';
 import '../kids/kids_more_logic.dart';
 import '../toast.dart';
 import '../timers_overlay.dart' show TimerQuickStart;
+import 'custom_tiles.dart';
 import 'home_apps.dart';
 import 'home_glass.dart';
 import 'home_themes.dart';
@@ -149,6 +150,7 @@ class _HomeTileGridState extends State<HomeTileGrid> {
     'cameras' => c.camera.config.defaultView != null,
     'shopping' => c.phoenixHome.homeAssistantConfigured,
     'telugu' => c.phoenixHome.telugu.value,
+    _ when id.startsWith('c_') => c.phoenixHome.customTile(id) != null,
     _ => true,
   };
 
@@ -159,6 +161,7 @@ class _HomeTileGridState extends State<HomeTileGrid> {
       listenable: Listenable.merge([
         home.tiles,
         home.hiddenTiles,
+        home.customTiles,
         home.theme,
         autoHomeTheme,
         home.editing,
@@ -314,6 +317,9 @@ class _HomeTileGridState extends State<HomeTileGrid> {
             spec: spec,
             resizing: _resizing?.id == spec.id,
             onHide: () => unawaited(c.phoenixHome.setTileHidden(spec.id, true)),
+            onEdit: c.phoenixHome.customTile(spec.id) == null
+                ? null
+                : () => unawaited(showCustomTileEditor(context, c, existing: c.phoenixHome.customTile(spec.id))),
             page: page,
             pageCount: pageCount,
             onToPage: (p) => unawaited(_toPage(spec.id, p)),
@@ -417,6 +423,10 @@ class _Tile extends StatelessWidget {
 
   Future<void> _open(BuildContext context) async {
     final home = c.phoenixHome;
+    if (home.customTile(spec.id) case final custom?) {
+      await openCustomTile(context, c, custom);
+      return;
+    }
     switch (spec.id) {
       case 'kids':
         await _command(context, 'openKids', 'the Kids Portal');
@@ -507,6 +517,9 @@ class _Tile extends StatelessWidget {
 
   Widget _content(BuildContext context, _Size size) {
     final home = c.phoenixHome;
+    if (home.customTile(spec.id) case final custom?) {
+      return CustomTileFace(container: c, tile: custom, small: size == _Size.small);
+    }
     final now = DateTime.now();
     switch (spec.id) {
       case 'kids':
@@ -1003,6 +1016,7 @@ class _EditFrame extends StatefulWidget {
     required this.spec,
     required this.resizing,
     required this.onHide,
+    this.onEdit,
     required this.page,
     required this.pageCount,
     required this.onToPage,
@@ -1017,6 +1031,9 @@ class _EditFrame extends StatefulWidget {
   final HomeTileSpec spec;
   final bool resizing;
   final VoidCallback onHide;
+
+  /// Change or delete the tile (the family's own tiles only).
+  final VoidCallback? onEdit;
 
   /// The home screen the tile is on, how many there are, and the move to
   /// another (a new one at [pageCount]).
@@ -1100,6 +1117,13 @@ class _EditFrameState extends State<_EditFrame> {
             onTap: w.onHide,
           ),
         ),
+        // Change or delete (bottom left), on the family's own tiles.
+        if (w.onEdit != null)
+          Positioned(
+            left: -10,
+            bottom: -10,
+            child: _Handle(icon: Icons.edit_rounded, tooltip: 'Change tile', onTap: w.onEdit),
+          ),
         // Another home screen (top right).
         Positioned(
           right: -10,
@@ -1230,6 +1254,7 @@ class HomeEditBar extends StatelessWidget {
     return ListenableBuilder(
       listenable: Listenable.merge([
         home.hiddenTiles,
+        home.customTiles,
         home.theme,
         home.weatherEffects,
       ]),
@@ -1239,7 +1264,7 @@ class HomeEditBar extends StatelessWidget {
           color: const Color(0xFF181B21),
           borderRadius: BorderRadius.circular(24),
         ),
-        child: Row(
+        child: _EditBarLayout(
           children: [
             const Icon(Icons.dashboard_customize_rounded, color: Colors.white),
             const SizedBox(width: 10),
@@ -1297,13 +1322,19 @@ class HomeEditBar extends StatelessWidget {
                 ),
               ),
             ),
+            TextButton.icon(
+              onPressed: () => unawaited(showCustomTileEditor(context, container)),
+              icon: const Icon(Icons.add_box_outlined, color: Colors.white),
+              label: const Text('New tile', style: TextStyle(color: Colors.white)),
+            ),
             if (home.hiddenTiles.value.isNotEmpty)
               PopupMenuButton<String>(
                 tooltip: 'Add a tile',
                 onSelected: (id) => unawaited(home.setTileHidden(id, false)),
                 itemBuilder: (_) => [
                   for (final id in home.hiddenTiles.value)
-                    PopupMenuItem(value: id, child: Text(_names[id] ?? id)),
+                    if (_names[id] ?? home.customTile(id)?.title case final name?)
+                      PopupMenuItem(value: id, child: Text(name)),
                 ],
                 child: const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 12),
@@ -1359,4 +1390,37 @@ class HomeEditBar extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The edit bar's row on a wide screen; on a narrower one the themes get
+/// the first line and the buttons a second (scrolling sideways if need be).
+class _EditBarLayout extends StatelessWidget {
+  const _EditBarLayout({required this.children});
+
+  /// The bar's parts in order; the [Expanded] one holds the themes.
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) {
+      if (box.maxWidth >= 1150) return Row(children: children);
+      final at = children.indexWhere((w) => w is Expanded);
+      final lead = children.sublist(0, at + 1);
+      final actions = children.sublist(at + 1);
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(children: lead),
+          const SizedBox(height: 6),
+          Align(
+            alignment: Alignment.centerRight,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(mainAxisSize: MainAxisSize.min, children: actions),
+            ),
+          ),
+        ],
+      );
+    },
+  );
 }

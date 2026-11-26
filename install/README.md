@@ -1,8 +1,8 @@
-# Phoenix Portal test build 2026.12.23 (398)
+# Phoenix Portal test build 2026.12.24 (399)
 
 - APK: on the repository's [Releases](https://github.com/rayalavcp/phoenix-portal/releases/latest)
-  page (`phoenix-portal.apk`), armeabi-v7a, runs on every Portal. 101285534 bytes.
-  SHA-256 `d678096e45bf7ea17dba7e81ee6c6c2028c4f97227d58b7318c650d7607c86e0`.
+  page (`phoenix-portal.apk`), armeabi-v7a, runs on every Portal. 101451722 bytes.
+  SHA-256 `7c70c35bc8574f1535ed14b1e720cce64bf5c3600489445cac8cd4e1db903701`.
 - New in this build:
   - **Scenic photo frame**: with no photos set up, the Phoenix Photo Frame
     screensaver shows the built-in 4K landscapes (Lake Louise, Gokyo,

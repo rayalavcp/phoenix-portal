@@ -19,6 +19,13 @@ Built from this branch and installed from `install/` (see `install/README.md`).
 - **Docs (2026-11-26):** new README and a wiki (`docs/wiki`) with mock
   screenshots made from sample data; leaderboard medals are icons (they look
   the same on every screen).
+- **2026.12.24:** custom tiles (a Home Assistant device or sensor, a web
+  page, a camera or an app; made on the tiles screen or in the remote
+  admin); clock faces (Classic, Bold, Flip cards, Analogue, Words) for the
+  Today screen and the photo frame; Homework on the Learn shelf (spelling
+  look-cover-write-check and times tables set by a grown-up, with a daily
+  report in the remote admin); camera games Pose Match, Simon Poses and Pop
+  Duel (two players).
 - **2026.12.23 (Kiosk Satellite 2026.11.32):** merged nine Kiosk Satellite
   releases (2026.11.24 to 2026.11.32): Ground Control **Vision Match** (face
   recognition, the Face and People in view sensors, skip the PIN or Lockdown
