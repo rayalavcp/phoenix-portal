@@ -84,7 +84,7 @@ void main() {
 
   test('the config survives a round trip', () {
     const cfg = SchoolConfig(
-      district: 'friscoisd',
+      district: 'exampleisd',
       schoolSlug: 'x-elementary',
       schoolName: 'X Elementary',
       menuTypes: [('lunch', 'Lunch')],
@@ -96,33 +96,33 @@ void main() {
     expect(back.schoolSlug, 'x-elementary');
     expect(back.menuTypes, [('lunch', 'Lunch')]);
     expect(back.hasMenu, isTrue);
-    expect(SchoolConfig.fromJson('junk').district, 'friscoisd');
+    expect(SchoolConfig.fromJson('junk').district, '');
   });
 
-  group('Frisco ISD defaults (SchoolCafe, Miller Elementary)', () {
-    test('a fresh setup is Miller Elementary with the Frisco ISD calendar', () {
+  group('SchoolCafe set-up', () {
+    test('a fresh install has no school: the School page asks to set one up', () {
       const c = SchoolConfig();
       expect(c.provider, 'schoolcafe');
-      expect(c.schoolSlug, millerElementarySchoolCafeId);
-      expect(c.schoolName, 'Miller Elementary');
-      expect(c.calendarUrl, friscoIsdCalendarUrl);
+      expect(c.district, isEmpty);
+      expect(c.schoolSlug, isEmpty);
+      expect(c.schoolName, isEmpty);
+      expect(c.calendarUrl, isEmpty);
       expect(c.servingLine, 'auto');
-      expect(c.grade, '02');
-      expect(c.hasMenu, isTrue);
+      expect(c.hasMenu, isFalse);
     });
 
-    test('an earlier setup with blanks picks up the defaults', () {
-      final c = SchoolConfig.fromJson({'provider': 'schoolcafe', 'district': 'friscoisd', 'school': '', 'calendar': '', 'servingLine': 'Main Line', 'menus': []});
-      expect(c.schoolSlug, millerElementarySchoolCafeId);
-      expect(c.calendarUrl, friscoIsdCalendarUrl);
+    test('an earlier setup with blanks stays blank; an old Main Line looks itself up', () {
+      final c = SchoolConfig.fromJson({'provider': 'schoolcafe', 'district': 'exampleisd', 'school': '', 'calendar': '', 'servingLine': 'Main Line', 'menus': []});
+      expect(c.schoolSlug, isEmpty);
+      expect(c.calendarUrl, isEmpty);
       expect(c.servingLine, 'auto');
       expect(c.menuTypes, hasLength(2));
     });
 
     test('a parent-chosen school and calendar are kept', () {
-      final c = SchoolConfig.fromJson({'school': 'abc', 'calendar': 'calendar.frisco_isd', 'servingLine': 'Grab and Go'});
+      final c = SchoolConfig.fromJson({'school': 'abc', 'calendar': 'calendar.school', 'servingLine': 'Grab and Go'});
       expect(c.schoolSlug, 'abc');
-      expect(c.calendarUrl, 'calendar.frisco_isd');
+      expect(c.calendarUrl, 'calendar.school');
       expect(c.servingLine, 'Grab and Go');
     });
 
@@ -137,7 +137,7 @@ void main() {
       expect(parseSchoolCafeServingLine({'Message': 'nope'}), isNull);
     });
 
-    test("Miller's real Dec 1 lunch, without the condiments", () {
+    test("a SchoolCafe lunch, without the condiments", () {
       final day = parseSchoolCafeDay({
         'ENTREES': [
           {'MenuItemDescription': 'Cheese Tortellini with Marinara '},
@@ -156,16 +156,16 @@ void main() {
     });
   });
 
-  test("SchoolCafe's real Frisco ISD answers", () {
+  test("SchoolCafe's district and school lists", () {
     expect(parseSchoolCafeIsdId([
-      {'ISDId': 1611, 'Status': true, 'StateCd': 'TX', 'ISDName': 'FRISCO ISD'},
-    ]), '1611');
+      {'ISDId': 1234, 'Status': true, 'StateCd': 'TX', 'ISDName': 'EXAMPLE ISD'},
+    ]), '1234');
     expect(parseSchoolCafeIsdId([]), isNull);
     final schools = parseSchoolCafeSchools([
-      {'SchoolId': '702b2a68-5a80-42e6-bb6e-c5fd29c837df', 'SchoolTypeId': 1420, 'SiteTypeDescription': 'Elementary School', 'SchoolName': 'Allen ES'},
-      {'SchoolId': millerElementarySchoolCafeId, 'SchoolTypeId': 1420, 'SiteTypeDescription': 'Elementary School', 'SchoolName': 'Miller ES'},
+      {'SchoolId': '11111111-1111-1111-1111-111111111111', 'SchoolTypeId': 1420, 'SiteTypeDescription': 'Elementary School', 'SchoolName': 'Birch ES'},
+      {'SchoolId': '22222222-2222-2222-2222-222222222222', 'SchoolTypeId': 1420, 'SiteTypeDescription': 'Elementary School', 'SchoolName': 'Oakwood ES'},
     ]);
-    expect(schools.map((s) => s.name), ['Allen ES', 'Miller ES']);
-    expect(bestSchoolMatch(schools, 'Miller Elementary')?.slug, millerElementarySchoolCafeId);
+    expect(schools.map((s) => s.name), ['Birch ES', 'Oakwood ES']);
+    expect(bestSchoolMatch(schools, 'Oakwood Elementary')?.slug, '22222222-2222-2222-2222-222222222222');
   });
 }

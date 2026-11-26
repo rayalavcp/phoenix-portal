@@ -101,7 +101,7 @@ class _TodayHomeState extends State<TodayHome> {
   Widget build(BuildContext context) {
     final home = c.phoenixHome;
     return ListenableBuilder(
-      listenable: Listenable.merge([home.weather, home.weatherEffects, home.weatherDemo, home.cameraEntities, home.glassOpacity]),
+      listenable: Listenable.merge([home.weather, home.weatherEffects, home.weatherDemo, home.cameraEntities, home.glassOpacity, home.telugu]),
       builder: (context, _) {
         final w = home.weather.value;
         final demo = home.weatherDemo.value;
@@ -231,11 +231,13 @@ class _TodayHomeState extends State<TodayHome> {
                                     child: _SchoolCard(container: c, now: _now),
                                   ),
                                   const SizedBox(height: 12),
-                                  SizedBox(
-                                    height: 120,
-                                    child: _WordCard(now: _now, onTap: home.openTelugu),
-                                  ),
-                                  const SizedBox(height: 12),
+                                  if (home.telugu.value) ...[
+                                    SizedBox(
+                                      height: 120,
+                                      child: _WordCard(now: _now, onTap: home.openTelugu),
+                                    ),
+                                    const SizedBox(height: 12),
+                                  ],
                                 ],
                               ),
                             ),
@@ -473,13 +475,15 @@ class _Hero extends StatelessWidget {
           spacing: 10,
           runSpacing: 8,
           children: [
-            if (festival != null)
+            if (festival != null && home.telugu.value)
               _Pill(
                 icon: Icons.celebration_rounded,
                 text: '${festival.$2.split(' (').first} ${_whenDays(festival.$1.difference(midnight).inDays)}',
                 onTap: home.openTelugu,
               ),
-            _Pill(icon: Icons.brightness_2_rounded, text: '$phase · $lit% · $paksha${today.tithiNameEn}', onTap: home.openTelugu),
+            home.telugu.value
+                ? _Pill(icon: Icons.brightness_2_rounded, text: '$phase · $lit% · $paksha${today.tithiNameEn}', onTap: home.openTelugu)
+                : _Pill(icon: Icons.brightness_2_rounded, text: '$phase · $lit%'),
           ],
         ),
       ],
@@ -557,7 +561,7 @@ class _GlanceColumn extends StatelessWidget {
           flex: 5,
           child: _SchoolCard(container: container, now: now),
         ),
-        if (!camera) ...[
+        if (!camera && home.telugu.value) ...[
           gap,
           SizedBox(
             height: 96,
@@ -637,7 +641,8 @@ class _UpNextCardState extends State<_UpNextCard> {
           for (final e in schoolEvents)
             if (!e.end.isBefore(midnight) && e.start.isBefore(midnight.add(const Duration(days: 14))))
               _UpNextItem(e.start.isBefore(midnight) ? midnight : e.start, e.title, e.allDay, Icons.school_rounded),
-          for (final (d, f) in home.panchang.upcoming(midnight, 21)) _UpNextItem(d, f.split(' (').first, true, Icons.celebration_rounded),
+          if (home.telugu.value)
+            for (final (d, f) in home.panchang.upcoming(midnight, 21)) _UpNextItem(d, f.split(' (').first, true, Icons.celebration_rounded),
         ]..sort((a, b) => a.start.compareTo(b.start));
         return Glass(
           onTap: () => unawaited(widget.container.commands.execute('openCalendar', const {})),
@@ -947,7 +952,9 @@ class _Dock extends StatelessWidget {
       (Icons.call_rounded, 'Calls', onCalls, false),
       (Icons.apps_rounded, 'Apps', () => home.appsOpen.value = true, false),
       (Icons.school_rounded, 'School', home.openSchool, false),
-      (Icons.brightness_5_rounded, 'Calendar', home.openTelugu, false),
+      home.telugu.value
+          ? (Icons.brightness_5_rounded, 'Calendar', home.openTelugu, false)
+          : (Icons.calendar_month_rounded, 'Calendar', () => unawaited(container.commands.execute('openCalendar', const {})), false),
       (Icons.photo_library_rounded, 'Photos', onPhotos, false),
       (Icons.settings_rounded, 'Settings', onOpenSettings, false),
     ];
@@ -1047,6 +1054,7 @@ Future<void> showTodaySetup(BuildContext context, AppContainer c) {
         home.wallpaperUrl,
         home.smartHomeTarget,
         home.glassOpacity,
+        home.telugu,
       ]),
       builder: (dialog, _) => AlertDialog(
         title: const Text('Customize home'),
@@ -1117,6 +1125,14 @@ Future<void> showTodaySetup(BuildContext context, AppContainer c) {
                     ])
                       ChoiceChip(label: Text(label), selected: home.weatherDemo.value == id, onSelected: (_) => home.weatherDemo.value = id),
                   ],
+                ),
+                heading('Telugu calendar'),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Show the Telugu calendar'),
+                  subtitle: const Text('Word of the day, festivals, tithi, and the Calendar button opens it'),
+                  value: home.telugu.value,
+                  onChanged: (v) => unawaited(home.setTelugu(v)),
                 ),
                 heading('Smart Home button'),
                 SegmentedButton<String>(

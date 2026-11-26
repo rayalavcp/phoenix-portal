@@ -539,7 +539,7 @@ class _SchoolSetupState extends State<_SchoolSetup> {
         setState(
           () => _error =
               "Couldn't load $district's schools. Check the name (it is the first part of "
-              'the menu site, like friscoisd in friscoisd.nutrislice.com).',
+              'the menu site, like exampleisd in exampleisd.nutrislice.com).',
         );
       }
     } finally {
@@ -602,7 +602,7 @@ class _SchoolSetupState extends State<_SchoolSetup> {
             children: [
               SegmentedButton<String>(
                 segments: const [
-                  ButtonSegment(value: 'schoolcafe', label: Text('SchoolCafe (Frisco ISD)')),
+                  ButtonSegment(value: 'schoolcafe', label: Text('SchoolCafe')),
                   ButtonSegment(value: 'nutrislice', label: Text('Nutrislice')),
                 ],
                 selected: {_cfg.provider},
@@ -620,8 +620,8 @@ class _SchoolSetupState extends State<_SchoolSetup> {
                       decoration: InputDecoration(
                         labelText: 'School district',
                         helperText: _cfg.provider == 'schoolcafe'
-                            ? 'friscoisd for Frisco ISD on schoolcafe.com'
-                            : 'friscoisd for friscoisd.nutrislice.com',
+                            ? 'exampleisd for Example ISD on schoolcafe.com'
+                            : 'exampleisd for exampleisd.nutrislice.com',
                       ),
                       onSubmitted: (_) => unawaited(_loadSchools()),
                     ),
@@ -750,7 +750,7 @@ class _SchoolSetupState extends State<_SchoolSetup> {
                   labelText: 'School calendar',
                   helperText:
                       "The district calendar's iCal (.ics) or Subscribe link, or a Home Assistant "
-                      'calendar such as calendar.frisco_isd.',
+                      'calendar such as calendar.school.',
                   helperMaxLines: 2,
                 ),
               ),

@@ -29,8 +29,8 @@
 
 **A calm home screen.** The **Today** screen shows the time, the weather and a 4K landscape with
 live weather effects: rain, snow, fog, a storm, and a half sun that moves along the top edge from
-sunrise on the left to sunset on the right. Frosted glass cards show what's up next, school and
-the Telugu word of the day. The dock opens the Kids Portal, Smart Home, **Calls** (the Portal's
+sunrise on the left to sunset on the right. Frosted glass cards show what's up next and
+school. The dock opens the Kids Portal, Smart Home, **Calls** (the Portal's
 own WhatsApp and Messenger calling), apps, school, the calendar, photos and settings. **Swipe
 right** for Smart Home; swipe in from the left edge for the menu.
 
@@ -66,13 +66,14 @@ person, on the same frosted glass. **Timers** start in one tap (1, 5, 10, 15 or 
   <img src="docs/phoenix/screens/calendar.jpg" alt="Family calendar" width="640" />
 </p>
 
-**Telugu calendar (తెలుగు క్యాలెండర్).** A full panchangam computed on the Portal for your city:
-tithi, nakshatra, yoga, karana, masa, paksha, ritu and samvatsara, sunrise and sunset, Rahu Kalam
-and Yamagandam, and the Telugu festivals in a month view.
+**Telugu calendar (optional).** Turn it on under **Customize** (or in the remote admin): a full
+panchangam computed on the Portal for your city (tithi, nakshatra, yoga, karana, masa, paksha,
+ritu and samvatsara, sunrise and sunset, Rahu Kalam and Yamagandam), the Telugu festivals in a
+month view and a Telugu word of the day. It is off on a new install.
 
-**School.** This week's breakfast and lunch menus from SchoolCafe (Miller Elementary, Frisco ISD
-by default; pick your school on the Portal), the district calendar and a "school starts in 20
-min" line.
+**School.** This week's breakfast and lunch menus from SchoolCafe for your school (pick it with
+**Set up** on the School page), your district's calendar and a "school starts in 20 min" line.
+Nothing is set up by default.
 
 **Photo frame.** Your photos from Immich or a network folder. With nothing set up, the frame shows
 the built-in 4K landscapes, slowly drifting, with the clock and each photographer's credit.

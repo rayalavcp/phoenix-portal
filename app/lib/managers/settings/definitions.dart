@@ -14781,7 +14781,7 @@ const kidsName = SettingDef<String>(
 const kidsDailyMinutes = SettingDef<String>(
   key: 'kids.daily_minutes',
   type: SettingType.select,
-  defaultValue: '90', // 1.5 hours: a sensible start for a 9-year-old
+  defaultValue: '90', // 1.5 hours: a sensible start for a school-age child
   title: 'Daily screen time',
   description:
       'How long the Kids Portal can be played each day. When it runs out, '

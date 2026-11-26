@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'kids_activities.dart';
 import 'kids_logic.dart';
 
-/// The Kids Portal's games for 9-year-olds: Math Blitz, Word Scramble, 2048,
+/// The Kids Portal's games for school-age children: Math Blitz, Word Scramble, 2048,
 /// Connect Four against the computer and Memory Pro. Offline and drawn by
 /// Flutter; the rules live in kids_logic.dart.
 

@@ -230,7 +230,7 @@ MathProblem mathProblem(int level, math.Random rng) {
 
 // ── Word Scramble ──────────────────────────────────────────────────────
 
-/// Themed words for 9-year-olds, 4 to 8 letters.
+/// Themed words for school-age children, 4 to 8 letters.
 const scrambleWords = <String, List<String>>{
   'Animals': ['TIGER', 'ZEBRA', 'PANDA', 'KOALA', 'OTTER', 'EAGLE', 'SHARK', 'RABBIT', 'GIRAFFE', 'DOLPHIN', 'PENGUIN', 'TURTLE', 'MONKEY', 'BEAVER', 'CHEETAH', 'LIZARD', 'HAMSTER', 'OCTOPUS', 'LOBSTER', 'BUFFALO'],
   'Space': ['MOON', 'STAR', 'COMET', 'ORBIT', 'PLANET', 'ROCKET', 'GALAXY', 'METEOR', 'SATURN', 'JUPITER', 'NEBULA', 'ASTEROID', 'GRAVITY', 'ECLIPSE', 'COSMOS', 'MARS', 'VENUS', 'SHUTTLE', 'CRATER', 'SOLAR'],

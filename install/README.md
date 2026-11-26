@@ -1,8 +1,8 @@
-# Phoenix Portal test build 2026.12.20 (395)
+# Phoenix Portal test build 2026.12.21 (396)
 
 - APK: on the repository's [Releases](https://github.com/rayalavcp/phoenix-portal/releases/latest)
-  page (`phoenix-portal.apk`), armeabi-v7a, runs on every Portal. 100707766 bytes.
-  SHA-256 `fc74a86e3d048d702de64b4fa7d4c77ca2bb7f90c9d8e8a6df0f4a789454e556`.
+  page (`phoenix-portal.apk`), armeabi-v7a, runs on every Portal. 100707822 bytes.
+  SHA-256 `4d757b7cee17d4acbd85944d6623e6156b8ea30b0f1993152b249b848bf0054c`.
 - New in this build:
   - **Scenic photo frame**: with no photos set up, the Phoenix Photo Frame
     screensaver shows the built-in 4K landscapes (Lake Louise, Gokyo,
@@ -160,8 +160,8 @@
     for 30 s when it rings) and a **menu items** picker.
   - **Remote admin fixed**: it stopped on its loading spinner since
     2026.11.27 (a startup error in the page's footer translation).
-  - **School**: Miller Elementary menus from SchoolCafe (breakfast and
-    lunch) and the Frisco ISD calendar, set up by default.
+  - **School**: menus from SchoolCafe (breakfast and lunch) and the
+    district calendar, for the school you pick.
   - **Today home screen** (the default): the time and weather right on a
     4K wallpaper with live weather effects (rain, storms, snow, fog, sun,
     clouds, stars), glance cards on the right (camera, up next, school,

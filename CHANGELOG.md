@@ -14,11 +14,15 @@ Built from this branch and installed from `install/` (see `install/README.md`).
 - **Today screen:** 4K wallpapers, glass cards, weather effects, Home
   Assistant cameras, a doorbell alert, a **Calls** button into the Portal's
   calling.
-- **School:** SchoolCafe menus and the Frisco ISD calendar.
+- **School:** SchoolCafe menus and the district calendar.
 - **Updates:** from this repository; nothing is sent to the original project.
 - **Docs (2026-11-26):** new README and a wiki (`docs/wiki`) with mock
   screenshots made from sample data; leaderboard medals are icons (they look
   the same on every screen).
+- **2026.12.21 (generic):** no school is set up by default (pick yours with
+  **Set up** on the School page); the Telugu calendar is an option under
+  Customize and in the remote admin (off on new installs, kept on for
+  existing ones); screenshots and docs use generic sample data.
 - **2026.12.20:** with no photos set up, the Phoenix Photo Frame shows the
   built-in 4K landscapes, slowly drifting, with their credits; everything
   (guides, licence, plugin list, wallpapers) now comes from `main`.

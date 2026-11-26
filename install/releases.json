@@ -1,16 +1,16 @@
 [
   {
-    "tag_name": "v2026.12.20",
-    "name": "Phoenix Portal 2026.12.20",
+    "tag_name": "v2026.12.21",
+    "name": "Phoenix Portal 2026.12.21",
     "draft": false,
     "prerelease": false,
-    "body": "With no photos set up, the Phoenix Photo Frame shows the built-in 4K landscapes, slowly drifting, with their credits. Guides, the licence link, the plugin list and wallpapers now come from the main branch.",
-    "html_url": "https://github.com/rayalavcp/phoenix-portal/releases/tag/v2026.12.20",
+    "body": "No school is set up by default (pick yours with Set up on the School page). The Telugu calendar is now an option under Customize and in the remote admin, kept on for existing installs. Generic sample data in docs and screenshots.",
+    "html_url": "https://github.com/rayalavcp/phoenix-portal/releases/tag/v2026.12.21",
     "assets": [
       {
-        "name": "kiosk-satellite-2026.12.20.armeabi-v7a.apk",
-        "browser_download_url": "https://github.com/rayalavcp/phoenix-portal/releases/download/v2026.12.20/kiosk-satellite-2026.12.20.armeabi-v7a.apk",
-        "size": 100707766,
+        "name": "kiosk-satellite-2026.12.21.armeabi-v7a.apk",
+        "browser_download_url": "https://github.com/rayalavcp/phoenix-portal/releases/download/v2026.12.21/kiosk-satellite-2026.12.21.armeabi-v7a.apk",
+        "size": 100707822,
         "state": "uploaded"
       }
     ]

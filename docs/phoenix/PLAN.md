@@ -58,7 +58,7 @@ intercom, RTSP, the fleet agent.
      fix, verifier, OTA block and stock-launcher snapshot. Verified on the Android 9 emulator.
    - App Store: 17 free apps verified on F-Droid, installed through Android's installer.
    - Immortal's security findings were not carried over.
-6. **Kids Portal: done**, aimed at a 9-year-old:
+6. **Kids Portal: done**, aimed at primary-school children:
    - Math Blitz, Word Scramble, 2048, Connect Four vs computer, Memory Pro, Draw Studio, with
      best scores and daily stars.
    - Daily screen time (default 1.5 h), bedtime, parent PIN or three-second hold, the
@@ -86,7 +86,7 @@ intercom, RTSP, the fleet agent.
      whitelist launcher remains for a locked kiosk.
    - Smart Home page: quick controls over `haListEntities` / `haCallService`, pinned favourites,
      rooms, and "Open dashboard".
-   - School page (`school_service.dart`): Nutrislice menus (district `friscoisd` by default, school
+   - School page (`school_service.dart`): Nutrislice menus (the district and school
      picked from the district's list), an iCal calendar link, bell times.
    - The setup wizards (device and remote) can skip Home Assistant (`home.setup_done`).
 10. **Kids Portal, second shelf: done.** Times Tables, Telling the Time, Flag Quiz, Patterns,
@@ -102,7 +102,7 @@ intercom, RTSP, the fleet agent.
     Science, Spelling, Opposites, Whack-a-Mole and Lights Out.
 12. **Today home and school, round three: done.** A Today screen with 4K
     wallpapers, glass cards, weather effects, live Home Assistant cameras and
-    a doorbell alert; SchoolCafe menus (Miller Elementary) and the Frisco ISD
+    a doorbell alert; SchoolCafe menus and the district
     calendar; updates from this repository (GitHub Releases since 2026.12.14).
 13. **Kids Portal, round three: done.** Calm redesign; Arcade (Munch Maze,
     Brick Bash, Hop Across, Sky Glide, Fox Run); Move camera games; Maps

@@ -148,6 +148,7 @@ class _HomeTileGridState extends State<HomeTileGrid> {
     'calendar' => c.phoenixHome.homeAssistantConfigured,
     'cameras' => c.camera.config.defaultView != null,
     'shopping' => c.phoenixHome.homeAssistantConfigured,
+    'telugu' => c.phoenixHome.telugu.value,
     _ => true,
   };
 
@@ -171,6 +172,7 @@ class _HomeTileGridState extends State<HomeTileGrid> {
         c.launcher.installedRevision,
         home.usage,
         home.todo.items,
+        home.telugu,
         KidsScores.changes,
       ]),
       builder: (context, _) {

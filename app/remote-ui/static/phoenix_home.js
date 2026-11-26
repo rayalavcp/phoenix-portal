@@ -124,6 +124,8 @@ function lookSection() {
       el('div', { class: 'phx-inline' }, wallLink,
         el('button', { class: 'btn-ghost', type: 'button', text: 'Save', onclick: () => save({ wallpaper: 'url', wallpaperUrl: wallLink.value.trim() }, 'Wallpaper link') }))),
     row('Glass', 'How see-through the cards and tiles are (0 clear, 100 frosted)', glass),
+    row('Telugu calendar', 'The Telugu word of the day, festivals and tithi on the home screen; the dock\'s Calendar opens it',
+      checkbox(!!model.telugu, (on) => save({ telugu: on }, 'Telugu calendar'))),
     row('Smart Home button', 'Open your Home Assistant dashboard, or Phoenix\'s own controls',
       select([['ha', 'Home Assistant dashboard'], ['phoenix', 'Phoenix controls']], model.smartHome || 'ha', (v) => save({ smartHome: v }, 'Smart Home button'))),
     row('Home Assistant page', 'The page the Smart Home button opens (your dashboard or HTML page)',
@@ -193,13 +195,13 @@ function hhmm(v) {
 
 function schoolSection() {
   const s = { ...model.school, menus: [...(model.school.menus || [])] };
-  const name = el('input', { type: 'text', class: 'field', value: s.schoolName || '', placeholder: 'Miller Elementary' });
-  const district = el('input', { type: 'text', class: 'field', value: s.district || 'friscoisd', placeholder: 'friscoisd' });
+  const name = el('input', { type: 'text', class: 'field', value: s.schoolName || '', placeholder: 'Oakwood Elementary' });
+  const district = el('input', { type: 'text', class: 'field', value: s.district || '', placeholder: 'exampleisd' });
   let provider = s.provider || 'schoolcafe';
   const schoolId = el('input', { type: 'text', class: 'field', value: provider === 'schoolcafe' ? (s.school || '') : '', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' });
   const line = el('input', { type: 'text', class: 'field', value: s.servingLine && s.servingLine !== 'auto' ? s.servingLine : '', placeholder: 'Found automatically' });
   const grade = el('input', { type: 'text', class: 'field', value: s.grade || '02', placeholder: '02' });
-  const calendar = el('input', { type: 'text', class: 'field', value: s.calendar || '', placeholder: 'calendar.frisco_isd or https://… .ics' });
+  const calendar = el('input', { type: 'text', class: 'field', value: s.calendar || '', placeholder: 'calendar.school or https://… .ics' });
   const start = el('input', { type: 'time', class: 'field', value: hhmm(s.start) });
   const end = el('input', { type: 'time', class: 'field', value: hhmm(s.end) });
   const picker = el('div');
@@ -239,16 +241,16 @@ function schoolSection() {
   drawMenus();
   return card('School',
     row('School name', 'Shown on the School tile and page', name),
-    row('Menu source', 'Frisco ISD posts its menus on SchoolCafe',
-      select([['schoolcafe', 'SchoolCafe (Frisco ISD)'], ['nutrislice', 'Nutrislice']], provider, (v) => { provider = v; })),
+    row('Menu source', 'Where the district posts its menus',
+      select([['schoolcafe', 'SchoolCafe'], ['nutrislice', 'Nutrislice']], provider, (v) => { provider = v; })),
     row('SchoolCafe school ID', 'The school\'s ID from SchoolCafe (the same one your Home Assistant SchoolCafe setup uses)', schoolId),
-    row('Serving line', 'Leave empty: found automatically (Frisco ISD: Main (Trayline) and Hot Breakfast)', line),
+    row('Serving line', 'Leave empty: found automatically (for example Main (Trayline) and Hot Breakfast)', line),
     row('Grade', 'Two digits, e.g. 02 for 2nd grade', grade),
-    row('District', 'friscoisd for Frisco ISD',
+    row('District', 'The district\'s short name on SchoolCafe or Nutrislice, e.g. exampleisd',
       el('div', { class: 'phx-inline' }, district, el('button', { class: 'btn-ghost', type: 'button', text: 'Load schools', onclick: load }))),
     row('School', s.school ? `Picked: ${s.school}` : 'Pick it for its menus', picker),
     row('Menus', 'Which menus to show', menus),
-    row('School calendar', 'A Home Assistant calendar (calendar.frisco_isd) or an iCal (.ics) link', calendar),
+    row('School calendar', 'A Home Assistant calendar (calendar.school) or an iCal (.ics) link', calendar),
     row('School starts', null, start),
     row('School ends', null, end),
     el('div', { class: 'phx-actions' }, el('button', {

@@ -339,11 +339,11 @@ class PhoenixHomeManager extends Manager {
   /// The Home Assistant to-do list the Shopping tile and page show.
   late final todo = TodoService(commands, configured: () => homeAssistantConfigured);
 
-  /// The Telugu calendar for the weather's place (Frisco, Texas until a
-  /// city is set): computed here, no network.
+  /// The Telugu calendar for the weather's place (Hyderabad until a city
+  /// is set): computed here, no network.
   PanchangCalculator get panchang {
     final g = _geo;
-    final lat = g?.lat ?? 33.1507, lon = g?.lon ?? -96.8236;
+    final lat = g?.lat ?? 17.385, lon = g?.lon ?? 78.4867;
     final calc = _panchang;
     if (calc != null && calc.lat == lat && calc.lon == lon) return calc;
     return _panchang = PanchangCalculator(lat, lon);
@@ -354,7 +354,7 @@ class PhoenixHomeManager extends Manager {
   /// The School page (menus, calendar, bell times) is on screen.
   final schoolOpen = ValueNotifier<bool>(false);
 
-  /// School menus and calendar (Frisco ISD's Nutrislice by default).
+  /// School menus and calendar (none until the School page's Set up).
   late final school = SchoolService(
     _client,
     _prefs,
@@ -840,6 +840,18 @@ class PhoenixHomeManager extends Manager {
   static const _wallpaperKey = 'phx.home.wallpaper';
   static const _smartTargetKey = 'phx.home.smart_target';
   static const _glassKey = 'phx.home.glass';
+  static const _teluguKey = 'phx.home.telugu';
+
+  /// The Telugu calendar on Phoenix Home: the word of the day, festivals in
+  /// Up next, the tithi line, the Telugu tile and the dock's Calendar
+  /// button. Off on a new install; Portals that ran an earlier build (which
+  /// always showed it) keep it on.
+  final telugu = ValueNotifier<bool>(false);
+
+  Future<void> setTelugu(bool on) async {
+    telugu.value = on;
+    await (await _prefs()).setBool(_teluguKey, on);
+  }
   static const _wallpaperUrlKey = 'phx.home.wallpaper_url';
   static const _weatherRefresh = Duration(minutes: 30);
 
@@ -968,7 +980,7 @@ class PhoenixHomeManager extends Manager {
         Command(
           name: 'phoenixSchoolList',
           description: "A district's schools and their menus, from SchoolCafe or Nutrislice.",
-          params: const {'district': 'the district, e.g. friscoisd', 'provider': 'schoolcafe or nutrislice'},
+          params: const {'district': 'the district, e.g. exampleisd', 'provider': 'schoolcafe or nutrislice'},
           handler: (p) async {
             final district = '${p['district'] ?? school.config.value.district}'.trim().toLowerCase();
             try {
@@ -1020,6 +1032,7 @@ class PhoenixHomeManager extends Manager {
     'wallpaper': wallpaper.value,
     'smartHome': smartHomeTarget.value,
     'glass': glassOpacity.value,
+    'telugu': telugu.value,
     'wallpapers': [for (final (id, name, credit) in builtinWallpapers) {'id': 'builtin:$id', 'name': name, 'credit': credit}],
     'smartHomePage': smartHomePage,
     'wallpaperUrl': wallpaperUrl.value,
@@ -1090,6 +1103,7 @@ class PhoenixHomeManager extends Manager {
       await setCameraEntity(p['camera'] as String);
     }
     if (p['glass'] is num) await setGlassOpacity((p['glass'] as num).toDouble());
+    if (p['telugu'] is bool) await setTelugu(p['telugu'] as bool);
     if (p['smartHome'] is String || p['smartHomePage'] is String) {
       await setSmartHomeTarget(
         p['smartHome'] is String ? p['smartHome'] as String : smartHomeTarget.value,
@@ -1512,6 +1526,15 @@ class PhoenixHomeManager extends Manager {
     smartHomeTarget.value = prefs.getString(_smartTargetKey) == 'phoenix' ? 'phoenix' : 'ha';
     wallpaperUrl.value = prefs.getString(_wallpaperUrlKey) ?? '';
     usage.value = decodeUsage(prefs.getString(_usageKey));
+    final savedTelugu = prefs.getBool(_teluguKey);
+    if (savedTelugu != null) {
+      telugu.value = savedTelugu;
+    } else {
+      // Anything Phoenix saved before means an earlier build, which always
+      // showed the Telugu calendar: keep it. A new install starts without.
+      telugu.value = prefs.getKeys().any((k) => k.startsWith('phx.') && k != _teluguKey);
+      await prefs.setBool(_teluguKey, telugu.value);
+    }
   }
 
   @override
@@ -1526,6 +1549,7 @@ class PhoenixHomeManager extends Manager {
     appsOpen.dispose();
     schoolOpen.dispose();
     teluguOpen.dispose();
+    telugu.dispose();
     shoppingOpen.dispose();
     todo.dispose();
     school.dispose();

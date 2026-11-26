@@ -9,8 +9,9 @@ import '../../core/logging.dart';
 
 /// Phoenix Home's School page: the school's breakfast and lunch menus and
 /// its calendar. No Home Assistant: menus come straight from the district's
-/// Nutrislice site (Frisco ISD by default), the calendar from any iCal feed
-/// the district publishes, and the bell times are typed in once.
+/// SchoolCafe or Nutrislice site, the calendar from any iCal feed the
+/// district publishes, and the bell times are typed in once. No school is
+/// set out of the box: the page's Set up picks one.
 
 @immutable
 class SchoolConfig {
@@ -18,27 +19,27 @@ class SchoolConfig {
     this.provider = 'schoolcafe',
     this.servingLine = 'auto',
     this.grade = '02',
-    this.district = 'friscoisd',
-    this.schoolSlug = millerElementarySchoolCafeId,
-    this.schoolName = 'Miller Elementary',
+    this.district = '',
+    this.schoolSlug = '',
+    this.schoolName = '',
     this.menuTypes = const [('Breakfast', 'Breakfast'), ('Lunch', 'Lunch')],
-    this.calendarUrl = friscoIsdCalendarUrl,
+    this.calendarUrl = '',
     this.startTime = '',
     this.endTime = '',
   });
 
-  /// Where the menus come from: 'schoolcafe' (Frisco ISD and many Texas
-  /// districts, schoolcafe.com) or 'nutrislice'.
+  /// Where the menus come from: 'schoolcafe' (schoolcafe.com, used by many
+  /// US districts) or 'nutrislice'.
   final String provider;
 
   /// SchoolCafe's serving line and grade ("02"), which pick the menu a
-  /// student sees. 'auto' asks SchoolCafe for each meal's line (Frisco ISD:
+  /// student sees. 'auto' asks SchoolCafe for each meal's line (for example
   /// "Main (Trayline)" for lunch, "Hot Breakfast" for breakfast).
   final String servingLine;
   final String grade;
 
-  /// The district: SchoolCafe's short name (friscoisd) or the Nutrislice
-  /// site (friscoisd.nutrislice.com → friscoisd).
+  /// The district: SchoolCafe's short name (exampleisd) or the Nutrislice
+  /// site (exampleisd.nutrislice.com → exampleisd).
   final String district;
 
   /// The school: SchoolCafe's school id (a GUID) or the Nutrislice slug.
@@ -49,7 +50,7 @@ class SchoolConfig {
   final List<(String, String)> menuTypes;
 
   /// The school calendar: an iCal (.ics) link, or a Home Assistant calendar
-  /// entity (calendar.frisco_isd).
+  /// entity (calendar.school).
   final String calendarUrl;
 
   /// Bell times as H:MM in 24 hours ("7:50", "15:05"), empty when unset.
@@ -112,9 +113,8 @@ class SchoolConfig {
     }
 
     final provider = raw['provider'] == 'nutrislice' ? 'nutrislice' : 'schoolcafe';
-    final district = text('district', 'friscoisd');
-    final frisco = provider == 'schoolcafe' && district == 'friscoisd';
-    // An old "Main Line" never matched Frisco ISD's menus: let it look the
+    final district = text('district', '');
+    // An old "Main Line" never matched SchoolCafe's menus: let it look the
     // line up instead.
     final line = text('servingLine', 'auto');
     return SchoolConfig(
@@ -122,24 +122,15 @@ class SchoolConfig {
       servingLine: line == 'Main Line' ? 'auto' : line,
       grade: text('grade', '02'),
       district: district,
-      // Blank fields from an earlier setup pick up the Frisco ISD defaults.
-      schoolSlug: text('school', frisco ? millerElementarySchoolCafeId : ''),
-      schoolName: text('schoolName', 'Miller Elementary'),
+      schoolSlug: text('school', ''),
+      schoolName: text('schoolName', ''),
       menuTypes: raw['menus'] is List && menus.isNotEmpty ? menus : const [('Breakfast', 'Breakfast'), ('Lunch', 'Lunch')],
-      calendarUrl: text('calendar', frisco ? friscoIsdCalendarUrl : ''),
+      calendarUrl: text('calendar', ''),
       startTime: '${raw['start'] ?? ''}',
       endTime: '${raw['end'] ?? ''}',
     );
   }
 }
-
-/// Miller Elementary, Frisco ISD, on SchoolCafe (looked up from SchoolCafe's
-/// Frisco ISD school list, district 1611).
-const millerElementarySchoolCafeId = 'd7bd7613-a7ac-4508-b50f-fd713b8b9bba';
-
-/// Frisco ISD's public school calendar (Google Calendar, iCal).
-const friscoIsdCalendarUrl =
-    'https://calendar.google.com/calendar/ical/friscoisd.org_1f00mj0hnlmf2s32hao46a61m4%40group.calendar.google.com/public/basic.ics';
 
 /// A school from the district's Nutrislice list, with its menus.
 @immutable
@@ -251,8 +242,7 @@ class SchoolService {
     final problems = <String>[];
     try {
       if (!c.hasMenu && c.schoolName.isNotEmpty && c.district.isNotEmpty) {
-        // A name but no school picked yet (Miller Elementary out of the
-        // box): find it in the district's list.
+        // A name but no school picked yet: find it in the district's list.
         await _resolveSchool(c);
       }
       final cfg = config.value;
@@ -543,10 +533,10 @@ class SchoolService {
 String _key(DateTime d) => '${d.year}-${d.month}-${d.day}';
 
 /// The district school that best matches a typed [name]: every word of the
-/// name in the school's name, the shortest such name first ("Miller" finds
-/// "Miller Elementary", not "Miller Middle Annex" before it).
-/// Words that only say what kind of school it is: "Miller Elementary"
-/// is SchoolCafe's "Miller ES".
+/// name in the school's name, the shortest such name first ("Oakwood" finds
+/// "Oakwood Elementary", not "Oakwood Middle Annex" before it).
+/// Words that only say what kind of school it is: "Oakwood Elementary"
+/// is SchoolCafe's "Oakwood ES".
 const _schoolKindWords = {
   'elementary', 'es', 'el', 'middle', 'ms', 'high', 'hs', 'school', 'sch', 'academy', 'the', 'of',
 };
@@ -639,7 +629,7 @@ String _title(String raw) => raw
 /// The first GUID-looking id in SchoolCafe's answer, preferring a key that
 /// mentions [kind] ("ISD", "School").
 /// The district's id from SchoolCafe's GetISDByShortName answer, e.g.
-/// `[{"ISDId":1611,"ISDName":"FRISCO ISD",…}]` → "1611". Empty list: none.
+/// `[{"ISDId":1234,"ISDName":"EXAMPLE ISD",…}]` → "1234". Empty list: none.
 String? parseSchoolCafeIsdId(Object? data) {
   final first = data is List && data.isNotEmpty ? data.first : data;
   if (first is Map) {

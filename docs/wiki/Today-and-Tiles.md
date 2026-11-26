@@ -9,8 +9,8 @@ a 4K landscape that changes every few hours. The weather is drawn on the picture
 fog, a storm, stars at night, and a half sun that moves along the top edge from the left at
 sunrise to the right at sunset.
 
-The cards on the right show what's up next (calendar and Telugu festivals), school and the
-Telugu word of the day. Home Assistant cameras can show live in a card (swipe across it to switch
+The cards on the right show what's up next and school; with the
+optional Telugu calendar on, also Telugu festivals and a Telugu word of the day. Home Assistant cameras can show live in a card (swipe across it to switch
 camera), and a doorbell ring shows its camera full screen for 30 seconds.
 
 The **dock** opens the Kids Portal, Smart Home, **Calls** (the Portal's own WhatsApp and

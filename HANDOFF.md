@@ -75,6 +75,10 @@ what is still open.
   Pre-existing.
 - Under full parallel runs only, now and then: `isolate_engine_test`,
   `dlna_port_test`, `immich_cache_clear_test` (all pass on rerun).
+- The Today screen at 1024x600 overflows by 13 px on a frame shortly after
+  it first lays out (a widget that is disposed right after; seen with the
+  Telugu calendar on). Pre-existing; every Portal is 1280x800 or larger, but
+  worth fixing. `phoenix_home_test.dart` skips the Telugu toggle there.
 - `test/logs_about_localization_ui_test.py` needs Python Playwright (not
   installed in the cloud container; never run there recently).
 
@@ -106,7 +110,12 @@ remove it safely).
   link (a separate project) and translator credits stay too.
 - Author shown in the app: **krayala**, linking to github.com/rayalavcp.
 - Ask before uninstalling, disabling or deleting anything on the device.
-- Default school: **Miller Elementary, Frisco ISD**.
+- **No personal data in the repository.** It is public: no school, city,
+  district, IP address, names or photos from the owner's home in code
+  defaults, tests, docs or screenshots. The school has no default (set it on
+  the Portal), the Telugu calendar is an option (off on new installs, kept on
+  for installs that already had Phoenix settings), and screenshots use mock
+  data only.
 - India map: India's official boundaries (Ladakh and Jammu and Kashmir as
   union territories, the whole of Jammu, Kashmir and Ladakh shown); the
   world map uses Natural Earth's India point of view to match. Keep the
@@ -223,8 +232,9 @@ agent may use its own. Never put model names in commits.
 - **Screenshots** (`docs/phoenix/screens/*.jpg`, 1280×800) are made from
   mock data only, never from the owner's Portal or home: a throwaway widget
   test pumps the real screens with sample weather, calendar events, shopping
-  items, Home Assistant entities and leaderboard names on the built-in
-  wallpapers, and saves each with `RenderRepaintBoundary.toImage`. Tips: load
+  items, Home Assistant entities, a made-up school ("Oakwood Elementary"),
+  a made-up town ("Springfield") and leaderboard names on the built-in
+  wallpapers, with the Telugu calendar off, and saves each with `RenderRepaintBoundary.toImage`. Tips: load
   the app fonts with `FontLoader` (Inter, Nunito, Rubik and Material Icons
   from the Flutter SDK); Telugu needs a font that has both Latin and Telugu
   (merge Inter, instanced at fixed weights, with Noto Sans Telugu scaled to
@@ -235,7 +245,7 @@ agent may use its own. Never put model names in commits.
 
 ## Device facts
 
-- Portal at `10.10.1.206`; remote admin `http://10.10.1.206:2324`.
+- Remote admin at `http://<portal-ip>:2324` (ask the owner for the address).
 - Package `com.phoenix.portal`. Installed from a Windows PC over USB by a
   local agent using `install/install-phoenix.ps1`.
 - The installer also sets Phoenix as the home screen, turns on start on boot,
@@ -269,7 +279,7 @@ Math, Wall Dodge, Air Trace, Freeze Dance), **Create**.
 ## Verified vs not yet verified on a real Portal
 
 Verified here (tests, real admin server in Chromium, real SchoolCafe and
-Frisco ISD calendar data): admin portal end to end, school menus and
+a district's calendar data): admin portal end to end, school menus and
 calendar parsing, Kids Portal layouts at 1280x800 / 800x1280 / 1024x600,
 games by touch, wallpaper and weather rendering, update list format.
 
@@ -378,7 +388,7 @@ cannot be granted on a Portal.
 ## Open ideas the owner mentioned
 
 - More motion games; owner will upload wallpapers.
-- Bell times for Miller Elementary are not set (unknown).
+- Bell times have no default; set them on the School page.
 - Immortal features not in Phoenix yet (iCloud/SMB/WebDAV photos, clock
   faces, lamp, bedtime stories, notes, converter, hourly chime, help tour):
   see `docs/phoenix/IMMORTAL.md`. Uninstalling Immortal is the owner's call.

@@ -7,7 +7,7 @@ import 'package:kiosk_satellite/managers/home/phoenix_home_manager.dart';
 // published dates. Festival days follow local sunrise, so they hold for
 // whatever timezone the tests run in.
 void main() {
-  final p = PanchangCalculator(33.1507, -96.8236); // Frisco, Texas
+  final p = PanchangCalculator(39.0997, -94.5786); // Kansas City, central US
 
   bool on(int y, int m, int d, String festival) =>
       p.day(DateTime(y, m, d)).festivals.any((f) => f.contains(festival));

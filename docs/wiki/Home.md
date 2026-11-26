@@ -34,7 +34,7 @@ Facebook account, no cloud service.
   challenge, screen time, bedtime and a parent PIN.
 - **Home Assistant** (optional): Smart Home controls, the shopping list, the family calendar,
   cameras, the doorbell, and the Portal in Home Assistant through ESPHome.
-- **Telugu calendar** (panchangam) and **school** menus and calendar.
+- An optional **Telugu calendar** (panchangam) and **school** menus and calendar.
 - **Photo frame** from Immich or a network folder, or built-in landscapes when nothing is set up.
 - Everything from **Kiosk Satellite**, which Phoenix is built on: voice assistant, music,
   intercom, alarms, gestures, remote administration and fleet management.
