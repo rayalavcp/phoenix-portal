@@ -303,8 +303,12 @@ class AppContainer {
     );
     // Camera games follow the body or the hand, as the Kids Portal setting
     // says.
-    void syncTracking() => motion.gameBodyTracking = phoenixHome.kidsTracking.value != 'hands';
+    void syncTracking() {
+      motion.gameBodyTracking = phoenixHome.kidsTracking.value != 'hands';
+      motion.gameLiveView = phoenixHome.kidsView.value != 'neon';
+    }
     phoenixHome.kidsTracking.addListener(syncTracking);
+    phoenixHome.kidsView.addListener(syncTracking);
     syncTracking();
     store = StoreManager(bus, commands, log);
     musicLibrary = MusicLibraryManager(

@@ -19,6 +19,15 @@ Built from this branch and installed from `install/` (see `install/README.md`).
 - **Docs (2026-11-26):** new README and a wiki (`docs/wiki`) with mock
   screenshots made from sample data; leaderboard medals are icons (they look
   the same on every screen).
+- **2026.12.27 (live camera):** camera games show the live camera picture,
+  mirrored, filling the play area, the children seeing themselves with the
+  game around them; the hand cursors are glowing rings on their real hands.
+  The camera's own preview stream goes straight to the screen (a Flutter
+  texture); if the camera refuses it, its preview frames stand in. New games:
+  Critter Bop (bop the critters popping out of holes, hands or feet) and
+  Target Strike (hit targets around you with hands, feet and head; combos).
+  Window Wipe frosts the camera picture. Remote admin, Kids Portal, Camera
+  games show: Live camera (default) or Neon body.
 - **2026.12.26 (neon body):** in the camera games the child is drawn as a
   body of neon sparks whose colours flow through it (the owner's pick from
   mockups), standing where the child stands, the hands reaching the game's

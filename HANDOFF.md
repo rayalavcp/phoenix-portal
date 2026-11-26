@@ -273,6 +273,20 @@ Math, Wall Dodge, Air Trace, Freeze Dance), **Create**.
   pushed along at its edges). The head tracker passes the last face to
   `FaceDetector.detect` so a nearby face wins over a bigger one. GameVision
   always tracks two hands (needed to choose the player) at 640 px.
+- **Live camera view (2026.12.27, the default):** `phx.kids.view` 'live' |
+  'neon' → `MotionManager.gameLiveView`. `CameraMotion.kt` binds a CameraX
+  `Preview` into a Flutter texture (`TextureRegistry.createSurfaceTexture`,
+  passed from `MainActivity`) beside the analysis when the game key has 'l',
+  and reports `{live: id, w, h, turn, front, mirrored}`; the texture already
+  has the SurfaceTexture matrix (sensor turn and front mirror when the camera
+  transform is on), Dart turns the rest (`LiveCameraView` in spark_body.dart).
+  If the bind is refused it reports `live: -1` and the preview JPEG frames
+  stand in. Cursors in live mode are the real hand places through the same
+  cover fit (`KidsHands.liveMap`), not the reach box; `liveBodies` gives
+  every point (feet, head) for Critter Bop and Target Strike
+  (kids_motion2.dart). Not yet seen on a Portal: whether its camera binds
+  Preview + ImageAnalysis together at 1280×960 (the log says "game live
+  picture: ..." or "live picture rejected").
 - **APK size:** 2026.12.25 is about 106 MB (the pose model added 5.8 MB; the
   Rubik font was cut to the scripts Phoenix shows: Latin, Greek, Cyrillic,
   Devanagari, Telugu and symbols). Over 100 MiB, `publish_release.sh` uploads it

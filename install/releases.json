@@ -1,16 +1,16 @@
 [
   {
-    "tag_name": "v2026.12.26",
-    "name": "Phoenix Portal 2026.12.26",
+    "tag_name": "v2026.12.27",
+    "name": "Phoenix Portal 2026.12.27",
     "draft": false,
     "prerelease": false,
-    "body": "Camera games show the child as a body of neon sparks with flowing colours, the hands as the bubble cursors; a corner shows the camera picture, dimmed, with the tracked body.",
-    "html_url": "https://github.com/rayalavcp/phoenix-portal/releases/tag/v2026.12.26",
+    "body": "Camera games show the live camera picture, like a mirror, with glowing rings on the children's hands. New: Critter Bop and Target Strike (hands, feet and head). Remote admin: Camera games show Live camera or Neon body.",
+    "html_url": "https://github.com/rayalavcp/phoenix-portal/releases/tag/v2026.12.27",
     "assets": [
       {
-        "name": "kiosk-satellite-2026.12.26.armeabi-v7a.apk",
-        "browser_download_url": "https://github.com/rayalavcp/phoenix-portal/releases/download/v2026.12.26/kiosk-satellite-2026.12.26.armeabi-v7a.apk",
-        "size": 105782252,
+        "name": "kiosk-satellite-2026.12.27.armeabi-v7a.apk",
+        "browser_download_url": "https://github.com/rayalavcp/phoenix-portal/releases/download/v2026.12.27/kiosk-satellite-2026.12.27.armeabi-v7a.apk",
+        "size": 105848088,
         "state": "uploaded"
       }
     ]

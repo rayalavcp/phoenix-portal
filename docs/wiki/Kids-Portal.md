@@ -13,7 +13,7 @@ A calm game hub for children, offline and ad-free. Open it from the dock or the 
 | **Puzzles** | Sudoku, Maze, Word Search, Word Guess, Memory Pro, 2048, Lights Out |
 | **Play** | Snake, Whack-a-Mole, Simon Says, Tic-Tac-Toe, Connect Four, Star Swipe (swipe through the stars, miss the storm clouds), Stack Up (drop each block to build a tower) |
 | **Arcade** | Munch Maze, Brick Bash, Hop Across, Sky Glide, Fox Run |
-| **Move** | Camera games: Space Blaster, Bubble Pop, Fruit Catcher, Finger Math, Wall Dodge, Air Trace, Freeze Dance, Goalie (save the shots), Window Wipe (wipe the frost off a window), Pose Match, Simon Poses, Pop Duel (two players) |
+| **Move** | Camera games: Critter Bop, Target Strike, Space Blaster, Bubble Pop, Fruit Catcher, Finger Math, Wall Dodge, Air Trace, Freeze Dance, Goalie (save the shots), Window Wipe (wipe the frost off a window), Pose Match, Simon Poses, Pop Duel (two players) |
 | **Create** | Draw Studio, Pixel Paint, Piano |
 
 Puzzles, mazes and brick walls are new every round. Quizzes have levels with stars and **Next
@@ -68,7 +68,12 @@ the screen, a hand above your head the top. Finger Math still looks at the hands
 to the Portal. To go back to the older hand-only tracking: remote admin › **Phoenix** › Kids
 Portal › **Camera games follow** › Hand only.
 
-On screen the child is a **body of neon sparks** whose colours flow through it, standing where
+By default the camera games show the **live camera picture**, mirrored, filling the screen: the
+children see themselves with the game around them, and glowing pink and blue rings follow their
+hands. **Critter Bop** and **Target Strike** use feet and the head too. The picture stays on the
+Portal. Remote admin › **Phoenix** › Kids Portal › **Camera games show** switches to the neon body.
+
+With the neon body the child is a **body of neon sparks** whose colours flow through it, standing where
 they stand; the hands are the pink and blue bubbles that pop and catch. The bottom-right corner
 shows what the camera sees, dimmed, with the body it follows drawn over it, so you can tell at a
 glance whether you are in view.

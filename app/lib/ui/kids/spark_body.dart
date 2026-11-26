@@ -476,3 +476,103 @@ class _TrackingPainter extends CustomPainter {
   @override
   bool shouldRepaint(_TrackingPainter old) => !identical(old.poses, poses);
 }
+
+/// The live camera picture filling the play area, mirrored, as a camera
+/// game's background: the camera's own preview stream when it comes (a
+/// texture, smooth), otherwise its preview frames (about ten a second).
+class LiveCameraView extends StatefulWidget {
+  const LiveCameraView({super.key, required this.motion});
+  final MotionManager motion;
+
+  @override
+  State<LiveCameraView> createState() => _LiveCameraViewState();
+}
+
+class _LiveCameraViewState extends State<LiveCameraView> {
+  ui.Image? _image;
+  int _rotation = 0;
+  bool _mirror = false, _decoding = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.motion.liveCamera.addListener(_changed);
+    widget.motion.gamePreview.addListener(_frame);
+  }
+
+  @override
+  void dispose() {
+    widget.motion.liveCamera.removeListener(_changed);
+    widget.motion.gamePreview.removeListener(_frame);
+    _image?.dispose();
+    super.dispose();
+  }
+
+  void _changed() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _frame() async {
+    final f = widget.motion.gamePreview.value;
+    if (f == null || _decoding || (widget.motion.liveCamera.value?.ok ?? false)) return;
+    _decoding = true;
+    try {
+      final codec = await ui.instantiateImageCodec(f.jpeg);
+      final image = (await codec.getNextFrame()).image;
+      codec.dispose();
+      if (!mounted) {
+        image.dispose();
+        return;
+      }
+      final old = _image;
+      setState(() {
+        _image = image;
+        _rotation = f.rotation;
+        _mirror = f.mirror;
+      });
+      old?.dispose();
+    } catch (_) {
+    } finally {
+      _decoding = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final live = widget.motion.liveCamera.value;
+    Widget picture;
+    if (live != null && live.ok) {
+      final turned = live.turn % 180 != 0;
+      final w = turned ? live.size.height : live.size.width;
+      final h = turned ? live.size.width : live.size.height;
+      picture = SizedBox(
+        width: w,
+        height: h,
+        child: Transform.flip(
+          // A mirror: flip a front camera the texture has not flipped.
+          flipX: live.front && !live.mirrored,
+          child: RotatedBox(
+            quarterTurns: (live.turn ~/ 90) % 4,
+            child: SizedBox(width: live.size.width, height: live.size.height, child: Texture(textureId: live.id)),
+          ),
+        ),
+      );
+    } else if (_image case final image?) {
+      final turned = _rotation % 180 != 0;
+      picture = SizedBox(
+        width: (turned ? image.height : image.width).toDouble(),
+        height: (turned ? image.width : image.height).toDouble(),
+        child: Transform.flip(
+          flipX: _mirror,
+          child: RotatedBox(quarterTurns: (_rotation ~/ 90) % 4, child: RawImage(image: image, filterQuality: FilterQuality.low)),
+        ),
+      );
+    } else {
+      return const ColoredBox(
+        color: Color(0xFF0B1020),
+        child: Center(child: CircularProgressIndicator(color: Colors.white38)),
+      );
+    }
+    return ClipRect(child: FittedBox(fit: BoxFit.cover, child: picture));
+  }
+}

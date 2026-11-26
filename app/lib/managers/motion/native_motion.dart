@@ -66,6 +66,7 @@ class NativeMotion {
     bool gameHands = false,
     bool gameBody = false,
     bool gamePose = false,
+    bool gameLive = false,
     bool remoteFaces = false,
     bool remoteHands = false,
     bool enroll = false,
@@ -105,7 +106,7 @@ class NativeMotion {
           'heads': heads,
           // A Kids Portal game is open: its hands (up to two, with their
           // points) and its body outline, on every frame (GameVision.kt).
-          'game': {'hands': gameHands, 'body': gameBody, 'pose': gamePose},
+          'game': {'hands': gameHands, 'body': gameBody, 'pose': gamePose, 'live': gameLive},
           // Vision Match: the face looks, the hand looks or both go to
           // Ground Control. The native side hands each due frame over as a
           // vision tick instead of running its own models for them.
@@ -152,7 +153,12 @@ class NativeMotionTick {
     this.body,
     this.vision,
     this.gamePoses,
+    this.live,
   });
+
+  /// A camera game's live picture is ready (or, id -1, refused).
+  final LiveCamera? live;
+  bool get isLive => live != null;
 
   /// A game's people, as the child sees them (an empty list: nobody).
   final List<BodyPose>? gamePoses;
@@ -204,6 +210,9 @@ class NativeMotionTick {
   /// original null events.
   static NativeMotionTick fromNative(Object? raw) {
     if (raw is Map) {
+      if (raw['live'] is num) {
+        return NativeMotionTick._(null, null, null, live: LiveCamera.fromNative(raw));
+      }
       final gposes = raw['gposes'];
       if (gposes is List) {
         return NativeMotionTick._(null, null, null, gamePoses: [
@@ -393,6 +402,28 @@ class GameHand {
   final double aspect;
 
   Offset point(int i) => Offset(points[i * 2], points[i * 2 + 1]);
+}
+
+/// The live camera picture of a camera game: a Flutter texture, its size
+/// as the camera delivers it, the quarter turns still needed to stand it
+/// upright, and whether it already comes mirrored. [id] -1: refused.
+class LiveCamera {
+  const LiveCamera(this.id, this.size, this.turn, this.front, this.mirrored);
+
+  factory LiveCamera.fromNative(Map<Object?, Object?> raw) => LiveCamera(
+    (raw['live']! as num).toInt(),
+    Size(((raw['w'] as num?) ?? 640).toDouble(), ((raw['h'] as num?) ?? 480).toDouble()),
+    ((raw['turn'] as num?) ?? 0).toInt(),
+    raw['front'] == true,
+    raw['mirrored'] == true,
+  );
+
+  final int id;
+  final Size size;
+  final int turn;
+  final bool front, mirrored;
+
+  bool get ok => id >= 0;
 }
 
 /// One person's body as a game sees it (MediaPipe's 33 pose points): x

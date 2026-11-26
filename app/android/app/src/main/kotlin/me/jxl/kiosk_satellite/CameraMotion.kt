@@ -92,6 +92,8 @@ class CameraMotion(
     private val context: Context,
     messenger: BinaryMessenger,
     private val deviceCamera: DeviceCamera? = null,
+    /** Where a camera game's live picture is drawn (a Flutter texture). */
+    private val textures: io.flutter.view.TextureRegistry? = null,
 ) : EventChannel.StreamHandler {
     companion object {
         /** How often the head games look for the face: ~10 a second. */
@@ -523,6 +525,20 @@ class CameraMotion(
     @Volatile private var gameHands = false
     @Volatile private var gameBody = false
     @Volatile private var gamePose = false
+
+    /** A camera game shows the live camera picture: a Preview use case into
+     *  a Flutter texture, bound beside the analysis. */
+    @Volatile private var gameLive = false
+    private var liveEntry: io.flutter.view.TextureRegistry.SurfaceTextureEntry? = null
+    private var liveSurface: Surface? = null
+
+    /** Frees the live picture's texture (main thread). */
+    private fun releaseLive() {
+        try { liveSurface?.release() } catch (_: Exception) {}
+        liveSurface = null
+        try { liveEntry?.release() } catch (_: Exception) {}
+        liveEntry = null
+    }
     private var gameVision: GameVision? = null
     private val gameMode get() = gameHands || gameBody || gamePose || headsWanted
     private var lastHeadNs = 0L
@@ -987,6 +1003,8 @@ class CameraMotion(
             gameHands = allowAnalysis && game?.get("hands") == true
             gameBody = allowAnalysis && game?.get("body") == true
             gamePose = allowAnalysis && game?.get("pose") == true
+            gameLive = allowAnalysis && game?.get("live") == true
+            if (!gameLive) mainHandler.post { releaseLive() }
             if (!gameHands && !gameBody && !gamePose) {
                 gameVision?.close()
                 gameVision = null
@@ -1405,6 +1423,52 @@ class CameraMotion(
                     }
             }
 
+            // A camera game's live picture: the camera's own preview stream
+            // into a Flutter texture (smooth, no copying through Dart). Not
+            // beside an RTSP or intercom stream, which own the preview.
+            val livePreview = if (gameLive && videoPreview == null && textures != null) {
+                try {
+                    androidx.camera.core.Preview.Builder()
+                        .setTargetRotation(currentDisplayRotation())
+                        .setResolutionSelector(videoResolutionSelector(Size(1280, 960)))
+                        .build().also { preview ->
+                            val executor = ContextCompat.getMainExecutor(context)
+                            preview.setSurfaceProvider(executor) { request ->
+                                if (session != mySession || !gameLive) { request.willNotProvideSurface(); return@setSurfaceProvider }
+                                val entry = liveEntry ?: textures.createSurfaceTexture().also { liveEntry = it }
+                                val texture = entry.surfaceTexture()
+                                texture.setDefaultBufferSize(request.resolution.width, request.resolution.height)
+                                try { liveSurface?.release() } catch (_: Exception) {}
+                                val surface = Surface(texture).also { liveSurface = it }
+                                request.provideSurface(surface, executor) { }
+                                request.setTransformationInfoListener(executor) { info ->
+                                    // The texture shows the picture with the
+                                    // SurfaceTexture's matrix applied, which
+                                    // (with a camera transform) already turns
+                                    // it by the sensor and mirrors a front
+                                    // camera: Dart turns it the rest of the way.
+                                    val front = cameraInfo.lensFacing == CameraSelector.LENS_FACING_FRONT
+                                    val turn = Math.floorMod(info.rotationDegrees -
+                                        if (info.hasCameraTransform()) cameraInfo.sensorRotationDegrees else 0, 360)
+                                    val event = mapOf(
+                                        "live" to entry.id(),
+                                        "w" to request.resolution.width,
+                                        "h" to request.resolution.height,
+                                        "turn" to turn,
+                                        "front" to front,
+                                        "mirrored" to (info.hasCameraTransform() && front),
+                                    )
+                                    Log.i(TAG, "game live picture: $event")
+                                    activeSink?.success(event)
+                                }
+                            }
+                        }
+                } catch (e: Exception) {
+                    Log.w(TAG, "no live picture: $e")
+                    null
+                }
+            } else null
+
             val owner = CameraLifecycle().also { lifecycle = it }
             // Pre-bound so a snapshot never reconfigures this session (an
             // AE resettle would read as motion and wake the screensaver).
@@ -1425,6 +1489,17 @@ class CameraMotion(
                         CameraDiagnostics.record(diagnosticId, "bind failure", "camera=$cameraId, fallback=$captureLevel", true, e)
                         if (retryRtsp(facing, sink, e.message ?: "capture binding failed")) return@addListener
                         throw e
+                    }
+                } else if (livePreview != null) {
+                    try {
+                        cameraProvider.bindToLifecycle(owner, selector, livePreview, imageAnalysis)
+                    } catch (e: Exception) {
+                        // The camera cannot show a preview beside the
+                        // analysis: the game falls back to preview frames.
+                        Log.w(TAG, "live picture rejected: ${e.message}")
+                        activeSink?.success(mapOf("live" to -1))
+                        cameraProvider.unbindAll()
+                        cameraProvider.bindToLifecycle(owner, selector, imageAnalysis)
                     }
                 } else if (imageCapture != null) {
                     try {

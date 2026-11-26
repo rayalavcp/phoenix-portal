@@ -11,6 +11,7 @@ import 'kids_arcade2.dart' show arcadeHud;
 import 'kids_games.dart';
 import 'kids_logic.dart' show KidsScores;
 import 'kids_motion.dart';
+import 'spark_body.dart' show ShownBody;
 import 'kids_dj.dart';
 import 'kids_play.dart' show KidsTones;
 
@@ -1287,7 +1288,10 @@ class _WipePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    _scene(canvas, size, g.scene);
+    // Over the live camera picture, the frost covers the child themself:
+    // wiping it shows them. Otherwise a painted view outside.
+    final live = (g.hands?.live ?? false) && (g.hands?.camera ?? false);
+    if (!live) _scene(canvas, size, g.scene);
     // The frost over it, cell by cell, soft at the edges.
     final f = g.frost;
     final cw = size.width / f.cols, ch = size.height / f.rows;
@@ -1882,4 +1886,433 @@ class _DuelPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DuelPainter old) => true;
+}
+
+// ── Shared: body parts in the play area ────────────────────────────────────
+
+/// Where the player's [parts] are in the play area (fractions), from the
+/// live picture's bodies; empty without them (neon body, touch).
+List<Offset> bodyParts(KidsHands? hands, List<int> parts) {
+  final bodies = hands?.liveBodies.value ?? const [];
+  return [
+    for (final b in bodies)
+      for (final i in parts)
+        if (b.seen[i] >= 0.4) b[i],
+  ];
+}
+
+/// Whether any of [points] is within [r] (a fraction of the shorter side)
+/// of [c], on a play area of [size].
+bool touches(List<Offset> points, Offset c, double r, Size size) {
+  final short = math.min(size.width, size.height);
+  for (final p in points) {
+    final d = Offset((p.dx - c.dx) * size.width, (p.dy - c.dy) * size.height).distance;
+    if (d <= r * short) return true;
+  }
+  return false;
+}
+
+// ── Critter Bop ───────────────────────────────────────────────────────────
+
+/// One critter in a hole: it rises, waits, and hides again unless bopped.
+class BopCritter {
+  BopCritter(this.hole, this.stay, this.hue, {this.golden = false});
+  final int hole;
+  final double stay, hue;
+  final bool golden;
+  double t = 0, bopped = -1;
+  bool missed = false;
+
+  /// How far up it is, 0 (in the hole) to 1.
+  double get up {
+    if (bopped >= 0) return math.max(0, 1 - bopped * 3);
+    if (t < 0.25) return t / 0.25;
+    if (t > stay - 0.25) return math.max(0, (stay - t) / 0.25);
+    return 1;
+  }
+
+  bool get done => (bopped >= 0 && bopped > 0.6) || t >= stay;
+}
+
+/// Critters pop out of the holes along the bottom: bop them with a hand
+/// (or a foot) before they hide. A golden one is worth three.
+class CritterBop extends StatefulWidget {
+  const CritterBop({super.key, required this.container, required this.onBack});
+  final AppContainer container;
+  final VoidCallback onBack;
+
+  @override
+  State<CritterBop> createState() => _CritterBopState();
+}
+
+class _CritterBopState extends _MoveGame<CritterBop> {
+  static const holes = [0.12, 0.31, 0.5, 0.69, 0.88];
+  static const holeY = 0.87;
+  final _rng = math.Random();
+  final critters = <BopCritter>[];
+  final pops = <(Offset, String, double)>[]; // where, text, age
+  double _next = 0, left = 90;
+
+  @override
+  void initState() {
+    super.initState();
+    steer = 1;
+  }
+
+  @override
+  bool get twoHands => true;
+  @override
+  bool get amplify => false;
+  @override
+  AppContainer get container => widget.container;
+  @override
+  VoidCallback get onBack => widget.onBack;
+  @override
+  String get scoreKey => 'bop${level + 1}';
+  @override
+  int starsFor(int s) => s >= 400 ? 3 : (s >= 200 ? 2 : (s >= 80 ? 1 : 0));
+
+  Offset head(BopCritter c) => Offset(holes[c.hole], holeY - 0.1 * c.up);
+
+  @override
+  void reset() {
+    critters.clear();
+    pops.clear();
+    _next = 1.0;
+    left = 90;
+  }
+
+  @override
+  void step(double dt) {
+    left -= dt;
+    if (left <= 0) {
+      unawaited(finish());
+      return;
+    }
+    final pace = math.min(0.5, time / 120);
+    _next -= dt;
+    if (_next <= 0 && critters.length < (level + 2)) {
+      final free = [for (var i = 0; i < holes.length; i++) if (!critters.any((c) => c.hole == i)) i];
+      if (free.isNotEmpty) {
+        critters.add(BopCritter(free[_rng.nextInt(free.length)], const [2.4, 1.9, 1.5][level] * (1 - pace * 0.5),
+            const [250.0, 45.0, 140.0, 200.0, 320.0][_rng.nextInt(5)], golden: _rng.nextDouble() < 0.1));
+      }
+      _next = const [1.1, 0.85, 0.65][level] * (1 - pace);
+    }
+    final hitters = [...?hands?.points.value, ...bodyParts(hands, const [27, 28, 31, 32])];
+    for (final c in critters) {
+      if (c.bopped >= 0) {
+        c.bopped += dt;
+        continue;
+      }
+      c.t += dt;
+      if (c.up > 0.5 && size != Size.zero && touches(hitters, head(c), 0.09, size)) {
+        c.bopped = 0;
+        final points = c.golden ? 30 : 10;
+        score += points;
+        pops.add((head(c) - const Offset(0, 0.12), '+$points', 0));
+      } else if (c.t >= c.stay && !c.missed) {
+        c.missed = true;
+        if (!loseLife()) return;
+      }
+    }
+    critters.removeWhere((c) => c.done);
+    for (var i = 0; i < pops.length; i++) {
+      pops[i] = (pops[i].$1, pops[i].$2, pops[i].$3 + dt);
+    }
+    pops.removeWhere((p) => p.$3 > 0.8);
+  }
+
+  @override
+  Widget build(BuildContext context) => moveFrame(
+    title: 'Critter Bop',
+    colors: const [Color(0xFF3B2A6B), Color(0xFF2FB8A8)],
+    hud: '${left.ceil()}s',
+    icon: Icons.pets_rounded,
+    pitch: 'Critters pop out of the holes! Bop them with your hands (or a foot) before they hide. Golden ones are worth 30.',
+    options: kidsLevelChips(const ['Easy', 'Medium', 'Hard'], level, (i) => setState(() => level = i)),
+    overDetail: 'Score $score',
+    painter: _BopPainter(this),
+  );
+}
+
+class _BopPainter extends CustomPainter {
+  _BopPainter(this.g);
+  final _CritterBopState g;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final short = math.min(size.width, size.height);
+    Offset at(Offset f) => Offset(f.dx * size.width, f.dy * size.height);
+    final ground = Rect.fromLTWH(0, size.height * (_CritterBopState.holeY - 0.03), size.width, size.height);
+    canvas.drawRect(ground, Paint()..color = const Color(0xCC4A2C1E));
+    final holeW = short * 0.2, holeH = short * 0.07;
+    for (final x in _CritterBopState.holes) {
+      final c = at(Offset(x, _CritterBopState.holeY));
+      final rect = Rect.fromCenter(center: c, width: holeW, height: holeH);
+      canvas.drawOval(rect, Paint()..color = const Color(0xFF1A0C08));
+      canvas.drawOval(rect, Paint()..style = PaintingStyle.stroke..strokeWidth = 5..color = const Color(0xFFFF9F40));
+    }
+    for (final c in g.critters) {
+      final r = short * 0.075;
+      final center = at(g.head(c));
+      canvas.save();
+      // Only the part above the hole's front edge shows.
+      final hole = at(Offset(_CritterBopState.holes[c.hole], _CritterBopState.holeY));
+      canvas.clipRect(Rect.fromLTRB(0, 0, size.width, hole.dy));
+      final body = c.golden ? const Color(0xFFFFD23F) : HSVColor.fromAHSV(1, c.hue, 0.5, 1).toColor();
+      final ink = const Color(0xFF1E143C);
+      for (final s in const [-1.0, 1.0]) {
+        canvas.drawCircle(center + Offset(s * r * 0.55, -r * 0.92), r * 0.24, Paint()..color = body);
+        canvas.drawCircle(center + Offset(s * r * 0.55, -r * 0.92), r * 0.24, Paint()..style = PaintingStyle.stroke..strokeWidth = 4..color = ink);
+      }
+      canvas.drawOval(Rect.fromCenter(center: center, width: r * 2, height: r * 2.05), Paint()..color = body);
+      canvas.drawOval(Rect.fromCenter(center: center, width: r * 2, height: r * 2.05), Paint()..style = PaintingStyle.stroke..strokeWidth = 4..color = ink);
+      final eye = Paint()..color = ink..strokeWidth = 5..strokeCap = StrokeCap.round;
+      for (final s in const [-1.0, 1.0]) {
+        final e = center + Offset(s * r * 0.35, -r * 0.1);
+        if (c.bopped >= 0) {
+          canvas.drawLine(e - Offset(r * 0.12, r * 0.12), e + Offset(r * 0.12, r * 0.12), eye);
+          canvas.drawLine(e - Offset(r * 0.12, -r * 0.12), e + Offset(r * 0.12, -r * 0.12), eye);
+        } else {
+          canvas.drawCircle(e, r * 0.12, Paint()..color = ink);
+        }
+        canvas.drawCircle(center + Offset(s * r * 0.62, r * 0.22), r * 0.12, Paint()..color = const Color(0xFFFF96B4));
+      }
+      canvas.drawArc(Rect.fromCenter(center: center + Offset(0, r * 0.22), width: r * 0.6, height: r * 0.45), 0.2, math.pi - 0.4, false,
+          Paint()..style = PaintingStyle.stroke..strokeWidth = 4..color = ink);
+      canvas.restore();
+      if (c.bopped >= 0) {
+        final k = (c.bopped / 0.6).clamp(0.0, 1.0);
+        final burst = Paint()..color = const Color(0xFF96E6FF).withValues(alpha: 1 - k)..strokeWidth = 7..strokeCap = StrokeCap.round;
+        for (var i = 0; i < 12; i++) {
+          final a = i * math.pi / 6;
+          final d = Offset(math.cos(a), math.sin(a));
+          canvas.drawLine(center + d * r * (1.1 + k), center + d * r * (1.7 + k), burst);
+        }
+      }
+    }
+    for (final (p, text, age) in g.pops) {
+      _say(canvas, text, at(p) - Offset(0, age * 60), short * 0.08, Colors.white.withValues(alpha: (1 - age / 0.8).clamp(0.0, 1.0)));
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BopPainter old) => true;
+}
+
+// ── Target Strike ─────────────────────────────────────────────────────────
+
+/// What a target wants: a hand, a foot or the head.
+enum StrikeKind { hand, foot, head }
+
+class StrikeTarget {
+  StrikeTarget(this.at, this.kind, this.life);
+  final Offset at;
+  final StrikeKind kind;
+  final double life;
+  double t = 0, hit = -1;
+}
+
+/// Where a target for [kind] goes around a player whose shoulders are at
+/// [centre] and [width] wide (fractions of the play area; [aspect] its
+/// height over width), so it is within reach. [r1], [r2] in 0..1 pick the
+/// spot.
+Offset strikeSpot(StrikeKind kind, Offset centre, double width, double aspect, double r1, double r2, {Offset? feet}) {
+  final across = width; // shoulder width, as a fraction of the area's width
+  final down = width / aspect; // the same length, as a fraction of its height
+  final out = switch (kind) {
+    // Round the upper body, arm's length away.
+    StrikeKind.hand => () {
+      final a = math.pi * (1.05 + r1 * 0.9); // from the left, over the top, to the right
+      final reach = 1.4 + r2 * 0.6;
+      return centre + Offset(math.cos(a) * across * reach, math.sin(a) * down * reach * 0.9);
+    }(),
+    // Low, either side of the feet.
+    StrikeKind.foot => Offset(centre.dx + (r1 < 0.5 ? -1 : 1) * across * (0.6 + r2 * 0.6), (feet?.dy ?? centre.dy + down * 3.2) - down * 0.15),
+    // Lean to put your head in it.
+    StrikeKind.head => centre + Offset((r1 < 0.5 ? -1 : 1) * across * (0.6 + r2 * 0.4), -down * 1.3),
+  };
+  return Offset(out.dx.clamp(0.07, 0.93), out.dy.clamp(0.08, 0.92));
+}
+
+/// Glowing targets appear around you: hit each with what its colour asks
+/// (pink or blue: a hand, gold: a foot, green: your head). Hits in a row
+/// build a combo that multiplies the points.
+class TargetStrike extends StatefulWidget {
+  const TargetStrike({super.key, required this.container, required this.onBack});
+  final AppContainer container;
+  final VoidCallback onBack;
+
+  @override
+  State<TargetStrike> createState() => _TargetStrikeState();
+}
+
+class _TargetStrikeState extends _MoveGame<TargetStrike> {
+  final _rng = math.Random();
+  final targets = <StrikeTarget>[];
+  double left = 60, _next = 0, comboFlash = 0;
+  int combo = 0, best = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    steer = 1;
+  }
+
+  @override
+  bool get twoHands => true;
+  @override
+  bool get amplify => false;
+  @override
+  AppContainer get container => widget.container;
+  @override
+  VoidCallback get onBack => widget.onBack;
+  @override
+  String get scoreKey => 'strike${level + 1}';
+  @override
+  int starsFor(int s) => s >= 800 ? 3 : (s >= 400 ? 2 : (s >= 150 ? 1 : 0));
+
+  @override
+  void reset() {
+    targets.clear();
+    left = 60;
+    combo = 0;
+    best = 0;
+    _next = 0.8;
+  }
+
+  ShownBody? get _player {
+    final b = hands?.liveBodies.value ?? const [];
+    return b.isEmpty ? null : b.first;
+  }
+
+  void _spawn() {
+    final p = _player;
+    final aspect = size == Size.zero ? 0.6 : size.height / size.width;
+    StrikeKind kind = StrikeKind.hand;
+    Offset centre = const Offset(0.5, 0.42);
+    double width = 0.12;
+    Offset? feet;
+    if (p != null) {
+      centre = Offset.lerp(p[11], p[12], 0.5)!;
+      width = (p[11] - p[12]).distance.clamp(0.05, 0.3);
+      final ankles = [for (final i in const [27, 28]) if (p.seen[i] >= 0.4) p[i]];
+      if (ankles.isNotEmpty) feet = ankles.reduce((Offset a, Offset b) => a.dy > b.dy ? a : b);
+      final roll = _rng.nextDouble();
+      // Feet and head targets only when the camera sees them.
+      if (roll < 0.22 && feet != null) {
+        kind = StrikeKind.foot;
+      } else if (roll < 0.36 && p.seen[0] >= 0.4) {
+        kind = StrikeKind.head;
+      }
+    }
+    final spot = strikeSpot(kind, centre, width, aspect, _rng.nextDouble(), _rng.nextDouble(), feet: feet);
+    targets.add(StrikeTarget(spot, kind, const [3.0, 2.4, 1.9][level] * (1 - math.min(0.35, time / 150))));
+  }
+
+  @override
+  void step(double dt) {
+    left -= dt;
+    comboFlash = math.max(0, comboFlash - dt);
+    if (left <= 0) {
+      unawaited(finish());
+      return;
+    }
+    _next -= dt;
+    final live = targets.where((t) => t.hit < 0).length;
+    if (_next <= 0 && live < (level == 0 ? 1 : 2)) {
+      _spawn();
+      _next = const [0.9, 0.7, 0.5][level];
+    }
+    final handsNow = hands?.points.value ?? const <Offset>[];
+    final feet = bodyParts(hands, const [27, 28, 31, 32]);
+    final heads = bodyParts(hands, const [0]);
+    for (final t in targets) {
+      if (t.hit >= 0) {
+        t.hit += dt;
+        continue;
+      }
+      t.t += dt;
+      final by = switch (t.kind) { StrikeKind.hand => handsNow, StrikeKind.foot => feet, StrikeKind.head => heads };
+      if (size != Size.zero && touches(by, t.at, 0.085, size)) {
+        t.hit = 0;
+        combo++;
+        best = math.max(best, combo);
+        score += 10 * (1 + combo ~/ 5);
+        if (combo % 5 == 0) comboFlash = 1;
+      } else if (t.t >= t.life) {
+        t.hit = 99; // gone
+        combo = 0;
+      }
+    }
+    targets.removeWhere((t) => t.hit > 0.5);
+  }
+
+  @override
+  Widget build(BuildContext context) => moveFrame(
+    title: 'Target Strike',
+    colors: const [Color(0xFF1A1340), Color(0xFFFF4D9A)],
+    hud: '${left.ceil()}s',
+    icon: Icons.track_changes_rounded,
+    pitch: 'Targets light up around you. Hit pink and blue ones with your hands, gold with a foot, green with your head. Keep the combo going!',
+    options: kidsLevelChips(const ['Easy', 'Medium', 'Hard'], level, (i) => setState(() => level = i)),
+    overDetail: 'Score $score · best combo $best',
+    painter: _StrikePainter(this),
+  );
+}
+
+class _StrikePainter extends CustomPainter {
+  _StrikePainter(this.g);
+  final _TargetStrikeState g;
+
+  static Color colour(StrikeKind k, Offset at) => switch (k) {
+    StrikeKind.hand => at.dx < 0.5 ? const Color(0xFFFF4DC4) : const Color(0xFF46DCFF),
+    StrikeKind.foot => const Color(0xFFFFD246),
+    StrikeKind.head => const Color(0xFF8CFF78),
+  };
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final short = math.min(size.width, size.height);
+    for (final t in g.targets) {
+      final c = Offset(t.at.dx * size.width, t.at.dy * size.height);
+      final col = colour(t.kind, t.at);
+      final r = short * 0.06;
+      if (t.hit >= 0) {
+        final k = (t.hit / 0.5).clamp(0.0, 1.0);
+        final burst = Paint()..color = Colors.white.withValues(alpha: 1 - k)..strokeWidth = 6..strokeCap = StrokeCap.round;
+        for (var i = 0; i < 10; i++) {
+          final d = Offset(math.cos(i * math.pi / 5), math.sin(i * math.pi / 5));
+          canvas.drawLine(c + d * r * (0.8 + k * 1.5), c + d * r * (1.6 + k * 1.5), burst);
+        }
+        continue;
+      }
+      final pulse = 1 + 0.06 * math.sin(g.time * 8);
+      final life = 1 - (t.t / t.life).clamp(0.0, 1.0);
+      final glow = Paint()..color = col.withValues(alpha: 0.5)..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.5);
+      final diamond = Path()
+        ..moveTo(c.dx, c.dy - r * pulse)
+        ..lineTo(c.dx + r * pulse, c.dy)
+        ..lineTo(c.dx, c.dy + r * pulse)
+        ..lineTo(c.dx - r * pulse, c.dy)
+        ..close();
+      canvas.drawPath(diamond, glow);
+      canvas.drawPath(diamond, Paint()..style = PaintingStyle.stroke..strokeWidth = 6..color = col);
+      canvas.drawCircle(c, r * 0.32, Paint()..color = col);
+      // Time left: a ring that shrinks.
+      canvas.drawArc(Rect.fromCircle(center: c, radius: r * 1.5), -math.pi / 2, 2 * math.pi * life, false,
+          Paint()..style = PaintingStyle.stroke..strokeWidth = 3..color = col.withValues(alpha: 0.6));
+      final label = switch (t.kind) { StrikeKind.hand => '', StrikeKind.foot => 'FOOT', StrikeKind.head => 'HEAD' };
+      if (label.isNotEmpty) _say(canvas, label, c + Offset(0, r * 2.1), short * 0.04, col);
+    }
+    if (g.combo >= 2) {
+      final pop = 1 + g.comboFlash * 0.3;
+      _say(canvas, '${g.combo}', Offset(size.width / 2, size.height * 0.8), short * 0.13 * pop, Colors.white);
+      _say(canvas, 'COMBO', Offset(size.width / 2, size.height * 0.9), short * 0.05, Colors.white);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_StrikePainter old) => true;
 }

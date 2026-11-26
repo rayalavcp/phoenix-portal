@@ -1101,6 +1101,7 @@ class MotionManager extends Manager {
             gameHands: game?.contains('h') ?? false,
             gameBody: game?.contains('b') ?? false,
             gamePose: game?.contains('p') ?? false,
+            gameLive: game?.contains('l') ?? false,
             remoteFaces: remoteFaces,
             enroll: _streamEnroll,
             remoteHands: remoteHands,
@@ -1155,6 +1156,10 @@ class MotionManager extends Manager {
               }
               // Hands are not a lighting change either. A count of 0 is the
               // hand gone, which the gestures manager needs to re-arm.
+              if (tick.isLive) {
+                liveCamera.value = tick.live;
+                return;
+              }
               if (tick.isGamePoses) {
                 gamePoses.value = tick.gamePoses!;
                 return;
@@ -1655,18 +1660,26 @@ class MotionManager extends Manager {
   /// with their points, and/or its body outline, on every frame the
   /// camera delivers, while the game is open. Behind the camera switch
   /// and the screen being on, like the head leg.
-  bool _gameHandsOn = false, _gameBodyOn = false, _gamePoseOn = false;
+  bool _gameHandsOn = false, _gameBodyOn = false, _gamePoseOn = false, _gameLiveOn = false;
   String? _streamGame;
   bool get _wantGame => _wantGameKey != null;
   String? get _wantGameKey {
     if (!_settings.get(defs.cameraEnabled) || !_screenOn) return null;
-    final h = _gameHandsOn && _vision.hands, b = _gameBodyOn, p = _gamePoseOn;
-    final key = '${h ? 'h' : ''}${b ? 'b' : ''}${p ? 'p' : ''}';
+    final h = _gameHandsOn && _vision.hands, b = _gameBodyOn, p = _gamePoseOn, l = _gameLiveOn;
+    final key = '${h ? 'h' : ''}${b ? 'b' : ''}${p ? 'p' : ''}${l && (h || p) ? 'l' : ''}';
     return key.isEmpty ? null : key;
   }
 
   /// The game's hands (empty when none is in view).
   final gameHands = ValueNotifier<List<GameHand>>(const []);
+
+  /// A camera game's live picture (null until the camera hands one over;
+  /// [LiveCamera.ok] false when the camera refused it).
+  final liveCamera = ValueNotifier<LiveCamera?>(null);
+
+  /// Camera games show the live camera picture (the child sees themself)
+  /// rather than the neon body. Set from the Kids Portal settings.
+  bool gameLiveView = true;
 
   /// What the camera sees while a camera game is open (the corner
   /// preview), null otherwise. Frames are about ten a second at most.
@@ -1706,20 +1719,24 @@ class MotionManager extends Manager {
 
   /// [pose]: follow people's bodies (MediaPipe Pose), the way camera games
   /// steer now; [hands] is for counting fingers close up.
-  void startGameVision({bool hands = false, bool body = false, bool pose = false}) {
-    if (_gameHandsOn == hands && _gameBodyOn == body && _gamePoseOn == pose) return;
+  /// [live]: show the live camera picture ([liveCamera]).
+  void startGameVision({bool hands = false, bool body = false, bool pose = false, bool live = false}) {
+    if (_gameHandsOn == hands && _gameBodyOn == body && _gamePoseOn == pose && _gameLiveOn == live) return;
     _gameHandsOn = hands;
     _gameBodyOn = body;
     _gamePoseOn = pose;
-    log.info(name, 'game vision on (hands=$hands body=$body pose=$pose)');
+    _gameLiveOn = live;
+    log.info(name, 'game vision on (hands=$hands body=$body pose=$pose live=$live)');
     _sync();
   }
 
   void stopGameVision() {
-    if (!_gameHandsOn && !_gameBodyOn && !_gamePoseOn) return;
+    if (!_gameHandsOn && !_gameBodyOn && !_gamePoseOn && !_gameLiveOn) return;
     _gameHandsOn = false;
     _gameBodyOn = false;
     _gamePoseOn = false;
+    _gameLiveOn = false;
+    liveCamera.value = null;
     gameHands.value = const [];
     gamePoses.value = const [];
     bodyMask.value = null;
@@ -1784,6 +1801,7 @@ class MotionManager extends Manager {
     headTest.dispose();
     gameHands.dispose();
     gamePoses.dispose();
+    liveCamera.dispose();
     _gamePreviewTimer?.cancel();
     gamePreview.dispose();
     bodyMask.dispose();

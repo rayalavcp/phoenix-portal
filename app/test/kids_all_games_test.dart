@@ -77,6 +77,8 @@ void main() {
     'Pose Match': () => PoseMatch(container: c, onBack: back),
     'Simon Poses': () => SimonPoses(container: c, onBack: back),
     'Pop Duel': () => PopDuel(container: c, onBack: back),
+    'Critter Bop': () => CritterBop(container: c, onBack: back),
+    'Target Strike': () => TargetStrike(container: c, onBack: back),
     'Draw Studio': () => KidsDraw(onBack: back),
     'Pixel Paint': () => PixelPaint(onBack: back),
     'Piano': () => KidsPiano(onBack: back, tones: tones),

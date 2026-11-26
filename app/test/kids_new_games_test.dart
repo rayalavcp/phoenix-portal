@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kiosk_satellite/managers/motion/native_motion.dart';
 import 'package:kiosk_satellite/ui/kids/kids_motion.dart';
@@ -109,6 +110,38 @@ void main() {
       expect(inSimonZone('TO THE LEFT', [const Offset(0.9, 0.5), const Offset(0.1, 0.5)]), isTrue);
       expect(duelSide(const Offset(0.2, 0.5)), 0);
       expect(duelSide(const Offset(0.8, 0.5)), 1);
+    });
+  });
+
+  group('live camera games', () {
+    test('a critter rises, waits and hides', () {
+      final c = BopCritter(0, 2.0, 100);
+      expect(c.up, 0);
+      c.t = 0.25;
+      expect(c.up, 1);
+      c.t = 1.9;
+      expect(c.up, lessThan(1));
+      c.t = 2.0;
+      expect(c.done, isTrue);
+    });
+
+    test('touching is measured on the screen', () {
+      const size = Size(1000, 500);
+      expect(touches([const Offset(0.52, 0.5)], const Offset(0.5, 0.5), 0.05, size), isTrue);
+      expect(touches([const Offset(0.6, 0.5)], const Offset(0.5, 0.5), 0.05, size), isFalse);
+    });
+
+    test('targets stay within reach and on screen', () {
+      for (var i = 0; i < 50; i++) {
+        final r1 = i / 50, r2 = (i * 7 % 50) / 50;
+        for (final kind in StrikeKind.values) {
+          final p = strikeSpot(kind, const Offset(0.5, 0.4), 0.12, 0.56, r1, r2, feet: const Offset(0.5, 0.9));
+          expect(p.dx, inInclusiveRange(0.07, 0.93));
+          expect(p.dy, inInclusiveRange(0.08, 0.92));
+          if (kind == StrikeKind.hand) expect(p.dy, lessThan(0.75), reason: 'hand targets are round the upper body');
+          if (kind == StrikeKind.foot) expect(p.dy, greaterThan(0.7));
+        }
+      }
     });
   });
 }

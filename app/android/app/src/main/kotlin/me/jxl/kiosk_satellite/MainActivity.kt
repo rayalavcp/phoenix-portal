@@ -276,7 +276,7 @@ class MainActivity : FlutterActivity() {
         // The snapshot bridge first: motion detection pre-binds its capture
         // use case so the two share one camera session.
         deviceCamera = DeviceCamera(this, messenger)
-        cameraMotion = CameraMotion(this, messenger, deviceCamera)
+        cameraMotion = CameraMotion(this, messenger, deviceCamera, flutterEngine.renderer)
         screenCapture = ScreenCapture(this, messenger)
         kioskLock = KioskLock(this, messenger)
         webViewFreeze = WebViewFreeze(this, messenger)

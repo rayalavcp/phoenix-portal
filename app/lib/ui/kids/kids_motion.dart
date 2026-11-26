@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -316,7 +317,8 @@ class KidsHands {
     this.twoHands = false,
     this.people = false,
     this.fingerCount = false,
-  }) : body = !head && !fingerCount && _motion.gameBodyTracking {
+  }) : body = !head && !fingerCount && _motion.gameBodyTracking,
+       live = !head && _motion.gameLiveView {
     if (head) {
       if (_motion.headsAvailable) {
         _motion.startHeadTracking();
@@ -325,14 +327,45 @@ class KidsHands {
     } else if (_motion.handsAvailable) {
       if (body) {
         _motion.gamePoses.addListener(_onPoses);
-        _motion.startGameVision(pose: true);
-        _motion.startGamePreview();
+        _motion.startGameVision(pose: true, live: live);
       } else {
         _motion.gameHands.addListener(_onHands);
-        _motion.startGameVision(hands: true);
+        _motion.startGameVision(hands: true, live: live);
       }
+      // Camera frames for the corner preview (neon body), or for the live
+      // picture until (or unless) the camera's own preview stream comes.
+      if (body || live) _motion.startGamePreview();
+      if (live) _motion.liveCamera.addListener(_onLive);
     }
   }
+
+  /// The live camera picture fills the play area (the child sees themself,
+  /// mirrored) and the cursors sit on the child's real hands in it.
+  final bool live;
+
+  /// The play area's size (set by [KidsMotionArena]), for [liveMap].
+  Size arena = Size.zero;
+
+  /// The camera's preview stream came: the corner frames are not needed.
+  void _onLive() {
+    if (_motion.liveCamera.value?.ok ?? false) _motion.stopGamePreview();
+  }
+
+  /// Where a point of the camera picture (fractions, as the child sees it)
+  /// shows in the play area when the picture covers it, as fractions.
+  Offset liveMap(Offset p, double aspect) {
+    final a = arena;
+    if (a.isEmpty) return p;
+    final scale = math.max(a.width, a.height / aspect);
+    final w = scale, h = scale * aspect;
+    final x = (p.dx * w - (w - a.width) / 2) / a.width;
+    final y = (p.dy * h - (h - a.height) / 2) / a.height;
+    return Offset(x.clamp(0.0, 1.0), y.clamp(0.0, 1.0));
+  }
+
+  /// Everyone in view, their 33 points where they show in the play area
+  /// (fractions; live picture only), for games that use feet or heads.
+  final liveBodies = ValueNotifier<List<ShownBody>>(const []);
 
   /// Following the whole body (MediaPipe Pose): the hand's place measured
   /// against the child's own shoulders, which works across the room. Off:
@@ -430,7 +463,7 @@ class KidsHands {
     _touch = null;
     // Keep each hand on its own track: the first track takes the hand
     // nearest where it was, so the cursor does not swap between hands.
-    final palms = [for (final h in hands.take(2)) map(h.palm)];
+    final palms = [for (final h in hands.take(2)) live ? liveMap(flip ? Offset(1 - h.palm.dx, h.palm.dy) : h.palm, h.aspect) : map(h.palm)];
     var first = 0;
     final was = _tracks[0].at;
     if (was != null && palms.length == 2 && (palms[1] - was).distance < (palms[0] - was).distance) first = 1;
@@ -457,7 +490,7 @@ class KidsHands {
     _touch = null;
     final raw = flip ? Offset(1 - h.palm.dx, h.palm.dy) : h.palm;
     // Steer through the reach box (the same arm movement near or far).
-    _tracks[0].measure(amplify && h.size > 0 ? _reach.map(raw, h.size, h.aspect, now) : map(h.palm), now);
+    _tracks[0].measure(live ? liveMap(raw, h.aspect) : (amplify && h.size > 0 ? _reach.map(raw, h.size, h.aspect, now) : map(h.palm)), now);
     _tracks[1].reset();
     fingers.value = h.fingers;
   }
@@ -479,7 +512,34 @@ class KidsHands {
     final players = <(int, BodyView, BodyPose)>[];
     // Each cursor: (track, slot, side, spot).
     final spots = <(int, int, int, Offset)>[];
-    if (people) {
+    if (live) {
+      // The live picture: cursors on the real hands, everyone's.
+      views.sort((a, b) => a.$1.centre.dx.compareTo(b.$1.centre.dx));
+      final chosen = people ? views.take(2).toList() : [
+        for (final e in views)
+          if (identical(e.$1, _bodyLock.pick([for (final e in views) e.$1], now))) e,
+      ];
+      liveBodies.value = [
+        for (final (i, (v, p)) in views.take(2).indexed)
+          _liveSmoothers[i].shown(_mappedPose(p), v, i, now, flip: flip),
+      ];
+      for (final (i, (v, _)) in chosen.take(2).indexed) {
+        if (people) {
+          final side = v.activeSide(_peopleSides[i]);
+          _peopleSides[i] = side;
+          if (v.hand(side) case final h?) spots.add((i, i, side, liveMap(h, v.aspect)));
+        } else if (twoHands) {
+          for (final side in const [0, 1]) {
+            if (v.hand(side) case final h?) spots.add((side, 0, side, liveMap(h, v.aspect)));
+          }
+        } else {
+          final side = _active.pick(v);
+          if (side != _cursorSide) _tracks[0].reset();
+          _cursorSide = side;
+          if (v.hand(side) case final h?) spots.add((0, 0, side, liveMap(h, v.aspect)));
+        }
+      }
+    } else if (people) {
       // Two players: left to right, each over their own half.
       views.sort((a, b) => a.$1.centre.dx.compareTo(b.$1.centre.dx));
       for (final (i, (v, p)) in views.take(2).indexed) {
@@ -534,6 +594,18 @@ class KidsHands {
   int _cursorSide = -1;
   final _peopleSides = <int?>[null, null];
   final _smoothers = [BodySmoother(), BodySmoother()];
+  final _liveSmoothers = [BodySmoother(), BodySmoother()];
+
+  /// [p] with its points moved to where they show in the play area.
+  BodyPose _mappedPose(BodyPose p) {
+    final pts = Float32List.fromList(p.points);
+    for (var i = 0; i < 33; i++) {
+      final m = liveMap(Offset(pts[i * 3], pts[i * 3 + 1]), p.aspect);
+      pts[i * 3] = m.dx;
+      pts[i * 3 + 1] = m.dy;
+    }
+    return BodyPose(pts, aspect: arena.isEmpty ? p.aspect : arena.height / arena.width);
+  }
 
   /// The people being drawn (body tracking), smoothed.
   final bodies = ValueNotifier<List<ShownBody>>(const []);
@@ -589,9 +661,11 @@ class KidsHands {
       _motion.gameHands.removeListener(_onHands);
       _motion.gamePoses.removeListener(_onPoses);
       _motion.stopGameVision();
-      if (body) _motion.stopGamePreview();
+      if (body || live) _motion.stopGamePreview();
+      if (live) _motion.liveCamera.removeListener(_onLive);
     }
     bodies.dispose();
+    liveBodies.dispose();
     point.dispose();
     points.dispose();
     fingers.dispose();
@@ -679,6 +753,14 @@ class _CursorPainter extends CustomPainter {
         _sparkle(canvas, px(trail[k]), r * 0.45 * age, Paint()..color = Color.lerp(Colors.white, hue, 0.3)!.withValues(alpha: 0.85 * age));
       }
       final c = px(ps[i]);
+      if (hands.live && hands.camera) {
+        // Over the live picture: a glowing ring round the real hand, so the
+        // child still sees their hand inside it.
+        canvas.drawCircle(c, r * 1.1, Paint()..style = PaintingStyle.stroke..strokeWidth = r * 0.35..color = hue.withValues(alpha: 0.45)..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.3));
+        canvas.drawCircle(c, r, Paint()..style = PaintingStyle.stroke..strokeWidth = math.max(3, r * 0.16)..color = hue);
+        canvas.drawCircle(c, r, Paint()..style = PaintingStyle.stroke..strokeWidth = math.max(1.5, r * 0.05)..color = Colors.white);
+        continue;
+      }
       canvas.drawCircle(c, r * 1.35, Paint()..color = hue.withValues(alpha: 0.35)..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.5));
       canvas.drawCircle(
         c,
@@ -921,6 +1003,8 @@ class KidsMotionArena extends StatelessWidget {
           builder: (context, box) {
             final size = Size(box.maxWidth, box.maxHeight);
             onSize(size);
+            hands.arena = size;
+            final live = hands.live && hands.camera;
             Offset frac(Offset local) => Offset((local.dx / size.width).clamp(0.0, 1.0), (local.dy / size.height).clamp(0.0, 1.0));
             return GestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -928,18 +1012,21 @@ class KidsMotionArena extends StatelessWidget {
               onPanUpdate: (d) => hands.touch(frac(d.localPosition)),
               child: Stack(
                 children: [
+                  // The live camera picture: the child sees themself.
+                  if (live) Positioned.fill(child: LiveCameraView(motion: hands.motion)),
                   Positioned.fill(
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        // Darker while the neon body shows, so it glows.
-                        color: const Color(0xFF070B16).withValues(alpha: hands.body && hands.camera ? 0.72 : 0.25),
+                        // Darker while the neon body shows, so it glows; a
+                        // light veil over the live picture.
+                        color: const Color(0xFF070B16).withValues(alpha: live ? 0.12 : (hands.body && hands.camera ? 0.72 : 0.25)),
                         border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 2),
                         borderRadius: BorderRadius.circular(28),
                       ),
                     ),
                   ),
                   // The child as a body of neon sparks, behind the game.
-                  if (hands.body && hands.camera)
+                  if (hands.body && hands.camera && !live)
                     Positioned.fill(
                       child: IgnorePointer(child: RepaintBoundary(child: CustomPaint(painter: SparkBodyPainter(hands, hands.sparkBody)))),
                     ),
@@ -948,11 +1035,11 @@ class KidsMotionArena extends StatelessWidget {
                     child: IgnorePointer(child: RepaintBoundary(child: CustomPaint(painter: _CursorPainter(hands, cursorIcon)))),
                   ),
                   // What the camera sees, dimmed, with what it tracks.
-                  if (hands.body && hands.camera)
+                  if (hands.body && hands.camera && !live)
                     Positioned(right: 12, bottom: 12, child: GameCameraPreview(motion: hands.motion, width: size.width < 700 ? 150 : 220)),
                   Positioned(
                     left: 0,
-                    right: hands.body && hands.camera ? (size.width < 700 ? 170 : 240) : 0,
+                    right: hands.body && hands.camera && !live ? (size.width < 700 ? 170 : 240) : 0,
                     bottom: 14,
                     child: KidsHandHint(hands: hands, visible: !hands.handInView),
                   ),

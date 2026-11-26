@@ -452,6 +452,17 @@ class PhoenixHomeManager extends Manager {
     await (await _prefs()).setString(_kidsTrackingKey, mode);
   }
 
+  /// What camera games show: 'live' (the live camera picture, the child
+  /// sees themself) or 'neon' (a neon spark body, no picture).
+  final kidsView = ValueNotifier<String>('live');
+  static const _kidsViewKey = 'phx.kids.view';
+
+  Future<void> setKidsView(String view) async {
+    if (view != 'live' && view != 'neon') return;
+    kidsView.value = view;
+    await (await _prefs()).setString(_kidsViewKey, view);
+  }
+
   /// Homework a grown-up sets for the Kids Portal's Homework game.
   late final homework = HomeworkStore(_prefs);
 
@@ -1183,6 +1194,7 @@ class PhoenixHomeManager extends Manager {
       'hiddenGames': kidsHiddenGames.value,
       'homework': homework.toJson(),
       'tracking': kidsTracking.value,
+      'view': kidsView.value,
     },
     'apps': [for (final a in _launcher.installed) {'package': a.package, 'label': a.label}],
     'school': school.config.value.toJson(),
@@ -1290,6 +1302,7 @@ class PhoenixHomeManager extends Manager {
       if (k['hiddenGames'] is List) await setKidsHiddenGames([for (final g in k['hiddenGames'] as List) '$g']);
       if (k['resetScores'] == true) await resetKidsScores();
       if (k['tracking'] is String) await setKidsTracking(k['tracking'] as String);
+      if (k['view'] is String) await setKidsView(k['view'] as String);
       if (k['homework'] is Map) {
         final h = (k['homework'] as Map).cast<String, Object?>();
         if (h['words'] is String) await homework.setWords(HomeworkStore.parseWords(h['words'] as String));
@@ -1304,6 +1317,7 @@ class PhoenixHomeManager extends Manager {
     kidsHiddenGames.value = prefs.getStringList(_kidsHiddenKey) ?? const [];
     await homework.load();
     kidsTracking.value = prefs.getString(_kidsTrackingKey) == 'hands' ? 'hands' : 'body';
+    kidsView.value = prefs.getString(_kidsViewKey) == 'neon' ? 'neon' : 'live';
       await prefs.setStringList(_kidsAppsKey, kidsApps.value);
     }
     if (p['school'] is Map) {
@@ -1751,6 +1765,7 @@ class PhoenixHomeManager extends Manager {
     kidsHiddenGames.dispose();
     homework.dispose();
     kidsTracking.dispose();
+    kidsView.dispose();
     kidsScoresReset.dispose();
     glassOpacity.dispose();
     wallpaperUrl.dispose();

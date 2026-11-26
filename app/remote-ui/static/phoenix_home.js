@@ -324,7 +324,7 @@ const KIDS_GAMES = [
   ['Puzzles', [['sudoku', 'Sudoku'], ['maze', 'Maze'], ['wordsearch', 'Word Search'], ['guess', 'Word Guess'], ['memory', 'Memory Pro'], ['g2048', '2048'], ['lights', 'Lights Out']]],
   ['Play', [['snake', 'Snake'], ['mole', 'Whack-a-Mole'], ['simon', 'Simon Says'], ['ttt', 'Tic-Tac-Toe'], ['connect4', 'Connect Four'], ['swipe', 'Star Swipe'], ['stack', 'Stack Up']]],
   ['Arcade', [['munch', 'Munch Maze'], ['bricks', 'Brick Bash'], ['hop', 'Hop Across'], ['sky', 'Sky Glide'], ['run', 'Fox Run']]],
-  ['Move (camera)', [['blaster', 'Space Blaster'], ['bubbles', 'Bubble Pop'], ['catcher', 'Fruit Catcher'], ['fingermath', 'Finger Math'], ['walls', 'Wall Dodge'], ['trace', 'Air Trace'], ['dance', 'Freeze Dance'], ['goalie', 'Goalie'], ['wipe', 'Window Wipe'], ['pose', 'Pose Match'], ['simonpose', 'Simon Poses'], ['duel', 'Pop Duel']]],
+  ['Move (camera)', [['bop', 'Critter Bop'], ['strike', 'Target Strike'], ['blaster', 'Space Blaster'], ['bubbles', 'Bubble Pop'], ['catcher', 'Fruit Catcher'], ['fingermath', 'Finger Math'], ['walls', 'Wall Dodge'], ['trace', 'Air Trace'], ['dance', 'Freeze Dance'], ['goalie', 'Goalie'], ['wipe', 'Window Wipe'], ['pose', 'Pose Match'], ['simonpose', 'Simon Poses'], ['duel', 'Pop Duel']]],
   ['Create', [['draw', 'Draw Studio'], ['pixel', 'Pixel Paint'], ['piano', 'Piano']]],
 ];
 
@@ -368,6 +368,8 @@ function kidsSection() {
           save({ kids: { pin: v } }, v ? 'Parent PIN' : 'PIN removed');
           pin.value = '';
         } }))),
+    row('Camera games show', 'Live camera: the children see themselves on screen, like a mirror, with the game around them (recommended). Neon body: a glowing body of sparks instead of the picture. The picture stays on the Portal.',
+      select([['live', 'Live camera'], ['neon', 'Neon body']], k.view || 'live', (v) => save({ kids: { view: v } }, 'Camera games'))),
     row('Camera games follow', 'Whole body: works from across the room and keeps to one child when others are in view (recommended). Hand only: the older tracker, for playing close to the screen. Finger Math always uses the hand.',
       select([['body', 'Whole body'], ['hands', 'Hand only']], k.tracking || 'body', (v) => save({ kids: { tracking: v } }, 'Camera games'))),
     row('Activities shown', 'Untick an activity to hide it from the Kids Portal', games),

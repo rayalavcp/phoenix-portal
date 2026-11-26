@@ -99,6 +99,7 @@ void main() {
     tester.view.physicalSize = const Size(1280, 800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
+    c.motion.gameLiveView = false; // the neon body
     final hands = KidsHands(c.motion)..debugCamera = true;
     final arms = poses((fx['scales']! as Map)['0.55']);
     for (var i = 0; i < 5; i++) {
@@ -132,6 +133,35 @@ void main() {
     await tester.pump();
     expect(tester.takeException(), isNull);
     expect(find.text('Camera'), findsOneWidget);
+    hands.dispose();
+  });
+
+  testWidgets('live picture: cursors sit on the real hands, bodies map to the play area', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final c = AppContainer();
+    await c.settings.init();
+    expect(c.motion.gameLiveView, isTrue, reason: 'live picture is the default');
+    final hands = KidsHands(c.motion, twoHands: true)..debugCamera = true;
+    expect(hands.live, isTrue);
+    // A 4:3 picture covering a wide play area: cropped top and bottom.
+    hands.arena = const Size(1280, 720);
+    expect(hands.liveMap(const Offset(0.5, 0.5), 0.75), const Offset(0.5, 0.5));
+    final top = hands.liveMap(const Offset(0.5, 0.1), 0.75);
+    expect(top.dy, lessThan(0.1)); // stretched: the picture is cropped
+    expect(hands.liveMap(const Offset(0.0, 0.5), 0.75).dx, 0.0); // full width
+    final arms = poses((fx['scales']! as Map)['0.55']);
+    for (var i = 0; i < 3; i++) {
+      hands.debugFollow(arms, DateTime.now());
+      hands.step(0.016);
+    }
+    // Both hands, each where the photo's hands are (not stretched to the edges).
+    final spots = [...hands.points.value]..sort((a, b) => a.dx.compareTo(b.dx));
+    expect(spots, hasLength(2));
+    final v = BodyView.of(arms.single)!;
+    final real = [hands.liveMap(v.hand(0)!, aspect), hands.liveMap(v.hand(1)!, aspect)]..sort((a, b) => a.dx.compareTo(b.dx));
+    expect((spots[0] - real[0]).distance, lessThan(0.03));
+    expect((spots[1] - real[1]).distance, lessThan(0.03));
+    expect(hands.liveBodies.value, hasLength(1));
     hands.dispose();
   });
 }

@@ -47,7 +47,7 @@ const _titles = {
   'blaster': 'Space Blaster',
   'fingermath': 'Finger Math',
   'walls': 'Wall Dodge', 'trace': 'Air Trace', 'freeze': 'Freeze Dance',
-  'goalie': 'Goalie', 'wipe': 'Window Wipe', 'pose': 'Pose Match', 'simonpose': 'Simon Poses', 'duel': 'Pop Duel', 'swipe': 'Star Swipe', 'stack': 'Stack Up',
+  'goalie': 'Goalie', 'wipe': 'Window Wipe', 'pose': 'Pose Match', 'simonpose': 'Simon Poses', 'duel': 'Pop Duel', 'bop': 'Critter Bop', 'strike': 'Target Strike', 'swipe': 'Star Swipe', 'stack': 'Stack Up',
 };
 
 const _maps = {'usa': 'USA Map', 'india': 'India Map', 'world': 'World Map'};
