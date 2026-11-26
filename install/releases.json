@@ -1,16 +1,16 @@
 [
   {
-    "tag_name": "v2026.12.24",
-    "name": "Phoenix Portal 2026.12.24",
+    "tag_name": "v2026.12.25",
+    "name": "Phoenix Portal 2026.12.25",
     "draft": false,
     "prerelease": false,
-    "body": "Custom tiles (smart home device, web page, camera, app), clock faces, Homework (spelling and times tables set by a grown-up), and camera games Pose Match, Simon Poses and Pop Duel.",
-    "html_url": "https://github.com/rayalavcp/phoenix-portal/releases/tag/v2026.12.24",
+    "body": "Camera games now follow the child's whole body (MediaPipe Pose): they work from across the room, keep to one player when other children are in view, and arms stretched out reach the sides of the screen. Finger Math keeps the hand tracker. Setting: remote admin, Kids Portal, Camera games follow.",
+    "html_url": "https://github.com/rayalavcp/phoenix-portal/releases/tag/v2026.12.25",
     "assets": [
       {
-        "name": "kiosk-satellite-2026.12.24.armeabi-v7a.apk",
-        "browser_download_url": "https://github.com/rayalavcp/phoenix-portal/releases/download/v2026.12.24/kiosk-satellite-2026.12.24.armeabi-v7a.apk",
-        "size": 101451722,
+        "name": "kiosk-satellite-2026.12.25.armeabi-v7a.apk",
+        "browser_download_url": "https://github.com/rayalavcp/phoenix-portal/releases/download/v2026.12.25/kiosk-satellite-2026.12.25.armeabi-v7a.apk",
+        "size": 105733100,
         "state": "uploaded"
       }
     ]

@@ -65,6 +65,7 @@ class NativeMotion {
     bool heads = false,
     bool gameHands = false,
     bool gameBody = false,
+    bool gamePose = false,
     bool remoteFaces = false,
     bool remoteHands = false,
     bool enroll = false,
@@ -104,7 +105,7 @@ class NativeMotion {
           'heads': heads,
           // A Kids Portal game is open: its hands (up to two, with their
           // points) and its body outline, on every frame (GameVision.kt).
-          'game': {'hands': gameHands, 'body': gameBody},
+          'game': {'hands': gameHands, 'body': gameBody, 'pose': gamePose},
           // Vision Match: the face looks, the hand looks or both go to
           // Ground Control. The native side hands each due frame over as a
           // vision tick instead of running its own models for them.
@@ -150,7 +151,12 @@ class NativeMotionTick {
     this.gameHands,
     this.body,
     this.vision,
+    this.gamePoses,
   });
+
+  /// A game's people, as the child sees them (an empty list: nobody).
+  final List<BodyPose>? gamePoses;
+  bool get isGamePoses => gamePoses != null;
 
   /// A game's hands, as the child sees them (an empty list: none in view).
   final List<GameHand>? gameHands;
@@ -198,6 +204,13 @@ class NativeMotionTick {
   /// original null events.
   static NativeMotionTick fromNative(Object? raw) {
     if (raw is Map) {
+      final gposes = raw['gposes'];
+      if (gposes is List) {
+        return NativeMotionTick._(null, null, null, gamePoses: [
+          for (final p in gposes)
+            ?BodyPose.fromNative(p, aspect: raw['aspect'] is num && (raw['aspect'] as num) > 0 ? (raw['aspect'] as num).toDouble() : 0.75),
+        ]);
+      }
       final ghands = raw['ghands'];
       if (ghands is List) {
         return NativeMotionTick._(null, null, null, gameHands: [
@@ -380,6 +393,33 @@ class GameHand {
   final double aspect;
 
   Offset point(int i) => Offset(points[i * 2], points[i * 2 + 1]);
+}
+
+/// One person's body as a game sees it (MediaPipe's 33 pose points): x
+/// and y as the child sees the picture (0..1) and how sure the model is
+/// that each point is in view.
+class BodyPose {
+  const BodyPose(this.points, {this.aspect = 0.75});
+
+  static BodyPose? fromNative(Object? raw, {double aspect = 0.75}) {
+    final pts = raw is Float32List
+        ? raw
+        : raw is List
+        ? Float32List.fromList([for (final v in raw) (v as num).toDouble()])
+        : null;
+    return pts != null && pts.length == 99 ? BodyPose(pts, aspect: aspect) : null;
+  }
+
+  final Float32List points;
+
+  /// The picture's height over its width.
+  final double aspect;
+
+  static const nose = 0, leftShoulder = 11, rightShoulder = 12, leftWrist = 15, rightWrist = 16;
+  static const leftIndex = 19, rightIndex = 20, leftHip = 23, rightHip = 24;
+
+  Offset point(int i) => Offset(points[i * 3], points[i * 3 + 1]);
+  double seen(int i) => points[i * 3 + 2];
 }
 
 /// The body as the game sees it: [width] × [height] cells, each how sure

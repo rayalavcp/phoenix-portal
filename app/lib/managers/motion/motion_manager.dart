@@ -1098,8 +1098,9 @@ class MotionManager extends Manager {
             faceMinWidth: faceMinWidth,
             fingers: palms,
             heads: heads,
-            gameHands: game == 'hands' || game == 'both',
-            gameBody: game == 'body' || game == 'both',
+            gameHands: game?.contains('h') ?? false,
+            gameBody: game?.contains('b') ?? false,
+            gamePose: game?.contains('p') ?? false,
             remoteFaces: remoteFaces,
             enroll: _streamEnroll,
             remoteHands: remoteHands,
@@ -1153,6 +1154,10 @@ class MotionManager extends Manager {
               }
               // Hands are not a lighting change either. A count of 0 is the
               // hand gone, which the gestures manager needs to re-arm.
+              if (tick.isGamePoses) {
+                gamePoses.value = tick.gamePoses!;
+                return;
+              }
               if (tick.isGameHands) {
                 gameHands.value = tick.gameHands!;
                 return;
@@ -1649,34 +1654,48 @@ class MotionManager extends Manager {
   /// with their points, and/or its body outline, on every frame the
   /// camera delivers, while the game is open. Behind the camera switch
   /// and the screen being on, like the head leg.
-  bool _gameHandsOn = false, _gameBodyOn = false;
+  bool _gameHandsOn = false, _gameBodyOn = false, _gamePoseOn = false;
   String? _streamGame;
   bool get _wantGame => _wantGameKey != null;
   String? get _wantGameKey {
     if (!_settings.get(defs.cameraEnabled) || !_screenOn) return null;
-    final h = _gameHandsOn && _vision.hands, b = _gameBodyOn;
-    return h && b ? 'both' : (h ? 'hands' : (b ? 'body' : null));
+    final h = _gameHandsOn && _vision.hands, b = _gameBodyOn, p = _gamePoseOn;
+    final key = '${h ? 'h' : ''}${b ? 'b' : ''}${p ? 'p' : ''}';
+    return key.isEmpty ? null : key;
   }
 
   /// The game's hands (empty when none is in view).
   final gameHands = ValueNotifier<List<GameHand>>(const []);
 
+  /// The people a game sees (empty when nobody is in view).
+  final gamePoses = ValueNotifier<List<BodyPose>>(const []);
+
+  /// How camera games follow the child: by the whole body (MediaPipe Pose,
+  /// works across the room) or by the hand alone (close up). Set from the
+  /// Kids Portal settings.
+  bool gameBodyTracking = true;
+
   /// The game's body outline (null when not asked for or not seen yet).
   final bodyMask = ValueNotifier<BodyMask?>(null);
 
-  void startGameVision({bool hands = false, bool body = false}) {
-    if (_gameHandsOn == hands && _gameBodyOn == body) return;
+  /// [pose]: follow people's bodies (MediaPipe Pose), the way camera games
+  /// steer now; [hands] is for counting fingers close up.
+  void startGameVision({bool hands = false, bool body = false, bool pose = false}) {
+    if (_gameHandsOn == hands && _gameBodyOn == body && _gamePoseOn == pose) return;
     _gameHandsOn = hands;
     _gameBodyOn = body;
-    log.info(name, 'game vision on (hands=$hands body=$body)');
+    _gamePoseOn = pose;
+    log.info(name, 'game vision on (hands=$hands body=$body pose=$pose)');
     _sync();
   }
 
   void stopGameVision() {
-    if (!_gameHandsOn && !_gameBodyOn) return;
+    if (!_gameHandsOn && !_gameBodyOn && !_gamePoseOn) return;
     _gameHandsOn = false;
     _gameBodyOn = false;
+    _gamePoseOn = false;
     gameHands.value = const [];
+    gamePoses.value = const [];
     bodyMask.value = null;
     log.info(name, 'game vision off');
     _sync();
@@ -1738,6 +1757,7 @@ class MotionManager extends Manager {
     handTest.dispose();
     headTest.dispose();
     gameHands.dispose();
+    gamePoses.dispose();
     bodyMask.dispose();
     _presence.dispose();
   }

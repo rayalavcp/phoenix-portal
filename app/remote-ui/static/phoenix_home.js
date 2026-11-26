@@ -368,6 +368,8 @@ function kidsSection() {
           save({ kids: { pin: v } }, v ? 'Parent PIN' : 'PIN removed');
           pin.value = '';
         } }))),
+    row('Camera games follow', 'Whole body: works from across the room and keeps to one child when others are in view (recommended). Hand only: the older tracker, for playing close to the screen. Finger Math always uses the hand.',
+      select([['body', 'Whole body'], ['hands', 'Hand only']], k.tracking || 'body', (v) => save({ kids: { tracking: v } }, 'Camera games'))),
     row('Activities shown', 'Untick an activity to hide it from the Kids Portal', games),
     el('div', { class: 'phx-actions' },
       el('button', { class: 'btn-primary', type: 'button', text: 'Save activities', onclick: () => save({ kids: { hiddenGames: [...hidden] } }, 'Activities') }),

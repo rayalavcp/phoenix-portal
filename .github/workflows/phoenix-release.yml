@@ -32,6 +32,13 @@ jobs:
         run: |
           set -euo pipefail
           apk=install/upload/phoenix-portal.apk
+          # The APK comes in parts (GitHub refuses files over 100 MiB in a
+          # push): join them in order and check the SHA-256 they came with.
+          if [ -f "$apk.part1" ]; then
+            n=1; : > "$apk"
+            while [ -f "$apk.part$n" ]; do cat "$apk.part$n" >> "$apk"; n=$((n + 1)); done
+            test "$(sha256sum "$apk" | cut -d' ' -f1)" = "$(tr -d '[:space:]' < "$apk.sha256")"
+          fi
           test -s "$apk"
           version="$(python3 -c 'import json;print(json.load(open("install/releases.json"))[0]["tag_name"].lstrip("v"))')"
           notes="$(python3 -c 'import json;print(json.load(open("install/releases.json"))[0]["body"])')"

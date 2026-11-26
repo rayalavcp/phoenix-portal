@@ -19,6 +19,15 @@ Built from this branch and installed from `install/` (see `install/README.md`).
 - **Docs (2026-11-26):** new README and a wiki (`docs/wiki`) with mock
   screenshots made from sample data; leaderboard medals are icons (they look
   the same on every screen).
+- **2026.12.25 (body tracking):** camera games follow the child's whole
+  body (MediaPipe Pose) instead of the hand alone: tested on real model
+  output, it finds a child filling 35% of the picture's height (22% with
+  its zoomed search) and keeps following down to about 13%, where the hand
+  tracker lost hands under 90%. The cursor is the hand measured against the
+  child's own shoulders (arms stretched out reach the screen's sides, near
+  or far); it keeps to one player when others are in view; Pop Duel gives
+  each player their half. Finger Math keeps the hand tracker. Setting:
+  remote admin, Kids Portal, Camera games follow.
 - **2026.12.24:** custom tiles (a Home Assistant device or sensor, a web
   page, a camera or an app; made on the tiles screen or in the remote
   admin); clock faces (Classic, Bold, Flip cards, Analogue, Words) for the

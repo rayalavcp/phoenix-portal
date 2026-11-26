@@ -14,6 +14,8 @@ import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmarker
 import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmarkerResult
 import com.google.mediapipe.tasks.vision.imagesegmenter.ImageSegmenter
+import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
+import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
 import com.google.mediapipe.tasks.vision.imagesegmenter.ImageSegmenterResult
 import java.nio.ByteOrder
 import java.util.concurrent.atomic.AtomicBoolean
@@ -46,6 +48,17 @@ class GameVision(
         private const val TAG = "GameVision"
         private const val HAND_MODEL = "hand_landmarker.task"
         private const val BODY_MODEL = "selfie_segmenter.tflite"
+        private const val POSE_MODEL = "pose_landmarker_lite.task"
+
+        /** Looking for someone too far away to be found in the whole
+         *  picture: the middle of it, this share each way, scaled up. A
+         *  child is then found at about 22% of the frame's height instead
+         *  of 35%, and once found is followed down to about 13%. */
+        private const val ZOOM = 0.6f
+
+        /** Results without anyone before the search switches between the
+         *  whole picture and its middle. */
+        private const val MISSES_BEFORE_SWITCH = 4
 
         /** The longer side the frame is scaled to before the models see
          *  it. The palm finder shrinks it to 192 pixels anyway, but the
@@ -60,6 +73,18 @@ class GameVision(
     }
 
     private var hands: HandLandmarker? = null
+    private var poses: PoseLandmarker? = null
+    private var posesFailed = false
+    private val poseBusy = AtomicBoolean(false)
+    private var poseFeedNs = 0L
+    private var poseResults = 0
+    private var poseAvgMs = 0f
+
+    /** Whether the pose model looks at the middle of the picture, and
+     *  whether the frame in flight was such a crop. */
+    @Volatile private var zoomed = false
+    @Volatile private var feedZoomed = false
+    private var misses = 0
     private var body: ImageSegmenter? = null
     private var handsFailed = false
     private var bodyFailed = false
@@ -76,10 +101,11 @@ class GameVision(
 
     /** Offer one frame. [front]: mirror it, as a front camera's picture is
      *  the mirror of what faces it. */
-    fun offer(image: ImageProxy, rotation: Int, front: Boolean, wantHands: Boolean, wantBody: Boolean) {
+    fun offer(image: ImageProxy, rotation: Int, front: Boolean, wantHands: Boolean, wantBody: Boolean, wantPose: Boolean = false) {
         val needHands = wantHands && !handsFailed && !handBusy.get()
         val needBody = wantBody && !bodyFailed && !bodyBusy.get()
-        if (!needHands && !needBody) return
+        val needPose = wantPose && !posesFailed && !poseBusy.get()
+        if (!needHands && !needBody && !needPose) return
         val frame = try {
             upright(image, rotation, front)
         } catch (e: Exception) {
@@ -100,6 +126,20 @@ class GameVision(
                 } catch (e: Exception) {
                     handBusy.set(false)
                     Log.w(TAG, "hand feed failed: $e")
+                }
+            }
+        }
+        if (needPose) {
+            val task = poses ?: loadPoses()
+            if (task != null && poseBusy.compareAndSet(false, true)) {
+                try {
+                    poseFeedNs = now
+                    feedZoomed = zoomed
+                    val input = if (zoomed) middle(frame) else frame
+                    task.detectAsync(BitmapImageBuilder(input).build(), ts)
+                } catch (e: Exception) {
+                    poseBusy.set(false)
+                    Log.w(TAG, "pose feed failed: $e")
                 }
             }
         }
@@ -129,6 +169,90 @@ class GameVision(
         if (front) m.postScale(-1f, 1f)
         m.postScale(scale, scale)
         return Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, true)
+    }
+
+    /** The middle [ZOOM] of [frame], scaled back up to its size. */
+    private fun middle(frame: Bitmap): Bitmap {
+        val w = (frame.width * ZOOM).toInt()
+        val h = (frame.height * ZOOM).toInt()
+        val crop = Bitmap.createBitmap(frame, (frame.width - w) / 2, (frame.height - h) / 2, w, h)
+        return Bitmap.createScaledBitmap(crop, frame.width, frame.height, true)
+    }
+
+    /** People's bodies: per person 33 points (x, y as the child sees the
+     *  picture, 0..1, and how sure the model is each point is in view). */
+    private fun onPoses(result: PoseLandmarkerResult) {
+        poseBusy.set(false)
+        val ms = (System.nanoTime() - poseFeedNs) / 1_000_000f
+        poseResults++
+        poseAvgMs += (ms - poseAvgMs) / min(poseResults, 30).toFloat()
+        if (poseResults == 1 || poseResults % 300 == 0) {
+            Log.i(TAG, "poses: ${"%.0f".format(poseAvgMs)} ms a look${if (zoomed) " (zoomed)" else ""}")
+        }
+        val wasZoomed = feedZoomed
+        // A crop of the middle maps back to the whole picture.
+        val scale = if (wasZoomed) ZOOM else 1f
+        val offset = if (wasZoomed) (1f - ZOOM) / 2f else 0f
+        val out = ArrayList<FloatArray>(2)
+        var widest = 0f
+        for (person in result.landmarks()) {
+            if (person.size < 33) continue
+            val pts = FloatArray(33 * 3)
+            var minX = 1f
+            var maxX = 0f
+            for (i in 0 until 33) {
+                val x = person[i].x()
+                val y = person[i].y()
+                minX = min(minX, x)
+                maxX = max(maxX, x)
+                pts[i * 3] = offset + x * scale
+                pts[i * 3 + 1] = offset + y * scale
+                pts[i * 3 + 2] = person[i].visibility().orElse(0f)
+            }
+            widest = max(widest, maxX - minX)
+            out.add(pts)
+        }
+        if (out.isEmpty()) {
+            // Nobody: look the other way (whole picture or its middle).
+            if (++misses >= MISSES_BEFORE_SWITCH) {
+                misses = 0
+                zoomed = !zoomed
+            }
+        } else {
+            misses = 0
+            // Someone filling the zoomed view: back to the whole picture.
+            if (wasZoomed && widest > 0.8f) zoomed = false
+        }
+        emit(mapOf("gposes" to out, "aspect" to aspect.toDouble(), "ms" to poseAvgMs.toDouble()))
+    }
+
+    private fun loadPoses(): PoseLandmarker? {
+        if (posesFailed) return null
+        return try {
+            val options = PoseLandmarker.PoseLandmarkerOptions.builder()
+                .setBaseOptions(BaseOptions.builder().setModelAssetPath(POSE_MODEL).setDelegate(Delegate.CPU).build())
+                .setRunningMode(RunningMode.LIVE_STREAM)
+                // Two: the player and someone beside them (or two players).
+                .setNumPoses(2)
+                .setMinPoseDetectionConfidence(0.5f)
+                .setMinPosePresenceConfidence(0.5f)
+                .setMinTrackingConfidence(0.5f)
+                .setOutputSegmentationMasks(false)
+                .setResultListener { result, _ -> onPoses(result) }
+                .setErrorListener { e ->
+                    poseBusy.set(false)
+                    Log.w(TAG, "pose landmarker error: $e")
+                }
+                .build()
+            PoseLandmarker.createFromOptions(context, options).also {
+                poses = it
+                Log.i(TAG, "game poses loaded")
+            }
+        } catch (e: Throwable) {
+            posesFailed = true
+            Log.e(TAG, "game poses unavailable: $e", e)
+            null
+        }
     }
 
     private fun onHands(result: HandLandmarkerResult) {
@@ -250,8 +374,13 @@ class GameVision(
     fun close() {
         try { hands?.close() } catch (_: Exception) {}
         try { body?.close() } catch (_: Exception) {}
+        try { poses?.close() } catch (_: Exception) {}
         hands = null
         body = null
+        poses = null
+        poseBusy.set(false)
+        zoomed = false
+        misses = 0
         handBusy.set(false)
         bodyBusy.set(false)
     }

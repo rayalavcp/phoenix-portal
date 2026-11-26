@@ -11,6 +11,10 @@
 # makes release v<version> with the APK attached, moves the branch back off
 # the temporary commit and keeps only the newest three releases. The local
 # branch never holds the APK commit.
+#
+# GitHub refuses files over 100 MiB in a push, so the APK goes up in parts
+# (phoenix-portal.apk.part1, .part2, ...) with its SHA-256; the workflow joins
+# them and checks the SHA-256 before releasing.
 set -euo pipefail
 apk="${1:?path to the APK}"
 cd "$(git rev-parse --show-toplevel)"
@@ -22,8 +26,17 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 export GIT_INDEX_FILE="$tmp/index"
 git read-tree "$head"
-blob="$(git hash-object -w "$apk")"
-git update-index --add --cacheinfo 100644,"$blob",install/upload/phoenix-portal.apk
+split -b 90m -d -a 1 "$apk" "$tmp/part"
+n=1
+for part in "$tmp"/part*; do
+  blob="$(git hash-object -w "$part")"
+  git update-index --add --cacheinfo 100644,"$blob",install/upload/phoenix-portal.apk.part$n
+  n=$((n + 1))
+done
+sha="$(sha256sum "$apk" | cut -d' ' -f1)"
+printf '%s\n' "$sha" > "$tmp/sha256"
+blob="$(git hash-object -w "$tmp/sha256")"
+git update-index --add --cacheinfo 100644,"$blob",install/upload/phoenix-portal.apk.sha256
 tree="$(git write-tree)"
 unset GIT_INDEX_FILE
 commit="$(git commit-tree "$tree" -p "$head" -m "APK upload for $version (taken off again by the release workflow)")"

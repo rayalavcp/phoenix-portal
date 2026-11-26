@@ -64,9 +64,12 @@ abstract class _MoveGame<T extends StatefulWidget> extends State<T> with SingleT
   /// Follow two hands (games played with both, or by two children).
   bool get twoHands => false;
 
+  /// Two players, one each side.
+  bool get people => false;
+
   void begin() {
     hands?.dispose();
-    hands = KidsHands(container.motion, head: steer == 0 && !twoHands, amplify: amplify, twoHands: twoHands);
+    hands = KidsHands(container.motion, head: steer == 0 && !twoHands, amplify: amplify, twoHands: twoHands, people: people);
     setState(() {
       score = 0;
       lives = 3;
@@ -1781,6 +1784,8 @@ class _PopDuelState extends _MoveGame<PopDuel> {
   AppContainer get container => widget.container;
   @override
   VoidCallback get onBack => widget.onBack;
+  @override
+  bool get people => true;
   @override
   String get scoreKey => 'duel';
   @override

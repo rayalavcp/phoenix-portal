@@ -6,7 +6,7 @@ import 'package:flutter/scheduler.dart';
 
 import '../../app_container.dart';
 import '../../managers/motion/motion_manager.dart';
-import '../../managers/motion/native_motion.dart' show GameHand;
+import '../../managers/motion/native_motion.dart' show BodyPose, GameHand;
 import 'kids_activities.dart';
 import 'kids_games.dart';
 import 'kids_logic.dart';
@@ -96,6 +96,121 @@ class _Track {
     _fy.reset();
     at = null;
     _v = Offset.zero;
+  }
+}
+
+/// A person as the camera games use them: where their shoulders are, how
+/// wide (their size in the picture, so how near), and their hands.
+class BodyView {
+  BodyView._(this.centre, this.width, this.aspect, this._hands, this._hips);
+
+  /// From a pose; null when the shoulders are not in view.
+  static BodyView? of(BodyPose p) {
+    final aspect = p.aspect;
+    const sure = 0.4;
+    if (p.seen(BodyPose.leftShoulder) < sure || p.seen(BodyPose.rightShoulder) < sure) return null;
+    final l = p.point(BodyPose.leftShoulder), r = p.point(BodyPose.rightShoulder);
+    final width = math.sqrt(math.pow(l.dx - r.dx, 2) + math.pow((l.dy - r.dy) * aspect, 2));
+    if (width < 0.01) return null;
+    Offset? hand(int wrist, int index) {
+      if (p.seen(wrist) < sure) return null;
+      // Between the wrist and the index finger: the middle of the hand.
+      final w = p.point(wrist);
+      return p.seen(index) >= sure ? Offset.lerp(w, p.point(index), 0.5) : w;
+    }
+
+    return BodyView._(
+      Offset.lerp(l, r, 0.5)!,
+      width,
+      aspect,
+      [hand(BodyPose.leftWrist, BodyPose.leftIndex), hand(BodyPose.rightWrist, BodyPose.rightIndex)],
+      [p.point(BodyPose.leftHip), p.point(BodyPose.rightHip)],
+    );
+  }
+
+  /// Between the shoulders, and the shoulders' width (in widths of the
+  /// picture).
+  final Offset centre;
+  final double width;
+
+  /// The picture's height over its width.
+  final double aspect;
+  final List<Offset?> _hands;
+  final List<Offset> _hips;
+
+  /// Hand 0 (the child's left) or 1, null when out of view.
+  Offset? hand(int side) => _hands[side];
+
+  /// How far a hand is from resting at the hip, in shoulder widths.
+  double reach(int side) {
+    final h = _hands[side];
+    if (h == null) return -1;
+    final d = h - _hips[side];
+    return math.sqrt(d.dx * d.dx + d.dy * d.dy * aspect * aspect) / width;
+  }
+
+  /// The hand doing the most, [current] kept unless the other is clearly
+  /// more in use.
+  int activeSide(int? current) {
+    final a = reach(0), b = reach(1);
+    if (current != null && reach(current) >= 0 && (reach(1 - current) - reach(current)) < 0.35) return current;
+    return a >= b ? 0 : 1;
+  }
+}
+
+/// Where [hand] puts the cursor, measured against the person's own
+/// shoulders: arms stretched out reach the sides of the screen, a hand
+/// above the head the top, a hand at the waist the bottom, the same near
+/// or far from the Portal.
+Offset bodyCursor(Offset hand, BodyView v) {
+  const across = 1.6, up = 1.4, down = 1.1; // in shoulder widths
+  final x = (hand.dx - v.centre.dx) / v.width;
+  final y = (hand.dy - v.centre.dy) * v.aspect / v.width;
+  return Offset((0.5 + x / (2 * across)).clamp(0.0, 1.0), ((y + up) / (up + down)).clamp(0.0, 1.0));
+}
+
+/// The player's hand: the one in use, kept until the other is clearly
+/// more in use (so a resting hand does not grab the cursor).
+class ActiveHand {
+  int? _side;
+  int pick(BodyView v) => _side = v.activeSide(_side);
+}
+
+/// Which person is the player when more than one is in view: the one
+/// nearest where the player was, about the same size; someone else is
+/// ignored. After a moment without the player, the person nearest the
+/// Portal (the widest shoulders) plays.
+class BodyLock {
+  Offset? _at;
+  double _width = 0;
+  DateTime _seen = DateTime.fromMillisecondsSinceEpoch(0);
+
+  static const hold = Duration(milliseconds: 1200);
+
+  BodyView? pick(List<BodyView> people, DateTime now) {
+    if (people.isEmpty) return null;
+    final at = _at;
+    BodyView? best;
+    if (at != null && now.difference(_seen) < hold) {
+      var bestCost = double.infinity;
+      for (final v in people) {
+        final jump = (v.centre - at).distance;
+        final ratio = math.max(v.width / _width, _width / v.width);
+        if (jump > 0.25 || ratio > 1.7) continue;
+        final cost = jump + (ratio - 1) * 0.2;
+        if (cost < bestCost) {
+          bestCost = cost;
+          best = v;
+        }
+      }
+      if (best == null) return null;
+    } else {
+      best = people.reduce((a, b) => b.width > a.width ? b : a);
+    }
+    _at = best.centre;
+    _width = _width == 0 ? best.width : _width + (best.width - _width) * 0.2;
+    _seen = now;
+    return best;
   }
 }
 
@@ -193,17 +308,44 @@ class HandReach {
 /// when it closes, so the camera is free again. Nothing of the child is
 /// drawn: only a friendly cursor where each hand (or the head) points.
 class KidsHands {
-  KidsHands(this._motion, {this.head = false, this.amplify = true, this.twoHands = false}) {
+  KidsHands(
+    this._motion, {
+    this.head = false,
+    this.amplify = true,
+    this.twoHands = false,
+    this.people = false,
+    this.fingerCount = false,
+  }) : body = !head && !fingerCount && _motion.gameBodyTracking {
     if (head) {
       if (_motion.headsAvailable) {
         _motion.startHeadTracking();
         _motion.headTest.addListener(_onHead);
       }
     } else if (_motion.handsAvailable) {
-      _motion.gameHands.addListener(_onHands);
-      _motion.startGameVision(hands: true);
+      if (body) {
+        _motion.gamePoses.addListener(_onPoses);
+        _motion.startGameVision(pose: true);
+      } else {
+        _motion.gameHands.addListener(_onHands);
+        _motion.startGameVision(hands: true);
+      }
     }
   }
+
+  /// Following the whole body (MediaPipe Pose): the hand's place measured
+  /// against the child's own shoulders, which works across the room. Off:
+  /// the hand tracker alone (close up; needed to count fingers).
+  final bool body;
+
+  /// Two players, one each side (Pop Duel): each child's hand moves over
+  /// their own half of the screen.
+  final bool people;
+
+  /// The game counts fingers (Finger Math): the hand tracker, close up.
+  final bool fingerCount;
+
+  final _bodyLock = BodyLock();
+  final _active = ActiveHand();
 
   final MotionManager _motion;
 
@@ -308,6 +450,52 @@ class KidsHands {
     fingers.value = h.fingers;
   }
 
+  void _onPoses() => _followBodies(_motion.gamePoses.value, DateTime.now());
+
+  /// For tests: what the camera saw at [now].
+  @visibleForTesting
+  void debugFollow(List<BodyPose> poses, DateTime now) => _followBodies(poses, now);
+
+  void _followBodies(List<BodyPose> poses, DateTime now) {
+    if (poses.isEmpty) return;
+    final views = [for (final p in poses) ?BodyView.of(p)];
+    if (views.isEmpty) return;
+    List<Offset> spots;
+    if (people) {
+      // Two players: left to right, each over their own half.
+      views.sort((a, b) => a.centre.dx.compareTo(b.centre.dx));
+      spots = [
+        for (final (i, v) in views.take(2).indexed)
+          if (v.hand(v.activeSide(null)) case final h?)
+            Offset(((views.length == 1 ? (v.centre.dx < 0.5 ? 0 : 1) : i) + bodyCursor(h, v).dx) / 2, bodyCursor(h, v).dy),
+      ];
+    } else {
+      final v = _bodyLock.pick(views, now);
+      if (v == null) return;
+      if (twoHands) {
+        spots = [for (final side in const [0, 1]) if (v.hand(side) case final h?) bodyCursor(h, v)];
+      } else {
+        final side = _active.pick(v);
+        final h = v.hand(side);
+        spots = h == null ? const [] : [bodyCursor(h, v)];
+      }
+    }
+    if (spots.isEmpty) return;
+    _seen = now;
+    _touch = null;
+    final flipped = [for (final s in spots) flip ? Offset(1 - s.dx, s.dy) : s];
+    // Keep each point on its own track (nearest to where it was).
+    var first = 0;
+    final was = _tracks[0].at;
+    if (was != null && flipped.length == 2 && (flipped[1] - was).distance < (flipped[0] - was).distance) first = 1;
+    _tracks[0].measure(flipped[first], now);
+    if (flipped.length == 2) {
+      _tracks[1].measure(flipped[1 - first], now);
+    } else {
+      _tracks[1].reset();
+    }
+  }
+
   /// Touch steers too (and is how the game plays without a camera).
   void touch(Offset fraction) {
     _seen = DateTime.now();
@@ -348,6 +536,7 @@ class KidsHands {
       _motion.stopHeadTracking();
     } else {
       _motion.gameHands.removeListener(_onHands);
+      _motion.gamePoses.removeListener(_onPoses);
       _motion.stopGameVision();
     }
     point.dispose();
@@ -386,6 +575,8 @@ class KidsHandHint extends StatelessWidget {
                     ? 'Camera is off: play with your finger on the screen'
                     : hands.head
                     ? 'Look at the camera, then lean left and right'
+                    : hands.body
+                    ? 'Stand back so the camera sees you, then move your hand'
                     : 'Hold up your hand to the camera',
                 textAlign: TextAlign.center,
                 style: kidsText(20),
@@ -965,7 +1156,7 @@ class FingerMath extends StatefulWidget {
 
 class _FingerMathState extends State<FingerMath> {
   static const _count = 10;
-  late final KidsHands _hands = KidsHands(widget.container.motion, twoHands: true);
+  late final KidsHands _hands = KidsHands(widget.container.motion, twoHands: true, fingerCount: true);
   final _rng = math.Random();
   int _level = 0, _index = 0, _score = 0;
   bool _playing = false, _over = false, _newBest = false;

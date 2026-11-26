@@ -60,6 +60,14 @@ when one is set), or in the remote admin under **Phoenix** › **Homework**. The
 The remote admin shows the last seven days: how many words and sums were tried and how many were
 right.
 
+## Camera games: how the camera follows
+
+The camera games follow the child's **whole body**, so they work from across the room: stand back
+until the camera sees your shoulders, then move a hand. Arms stretched out reach the sides of
+the screen, a hand above your head the top. Finger Math still looks at the hands, so play it close
+to the Portal. To go back to the older hand-only tracking: remote admin › **Phoenix** › Kids
+Portal › **Camera games follow** › Hand only.
+
 ## Playing with two children
 
 One-player camera games follow one child, even with another in view. **Pop Duel** is made for

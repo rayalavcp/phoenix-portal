@@ -522,8 +522,9 @@ class CameraMotion(
      *  landmarks) and its body mask, on every frame, emitted at once. */
     @Volatile private var gameHands = false
     @Volatile private var gameBody = false
+    @Volatile private var gamePose = false
     private var gameVision: GameVision? = null
-    private val gameMode get() = gameHands || gameBody || headsWanted
+    private val gameMode get() = gameHands || gameBody || gamePose || headsWanted
     private var lastHeadNs = 0L
 
     /** Bumped per presence, so a hold timer from an ended presence
@@ -985,7 +986,8 @@ class CameraMotion(
             val game = args?.get("game") as? Map<*, *>
             gameHands = allowAnalysis && game?.get("hands") == true
             gameBody = allowAnalysis && game?.get("body") == true
-            if (!gameHands && !gameBody) {
+            gamePose = allowAnalysis && game?.get("pose") == true
+            if (!gameHands && !gameBody && !gamePose) {
                 gameVision?.close()
                 gameVision = null
             }
@@ -1593,7 +1595,7 @@ class CameraMotion(
             if (session != boundSession) return
             lastFrameAtMs = SystemClock.elapsedRealtime()
             deviceCamera?.captureAnalysisFrame(image)
-            if (!motionWanted && !facesWanted && !fingersWanted && !headsWanted && !gameHands && !gameBody &&
+            if (!motionWanted && !facesWanted && !fingersWanted && !headsWanted && !gameHands && !gameBody && !gamePose &&
                 !previewWanted && pluginFrames == null && !enrollFrames) return
             val now = System.nanoTime()
             if (enrollFrames) {
@@ -1625,13 +1627,13 @@ class CameraMotion(
 
             // A game's hands and body first, on the newest frame: the
             // models run on their own threads and skip frames while busy.
-            if ((gameHands || gameBody) && !paused) {
+            if ((gameHands || gameBody || gamePose) && !paused) {
                 try {
                     val vision = gameVision ?: GameVision(context) { event ->
                         val sink = activeSink
                         if (sink != null && !paused) mainHandler.post { sink.success(event) }
                     }.also { gameVision = it }
-                    vision.offer(image, image.imageInfo.rotationDegrees, boundFront, gameHands, gameBody)
+                    vision.offer(image, image.imageInfo.rotationDegrees, boundFront, gameHands, gameBody, gamePose)
                 } catch (e: Throwable) {
                     Log.w(TAG, "game vision failed: $e")
                 }

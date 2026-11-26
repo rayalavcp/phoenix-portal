@@ -67,7 +67,8 @@ are kept; older ones are deleted when a new one is published.
    ```bash
    install/publish_release.sh path/to/app.apk
    ```
-   It pushes one temporary commit holding the APK. The **Phoenix release** workflow
+   It pushes one temporary commit holding the APK (in 90 MB parts with its SHA-256, since
+   GitHub refuses files over 100 MiB; the workflow joins and checks them). The **Phoenix release** workflow
    (`.github/workflows/phoenix-release.yml`) makes release `v2026.12.21` with the APK attached,
    takes the temporary commit off `main` again and deletes releases older than the newest three.
    Portals offer the update at their next check.

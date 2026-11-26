@@ -301,6 +301,11 @@ class AppContainer {
       homeAssistant,
       immich,
     );
+    // Camera games follow the body or the hand, as the Kids Portal setting
+    // says.
+    void syncTracking() => motion.gameBodyTracking = phoenixHome.kidsTracking.value != 'hands';
+    phoenixHome.kidsTracking.addListener(syncTracking);
+    syncTracking();
     store = StoreManager(bus, commands, log);
     musicLibrary = MusicLibraryManager(
       bus,

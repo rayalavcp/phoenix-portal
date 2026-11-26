@@ -272,7 +272,29 @@ Math, Wall Dodge, Air Trace, Freeze Dance), **Create**.
   `HandReach` (a box 7 × 5 hand sizes wide maps to the whole screen and is
   pushed along at its edges). The head tracker passes the last face to
   `FaceDetector.detect` so a nearby face wins over a bigger one. GameVision
-  always tracks two hands (needed to choose the player) at 640 px. **Nothing of the child is drawn** (the owner found the hand and
+  always tracks two hands (needed to choose the player) at 640 px.
+- **APK size:** 2026.12.25 is about 106 MB (the pose model added 5.8 MB; the
+  Rubik font was cut to the scripts Phoenix shows: Latin, Greek, Cyrillic,
+  Devanagari, Telugu and symbols). Over 100 MiB, `publish_release.sh` uploads it
+  in parts that the release workflow joins and checks; release assets may be
+  up to 2 GB.
+- **Body tracking (2026.12.25, the default):** `GameVision.kt` runs MediaPipe
+  Pose (`pose_landmarker_lite.task`, two people, LIVE_STREAM) and, after four
+  empty results, alternates to the middle 60% of the picture (zoomed) to find
+  a child further away; it emits `gposes` (33 × x, y, visibility per person).
+  Dart: `BodyPose` (native_motion.dart), `MotionManager.gamePoses`,
+  `startGameVision(pose: true)`, and in `kids_motion.dart` `BodyView`,
+  `bodyCursor` (hand relative to the shoulders: ±1.6 shoulder widths across,
+  1.4 up, 1.1 down), `ActiveHand`, `BodyLock`; `KidsHands(people: true)` splits
+  the screen for Pop Duel, `fingerCount: true` keeps the hand tracker (Finger
+  Math). Setting `phx.kids.tracking` ('body' | 'hands') →
+  `MotionManager.gameBodyTracking`. Measured in this container with the same
+  model (Python MediaPipe, 640×480 frames of one photo scaled down): pose found
+  down to 35% of the frame height (22% zoomed) and tracked to 13%; the hand
+  tracker found hands only at 90%. `test/fixtures/body_poses.json` holds those
+  real results; `test/body_tracking_test.dart` checks the cursor on them.
+  Not yet measured on a Portal: the time per look (log line "GameVision
+  poses: N ms a look"). **Nothing of the child is drawn** (the owner found the hand and
   body renders scary, 2026.12.14): only a pastel bubble cursor per hand
   (pink, blue; yellow for the head) with a sparkle trail
   (`_CursorPainter`). The camera runs only while a camera game is played.
