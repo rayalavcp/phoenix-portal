@@ -1,6 +1,6 @@
 # Home Assistant Events
 
-Phoenix Portal fires an event on the Home Assistant bus whenever a voice turn, a timer, the person talking, an intercom call, an alarm, a notification card, the screensaver or the screen changes. Automations can trigger on them with an event trigger. They go out over the ESPHome connection, so turn on **Settings > ESPHome** and add the kiosk to Home Assistant first. **Expose kiosk entities** is not needed.
+Phoenix Portal fires an event on the Home Assistant bus whenever a voice turn, a timer, the person talking, the person at the kiosk, an intercom call, an alarm, a notification card, the screensaver or the screen changes. Automations can trigger on them with an event trigger. They go out over the ESPHome connection, so turn on **Settings > ESPHome** and add the kiosk to Home Assistant first. **Expose kiosk entities** is not needed.
 
 Home Assistant only fires device events under `esphome.`, hence the prefix. Every event carries `event_type` with what happened. Home Assistant adds `device_id`, the kiosk's ESPHome device. Use `device_id` to react to one kiosk only. You can find it in the URL of the kiosk's device page.
 
@@ -9,6 +9,7 @@ Home Assistant only fires device events under `esphome.`, hence the prefix. Ever
 | [`esphome.kiosk_satellite_voice`](#voice-satellite) | Voice Satellite interactions |
 | [`esphome.kiosk_satellite_timer`](#timers) | Voice Satellite timers |
 | [`esphome.kiosk_satellite_speaker`](#speaker) | Who is talking, with [Voice Match](voice-match.md) |
+| [`esphome.kiosk_satellite_face`](#face) | Who arrives at and leaves the kiosk, with [Face Recognition](vision-match.md#face-recognition) |
 | [`esphome.kiosk_satellite_intercom`](#intercom) | Intercom calls and announcements |
 | [`esphome.kiosk_satellite_alarm`](#alarms) | Alarms |
 | [`esphome.kiosk_satellite_notification`](#notifications) | Notification cards leaving the screen |
@@ -27,11 +28,13 @@ data:
   device_id: 5f1c...
   event_type: started
   reason: voice
+  slot: 2
+  wake_word: Hey Jarvis
 ```
 
 | `event_type` | When |
 | --- | --- |
-| `started` | A voice interaction begins: a turn, an announcement, a `vs_show` prompt, a realtime conversation or a ringing timer. `reason` says which: `voice`, `announcement`, `show`, `conversation` or `timer`. |
+| `started` | A voice interaction begins: a turn, an announcement, a `vs_show` prompt, a realtime conversation or a ringing timer. `reason` says which: `voice`, `announcement`, `show`, `conversation` or `timer`. A turn, a realtime conversation and a `vs_show` also carry `slot`, the Assistant that answers (1 or 2), and `wake_word`, the wake word that started it. `wake_word` is empty when no wake word did, as for a `vs_show`. `vs_wake` reports the wake word of the slot it starts. |
 | `listening` | The microphone opens for a command. |
 | `thinking` | The command is in and the assistant is working on it. |
 | `speaking` | The answer starts playing. |
@@ -95,6 +98,48 @@ actions:
     target:
       entity_id: light.kids_reading_light
 ```
+
+## Face
+
+With [Face Recognition](vision-match.md#face-recognition) on, the kiosk fires this event when someone recognized arrives at the kiosk or leaves it, and when the PIN is skipped or Lockdown Mode is turned off because they were recognized. An arrival fires once. It fires again for the same person only after they have been out of view for a minute, which is also when `left` fires. Nothing fires when a face turns away for a moment or a second person walks past. The event fires whether or not the [recognition cards](vision-match.md#recognition-cards) show.
+
+```yaml
+event_type: esphome.kiosk_satellite_face
+data:
+  device_id: 5f1c...
+  event_type: arrived
+  name: Ana
+  person: person.ana
+```
+
+| `event_type` | When |
+| --- | --- |
+| `arrived` | Someone recognized became the person at the kiosk after being out of view for at least a minute. When several people are in view, it fires for the person with the highest score and for the others as each one becomes the person at the kiosk. |
+| `left` | Someone who arrived has been out of view for a minute. |
+| `pin_skipped` | The kiosk PIN was skipped for them after the exit gesture. `mode` is `kiosk` for the Kiosk Mode exit gesture and `lockdown` for Lockdown Mode's. |
+| `lockdown_off` | Lockdown Mode was turned off because they were recognized at the kiosk. |
+
+| Field | What it holds |
+| --- | --- |
+| `name` | The person's name in Ground Control. |
+| `person` | The Home Assistant person set for them on Ground Control's People page, or empty. |
+
+```yaml
+# Turn on the kitchen lights when Ana walks up to the kitchen kiosk.
+triggers:
+  - trigger: event
+    event_type: esphome.kiosk_satellite_face
+    event_data:
+      event_type: arrived
+      person: person.ana
+      device_id: 5f1c...
+actions:
+  - action: light.turn_on
+    target:
+      entity_id: light.kitchen
+```
+
+A photo of an enrolled person can be recognized as them. Don't use this event to unlock doors or disarm an alarm. See [Face Recognition Is Not Security](vision-match.md#face-recognition-is-not-security).
 
 ## Timers
 

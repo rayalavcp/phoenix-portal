@@ -69,6 +69,7 @@ import 'dlna_media_overlay.dart';
 import 'camera_view_overlay.dart';
 import 'code_scanner.dart';
 import 'face_preview_overlay.dart';
+import 'recognition_card_overlay.dart';
 import 'fleet_settings.dart';
 import 'intercom_settings.dart';
 import 'back_nav.dart';
@@ -79,6 +80,7 @@ import 'sendspin_player_overlay.dart';
 import 'assist/assist_overlay.dart';
 import 'toast.dart';
 import 'settings_screen.dart';
+import 'face_enroll_overlay.dart';
 import 'voice_match_enroll_overlay.dart';
 import 'voice_timer_overlay.dart';
 import 'web_console_panel.dart';
@@ -385,6 +387,9 @@ class _KioskScreenState extends State<KioskScreen>
       // again, so back opens the Menu as it does on any other center.
       case BackAction.stopScreensaver when c.screensaver.nowPlayingIsCenter:
         unawaited(_compass.goMenu());
+      // Only the chosen people dismiss it: back does nothing over it.
+      case BackAction.stopScreensaver when c.screensaver.faceLocked.value:
+        c.log.info('kiosk', 'back: only the chosen people dismiss it');
       case BackAction.stopScreensaver:
         unawaited(c.commands.execute('stopScreensaver', const {}));
       case BackAction.closeDrawer:
@@ -1042,12 +1047,16 @@ class _KioskScreenState extends State<KioskScreen>
       if (c.camera.activeViewId.value != null) {
         c.camera.hideView(returnToPreviousApp: false);
       }
-      unawaited(c.commands.execute('stopScreensaver', const {}));
+      // Only the chosen people dismiss it, not HOME.
+      if (!c.screensaver.faceLocked.value) {
+        unawaited(c.commands.execute('stopScreensaver', const {}));
+      }
     });
     // The volume key routing follows the player and the screensaver
     // slot (issue #544); the setting rides _onSettingChanged.
     c.sendspin.nowPlaying.addListener(_syncVolumeKeys);
     c.pageState.pageDark.addListener(_pageDarkChanged);
+    c.homeAssistant.dashboardDark.addListener(_haDarkChanged);
     c.screensaver.activeView.addListener(_syncVolumeKeys);
     c.screensaver.dashboardShowing.addListener(_applyKioskMode);
     // The build and the native key routing both follow these surfaces.
@@ -1216,6 +1225,11 @@ class _KioskScreenState extends State<KioskScreen>
   void _pageDarkChanged() =>
       unawaited(c.browser.setCustomPageDark(c.pageState.pageDark.value));
 
+  /// The kiosk's Home Assistant theme changed: the dashboard on screen, and
+  /// the next load, follow.
+  void _haDarkChanged() =>
+      unawaited(c.browser.setHaDark(c.homeAssistant.dashboardDark.value));
+
   /// The JS bridge is always injected at document start. Kiosk mode rides
   /// along as a document-start script too, and is re-asserted per load in
   /// [onLoadStop] so a page that outlived a toggle catches up.
@@ -1256,6 +1270,14 @@ class _KioskScreenState extends State<KioskScreen>
         dark: c.pageState.pageDark.value,
         origins: c.browser.customPageOrigins,
       ),
+      injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+    ),
+    // Home Assistant's light or dark on this device only, never through the
+    // user's profile (issue #1101). Acts only on Home Assistant pages;
+    // swapped live by BrowserManager.setHaDark.
+    UserScript(
+      groupName: BrowserManager.haSchemeGroup,
+      source: haColorSchemeJs(dark: c.homeAssistant.dashboardDark.value),
       injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
     ),
     UserScript(
@@ -1494,7 +1516,14 @@ class _KioskScreenState extends State<KioskScreen>
     // Hold the screensaver while settings are open. Otherwise the idle timer
     // keeps firing behind the route: it dims the backlight and, with motion
     // on, opens the camera while someone is configuring. Re-arm on return.
-    await c.commands.execute('pauseScreensaver', {'paused': true});
+    // The settings reason keeps it from ducking or pausing music the way a
+    // voice turn does (issue #1603).
+    c.bus.publish(
+      const VoiceInteractionChanged(
+        active: true,
+        reason: VoiceInteractionChanged.settingsReason,
+      ),
+    );
     _settingsOpen = true;
     _syncMenuBusy();
     if (mounted) {
@@ -1520,7 +1549,12 @@ class _KioskScreenState extends State<KioskScreen>
     }
     _settingsOpen = false;
     _syncMenuBusy();
-    await c.commands.execute('pauseScreensaver', {'paused': false});
+    c.bus.publish(
+      const VoiceInteractionChanged(
+        active: false,
+        reason: VoiceInteractionChanged.settingsReason,
+      ),
+    );
   }
 
   /// Tell the kiosk manager whether the owner is inside the menu or the
@@ -1729,7 +1763,8 @@ class _KioskScreenState extends State<KioskScreen>
     // the Activity otherwise. The PIN dialog lives underneath that
     // overlay, so it lets touches through for the prompt's duration.
     if (c.kiosk.lockdownActive) {
-      if (c.kiosk.pinRequired) {
+      // Skip the PIN for: a chosen person recognized at the kiosk.
+      if (c.kiosk.pinRequired && !c.kiosk.faceSkipsPin(lockdown: true)) {
         await c.kiosk.setLockShieldPassThrough(true);
         final ok = await _askPin();
         await c.kiosk.setLockShieldPassThrough(false);
@@ -1738,7 +1773,7 @@ class _KioskScreenState extends State<KioskScreen>
       await c.settings.set(defs.lockdownEnabled, false);
       return;
     }
-    if (c.kiosk.pinRequired) {
+    if (c.kiosk.pinRequired && !c.kiosk.faceSkipsPin(lockdown: false)) {
       final ok = await _askPin();
       if (!ok || !mounted) return;
     }
@@ -1760,7 +1795,7 @@ class _KioskScreenState extends State<KioskScreen>
   /// the full Menu. Under lockdown the shield takes every touch, so this
   /// is never reached there.
   Future<void> _unlockMenu() async {
-    if (c.kiosk.pinRequired) {
+    if (c.kiosk.pinRequired && !c.kiosk.faceSkipsPin(lockdown: false)) {
       final ok = await _askPin();
       if (!ok || !mounted) return;
     }
@@ -1846,6 +1881,7 @@ class _KioskScreenState extends State<KioskScreen>
     _saverSub?.cancel();
     c.sendspin.nowPlaying.removeListener(_syncVolumeKeys);
     c.pageState.pageDark.removeListener(_pageDarkChanged);
+    c.homeAssistant.dashboardDark.removeListener(_haDarkChanged);
     c.screensaver.activeView.removeListener(_syncVolumeKeys);
     c.screensaver.dashboardShowing.removeListener(_applyKioskMode);
     c.browser.overlayUrl.removeListener(_onOverlayChanged);
@@ -2205,9 +2241,16 @@ class _KioskScreenState extends State<KioskScreen>
                     // draws over it instead of dismissing it.
                     ScreensaverFade(
                       screensaver: c.screensaver,
-                      child: PausedUnder(
-                        paused: c.screensaver.renderPaused,
-                        child: ScreensaverOverlay(container: c),
+                      // Only the chosen people dismiss it: none of its
+                      // buttons, links or widgets take a touch, Now
+                      // Playing's included. Outside PausedUnder, whose
+                      // Stack the screensaver's Positioned root needs.
+                      child: _FaceLockAbsorb(
+                        locked: c.screensaver.faceLocked,
+                        child: PausedUnder(
+                          paused: c.screensaver.renderPaused,
+                          child: ScreensaverOverlay(container: c),
+                        ),
                       ),
                     ),
                     CameraViewOverlay(container: c),
@@ -2238,7 +2281,12 @@ class _KioskScreenState extends State<KioskScreen>
                     // The camera preview a face wake leaves behind
                     // (discussion #371): over the screensaver, whose fade
                     // out it appears through, and answering no touch.
-                    FacePreviewOverlay(motion: c.motion, settings: c.settings),
+                    FacePreviewOverlay(
+                      motion: c.motion,
+                      settings: c.settings,
+                      cards: c.recognitionCards,
+                      pictureOf: c.groundControl.pictureOf,
+                    ),
                     // The black timeout cover while a voice turn shows: the
                     // turn draws over it (issue #746). Outside a turn it
                     // sits above everything below.
@@ -2303,6 +2351,9 @@ class _KioskScreenState extends State<KioskScreen>
                     // A Voice Match enrollment: the reading view while it
                     // records, then its result card.
                     VoiceMatchEnrollOverlay(container: c),
+                    // Face Recognition's guided capture: the camera's view and
+                    // the steps while it runs, then its result card.
+                    FaceEnrollOverlay(container: c),
                     // The timer pills stay over the voice overlay, as Voice
                     // Satellite stacks them over its own.
                     TimerPillsSetting(
@@ -2322,6 +2373,16 @@ class _KioskScreenState extends State<KioskScreen>
                       LockdownShield(
                         blackout: c.settings.get(defs.lockdownBlackout),
                       ),
+                    // Vision Match > Recognition cards: over everything but
+                    // an alarm, including the lockdown shield and the voice
+                    // overlay, so the person in front sees when Face
+                    // Recognition was used.
+                    RecognitionCardOverlay(
+                      cards: c.recognitionCards,
+                      motion: c.motion,
+                      settings: c.settings,
+                      pictureOf: c.groundControl.pictureOf,
+                    ),
                     // An alarm on its own view: over everything, the lockdown
                     // shield included, since Stop has to answer. Its sunrise
                     // covers the screensaver and the dark panel too.
@@ -3756,6 +3817,24 @@ class _PausedUnderState extends State<PausedUnder> {
 /// session is over by the time its view drops, so it fades the last frame
 /// instead, held at full opacity until the dashboard under it has drawn
 /// again.
+/// A screensaver only the chosen people dismiss takes no touches: none of
+/// its buttons, links or widgets, which could open something over it. The
+/// kiosk screen's own report of the touch still reaches the screensaver
+/// manager, which ignores it but for waking a black screen.
+class _FaceLockAbsorb extends StatelessWidget {
+  const _FaceLockAbsorb({required this.locked, required this.child});
+
+  final ValueListenable<bool> locked;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
+    valueListenable: locked,
+    builder: (context, on, child) => AbsorbPointer(absorbing: on, child: child),
+    child: child,
+  );
+}
+
 class ScreensaverFade extends StatefulWidget {
   const ScreensaverFade({
     super.key,

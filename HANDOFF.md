@@ -308,6 +308,34 @@ Not yet seen on a device:
 - Whether the HA Bridge app still takes over after a reboot once the
   installer has stopped its boot start.
 
+## Syncing with Kiosk Satellite (upstream)
+
+Phoenix has no shared git history with Kiosk Satellite: it began as a copy
+of upstream commit `510a3bde` (2026-11-20). **2026.12.23 merged upstream up
+to v2026.11.32 (`e5e6a48f`)**, so the next sync starts from `e5e6a48f`.
+
+How (read-only; never push to upstream, its push URL is disabled):
+
+```bash
+git remote add upstream https://github.com/jxlarrea/kiosk-satellite
+git remote set-url --push upstream DISABLED
+git fetch --depth=400 upstream main
+git diff --binary e5e6a48f upstream/main > /tmp/up.patch
+git apply -3 --exclude='app/l10n/vendor/translations/*' \
+  --exclude='app/l10n/vendor/metadata/reviews/*' \
+  --exclude='app/lib/l10n/generated/*' --exclude='.github/workflows/release.yml' \
+  ... /tmp/up.patch
+```
+
+Phoenix ships English only: leave out other languages' files. Resolve JSON
+and `.arb` conflicts key by key (Phoenix's wording wins, new upstream keys
+are added), rename new "Kiosk Satellite" strings to "Phoenix Portal" except
+the product names "Kiosk Satellite Ground Control" and "Kiosk Satellite
+Analytics", refresh the digests in `l10n/vendor/source/manifest.json` and
+`l10n/localization.lock.json`, then `python3 tool/localization.py generate`
+and `flutter gen-l10n`. Check that analytics stays off (empty endpoint) and
+no new code calls the original project.
+
 ## Kiosk Satellite features kept (checked 2026.12.16)
 
 Every feature in Kiosk Satellite's README is still in Phoenix and its guide

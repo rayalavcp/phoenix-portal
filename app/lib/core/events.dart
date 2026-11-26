@@ -521,9 +521,19 @@ class VoiceInteractionChanged extends AppEvent {
     required this.active,
     this.reason = '',
     this.source = InteractionSource.command,
+    this.slot = 0,
+    this.wakeWord = '',
   });
   final bool active;
   final InteractionSource source;
+
+  /// The Assistant (1 or 2) answering a built-in Voice Satellite turn,
+  /// realtime conversation or vs_show, 0 for everything else (issue #1545).
+  final int slot;
+
+  /// The phrase of the wake word that started the turn, or '' when none
+  /// did (a vs_show, a conversation Home Assistant started).
+  final String wakeWord;
 
   /// The reason an announcement from Home Assistant (the ESPHome announce
   /// action) holds with. It ducks the music and pauses wake word detection
@@ -534,6 +544,12 @@ class VoiceInteractionChanged extends AppEvent {
   /// reading screen covers the whole display, so the screensaver is
   /// dismissed for it and the display is at its normal brightness.
   static const enrollmentReason = 'voice_match_enroll';
+
+  /// The reason the settings screen holds with while it is open. It only
+  /// keeps ambient features away (the screensaver, the dashboard
+  /// rotation). Nobody is talking, so other apps' music and Sendspin
+  /// keep playing at full volume (issue #1603).
+  static const settingsReason = 'settings';
 
   /// What kind of interaction, as reported by the page: 'voice',
   /// 'announcement', 'ask_question', 'start_conversation', 'timer', 'media',
@@ -548,7 +564,7 @@ class VoiceInteractionChanged extends AppEvent {
 /// Native Voice Satellite moved between Home Assistant's assist_satellite
 /// states: idle, listening, processing or responding. Covers Assist turns
 /// and realtime conversations alike.
-/// Phoenix Portal Ground Control became reachable, moved or went away.
+/// Kiosk Satellite Ground Control became reachable, moved or went away.
 /// [baseUrl] is its http(s) address (no trailing slash), null when there
 /// is none to use: Voice Match off, not found, or the kiosk's token refused.
 class GroundControlServiceChanged extends AppEvent {
@@ -798,6 +814,153 @@ class FaceDetected extends AppEvent {
 /// every second or so for as long as someone stays.
 class FaceDismissedScreensaver extends AppEvent {
   const FaceDismissedScreensaver();
+}
+
+/// Face Recognition: who Ground Control sees at the kiosk, or nobody
+/// ([name] empty), and everyone it names in view ([people], the person at
+/// the kiosk first). Feeds the Face and People in view sensors, Faces that
+/// count and the camera preview.
+class FaceInViewChanged extends AppEvent {
+  const FaceInViewChanged({
+    this.id,
+    this.name = '',
+    this.score,
+    this.color,
+    this.people = const [],
+    this.colors = const {},
+  });
+  final String? id;
+  final String name;
+  final double? score;
+
+  /// The person's color on the kiosk, as Ground Control keeps it (#RRGGBB).
+  final String? color;
+  final List<({String id, String name})> people;
+
+  /// The colors of everyone in view, by person id, for the recognition
+  /// cards.
+  final Map<String, String> colors;
+}
+
+/// Vision Match > Presence sensors: someone is in front of the kiosk
+/// ([present]: a face, turned away or not, or a raised hand seen lately)
+/// and someone looks at the screen ([looking]). From Ground Control's
+/// looks (VisionPresence). Feeds the Presence and Looking at the kiosk
+/// binary sensors.
+class VisionPresenceChanged extends AppEvent {
+  const VisionPresenceChanged({required this.present, required this.looking});
+  final bool present;
+  final bool looking;
+}
+
+/// Someone Face Recognition named arrived at the kiosk: the person at the
+/// kiosk now, out of view for at least a minute before.
+/// Fires whether or not the arrival card shows. Home Assistant gets it as
+/// `esphome.kiosk_satellite_face`.
+class FaceArrived extends AppEvent {
+  const FaceArrived({required this.id, required this.name});
+  final String id;
+  final String name;
+}
+
+/// Someone who arrived has been out of view for a minute.
+class FaceLeft extends AppEvent {
+  const FaceLeft({required this.id, required this.name});
+  final String id;
+  final String name;
+}
+
+/// Calendar > Focus on who is at the kiosk put [name]'s calendar forward on
+/// screen: the calendar showed it for them for the first time since it
+/// opened or since someone else was the person at the kiosk. [id] is their
+/// Ground Control person id, for the action card.
+class FaceCalendarFocused extends AppEvent {
+  const FaceCalendarFocused({required this.id, required this.name});
+  final String id;
+  final String name;
+}
+
+/// Who Face Recognition sees at the kiosk changed, in the shape plugins
+/// with the face.recognition capability and Home Assistant and custom
+/// pages read it (GroundControlManager.faceRecognitionState). No
+/// wireName: the JS API hands it only to the pages allowed to see it.
+class FaceRecognitionChanged extends AppEvent {
+  const FaceRecognitionChanged(this.state);
+  final Map<String, Object?> state;
+}
+
+/// [FaceArrived] or [FaceLeft] with the person's Home Assistant person,
+/// as the `esphome.kiosk_satellite_face` event carries them, for plugins
+/// and pages. [type] is `arrived` or `left`. No wireName, like
+/// [FaceRecognitionChanged].
+class FaceArrivalReported extends AppEvent {
+  const FaceArrivalReported({
+    required this.type,
+    required this.name,
+    required this.person,
+  });
+  final String type;
+  final String name;
+  final String person;
+
+  @override
+  Map<String, Object?> toJson() => {
+    'event': type,
+    'name': name,
+    'person': person,
+  };
+}
+
+/// Ground Control asked this kiosk to enroll a person's face, or someone
+/// started it here: the guided capture opens.
+class FaceEnrollRequested extends AppEvent {
+  const FaceEnrollRequested({
+    required this.personId,
+    required this.name,
+    this.color,
+  });
+  final String? personId;
+  final String name;
+  final String? color;
+}
+
+/// Skip the PIN for let an exit gesture through without the kiosk PIN
+/// because [name], one of the chosen people, was recognized at the kiosk.
+/// Reported to Ground Control's vision session.
+class FacePinSkipped extends AppEvent {
+  const FacePinSkipped({required this.lockdown, required this.name, this.id});
+
+  /// The lockdown exit gesture, not the kiosk one.
+  final bool lockdown;
+  final String name;
+
+  /// The person's Ground Control id, for the action card.
+  final String? id;
+}
+
+/// Disable Lockdown Mode for turned Lockdown Mode off because [name] was
+/// recognized at the kiosk, or Turn Lockdown Mode back on turned it on
+/// because nobody chosen was. Reported to Ground Control's vision session.
+class FaceLockdownChanged extends AppEvent {
+  const FaceLockdownChanged({required this.locked, this.name, this.id});
+  final bool locked;
+  final String? name;
+
+  /// The person's Ground Control id, for the action card.
+  final String? id;
+}
+
+/// Ground Control asked this kiosk to stop its face capture early, as its
+/// own Stop does.
+class FaceEnrollStopRequested extends AppEvent {
+  const FaceEnrollStopRequested();
+}
+
+/// A face put off the next screensaver (Postpone on face). Repeats with
+/// every face while someone stays. Vision Match reports it to Ground
+/// Control for the vision session it belongs to.
+class FacePostponedScreensaver extends AppEvent {
+  const FacePostponedScreensaver();
 }
 
 /// Someone is in view of the device's own person sensor (discussion #353,

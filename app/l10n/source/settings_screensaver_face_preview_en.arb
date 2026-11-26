@@ -116,5 +116,15 @@
         "Screensaver > Face Detection > Camera Preview"
       ]
     }
+  },
+  "facePreviewRecognized": "Recognized",
+  "@facePreviewRecognized": {
+    "context": "Kiosk screen > camera preview",
+    "description": "Under the person's name in the card next to the camera preview, when Face Recognition names them.",
+    "x-locations": {
+      "device": [
+        "Kiosk screen > camera preview > name card"
+      ]
+    }
   }
 }

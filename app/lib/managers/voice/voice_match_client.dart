@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:web_socket_channel/web_socket_channel.dart';
 
-/// One Voice Match session on Phoenix Portal Ground Control: one voice
+/// One Voice Match session on Kiosk Satellite Ground Control: one voice
 /// turn, or a whole realtime conversation.
 ///
 /// Follow mode: the service gets everything the microphone hears, with the
@@ -73,11 +73,19 @@ class VoiceMatchTurn {
     Uint8List? anchor,
     String? speaker,
     String? continues,
+    String? wakeWord,
+    String? wakeWordEngine,
+    String? wakeWordModel,
+    bool seamless = false,
+    String? assistant,
+    String? language,
+    String? interaction,
     void Function(String session)? onReady,
     void Function(Uint8List pcm)? onAudio,
     void Function()? onLost,
   }) {
     final turn = VoiceMatchTurn._(onEvent, log, onAudio, onLost, onReady);
+    final woken = wakeWord != null && wakeWord.isNotEmpty;
     final base = Uri.parse(baseUrl);
     final uri = base.replace(
       scheme: base.scheme == 'https' ? 'wss' : 'ws',
@@ -103,6 +111,22 @@ class VoiceMatchTurn {
         // Isolation, this kiosk's own switch: Ground Control runs it when
         // it is on in its own settings too.
         if (follow) 'isolation': isolation,
+        // How the turn started, for the session's page in Ground Control:
+        // the wake word as it is said, what heard it and who answers.
+        if (woken) 'wake_word': wakeWord,
+        if (woken && wakeWordEngine != null) 'wake_word_engine': wakeWordEngine,
+        if (woken && wakeWordModel != null && wakeWordModel.isNotEmpty)
+          'wake_word_model': wakeWordModel,
+        // Talk right after the wake word: the audio starts the moment the
+        // wake word fired, before the word is over. Ground Control then
+        // leaves the end of the wake word out of the command.
+        'seamless': seamless,
+        'assistant': ?assistant,
+        // How the turn started: wake_word, question (a reply to something
+        // Home Assistant asked), follow_up or manual.
+        'interaction': ?interaction,
+        // The wake word is said with the accent of the kiosk's language.
+        if (language != null && language.isNotEmpty) 'language': language,
       }),
     );
     return turn;
@@ -149,6 +173,7 @@ class VoiceMatchTurn {
       _ready = true;
       final session = e['session'];
       if (session is String) _onReady?.call(session);
+      _sendInteraction();
       for (final pcm in _queue) {
         _socket?.sink.add(pcm);
       }
@@ -174,6 +199,31 @@ class VoiceMatchTurn {
     if (_queued + pcm.length > _maxQueued) return;
     _queue.add(Uint8List.fromList(pcm));
     _queued += pcm.length;
+  }
+
+  String? _interaction;
+
+  /// Which kind of question the turn replies to, once it is known:
+  /// `ask_question` or `start_conversation`. The start said `question` for
+  /// both, since they arrive the same. Sent once the service has answered
+  /// the start, for the session's page there.
+  void interaction(String kind) {
+    if (_ended) return;
+    _interaction = kind;
+    if (_ready) _sendInteraction();
+  }
+
+  void _sendInteraction() {
+    final kind = _interaction;
+    if (kind == null) return;
+    _interaction = null;
+    try {
+      _socket?.sink.add(
+        jsonEncode({'type': 'interaction', 'interaction': kind}),
+      );
+    } on Object {
+      // Already closed.
+    }
   }
 
   /// The turn is over. The service keeps the session (its audio, scores

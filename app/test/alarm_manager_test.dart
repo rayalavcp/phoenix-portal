@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -35,6 +36,7 @@ void main() {
   Future<void> build(
     List<Map<String, Object?>> list, {
     Map<String, Object> extra = const {},
+    Future<Uint8List?> Function(String, String, String, String)? tts,
   }) async {
     SharedPreferences.setMockInitialValues({
       'ks.alarms.list': jsonEncode(list),
@@ -74,7 +76,14 @@ void main() {
         ),
       );
     }
-    alarms = AlarmManager(bus, commands, log, settings, clock: () => now);
+    alarms = AlarmManager(
+      bus,
+      commands,
+      log,
+      settings,
+      clock: () => now,
+      tts: tts,
+    );
     await alarms.init();
     await pumpEventQueue();
   }
@@ -175,6 +184,14 @@ void main() {
       expect(s.ids, ['a']);
     },
   );
+
+  test('any snooze length from the slider holds it off (#1585)', () async {
+    now = DateTime(2026, 10, 2, 7, 0, 5);
+    await build([daily('07:00')]);
+    await settings.set(defs.alarmsSnoozeMinutes, 3);
+    expect(await alarms.snooze(), isTrue);
+    expect(alarms.status.value.snoozedUntil, DateTime(2026, 10, 2, 7, 3, 5));
+  });
 
   test('stop ends it and the same ring never comes back', () async {
     now = DateTime(2026, 10, 2, 7, 0, 5);
@@ -803,6 +820,119 @@ void main() {
         alarms.phraseFor(alarms.alarms.value.single, DateTime(2026, 10, 2, 7)),
         "It's 7:00 AM.",
       );
+    });
+  });
+
+  group('say (#1585)', () {
+    const channel = MethodChannel('kiosk_satellite/alarms');
+    late List<MethodCall> native;
+    late List<String> spoken;
+
+    Future<Uint8List?> tts(
+      String engine,
+      String language,
+      String voice,
+      String message,
+    ) async {
+      spoken.add(message);
+      return Uint8List.fromList(const [1, 2, 3]);
+    }
+
+    const paths = MethodChannel('plugins.flutter.io/path_provider');
+    late Directory temp;
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+
+    setUp(() {
+      native = [];
+      spoken = [];
+      temp = Directory.systemTemp.createTempSync('ks_alarm_say');
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        native.add(call);
+        return call.method == 'ring' ? true : null;
+      });
+      messenger.setMockMethodCallHandler(paths, (_) async => temp.path);
+    });
+    tearDown(() {
+      messenger.setMockMethodCallHandler(channel, null);
+      messenger.setMockMethodCallHandler(paths, null);
+      temp.deleteSync(recursive: true);
+    });
+
+    Iterable<MethodCall> rings() =>
+        native.where((c) => c.method == 'ring' && c.arguments['loop'] == false);
+
+    test('a snooze is said once at the alarm volume', () async {
+      now = DateTime(2026, 10, 2, 7, 0, 5);
+      await build([daily('07:00')], tts: tts);
+      expect(await alarms.snooze(), isTrue);
+      expect(await alarms.say('  Snooze 1, 10 minutes '), isNull);
+      expect(spoken, ['Snooze 1, 10 minutes']);
+      final ring = rings().single.arguments as Map;
+      expect(ring['volume'], settings.get(defs.alarmsVolume).toDouble());
+      expect(ring['path'], isNotEmpty);
+      // The same words again come from disk.
+      expect(await alarms.say('Snooze 1, 10 minutes'), isNull);
+      expect(spoken, hasLength(1));
+      expect(rings(), hasLength(2));
+    });
+
+    test('a percent only makes it quieter than the alarm', () async {
+      now = DateTime(2026, 10, 2, 7, 0, 5);
+      await build([daily('07:00')], tts: tts);
+      await settings.set(defs.alarmsVolume, 0.6);
+      await alarms.snooze();
+      expect(await alarms.say('Snooze 1', percent: 20), isNull);
+      expect(await alarms.say('Snooze 1', percent: 90), isNull);
+      expect(rings().map((c) => (c.arguments as Map)['volume']), [0.2, 0.6]);
+      expect(await alarms.say('Snooze 1', percent: 4), isNotNull);
+      expect(await alarms.say('Snooze 1', percent: 101), isNotNull);
+      expect(rings(), hasLength(2));
+    });
+
+    test('a ringing alarm and an idle one refuse it', () async {
+      now = DateTime(2026, 10, 2, 7, 0, 5);
+      await build([daily('07:00'), daily('09:00', id: 'b')], tts: tts);
+      expect(await alarms.say('Hello'), 'an alarm is ringing');
+      expect(await alarms.stop(), isTrue);
+      now = now.add(AlarmManager.sayGrace);
+      expect(await alarms.say('Alarm off'), isNull);
+      now = now.add(const Duration(seconds: 1));
+      expect(await alarms.say('Too late'), 'no alarm is going');
+      expect(spoken, ['Alarm off']);
+    });
+
+    test('empty and long texts are refused', () async {
+      now = DateTime(2026, 10, 2, 7, 0, 5);
+      await build([daily('07:00')], tts: tts);
+      await alarms.snooze();
+      expect(await alarms.say('  '), isNotNull);
+      expect(await alarms.say('x' * 251), isNotNull);
+      expect(spoken, isEmpty);
+    });
+
+    test('a ring that starts while Home Assistant speaks wins', () async {
+      now = DateTime(2026, 10, 2, 7, 0, 5);
+      await build(
+        [daily('07:00')],
+        tts: (engine, language, voice, message) async {
+          // The snooze ends while the words are made.
+          now = DateTime(2026, 10, 2, 7, 11);
+          await alarms.check();
+          return Uint8List.fromList(const [1]);
+        },
+      );
+      await alarms.snooze();
+      expect(await alarms.say('Snoozed'), 'an alarm is ringing');
+      expect(rings(), isEmpty);
+    });
+
+    test('the command answers why it did not speak', () async {
+      now = DateTime(2026, 10, 2, 9);
+      await build([daily('07:00')], tts: tts);
+      final result = await registry.execute('alarmSay', {'text': 'Hi'});
+      expect(result.ok, isFalse);
+      expect(result.error, 'no alarm is going');
     });
   });
 }

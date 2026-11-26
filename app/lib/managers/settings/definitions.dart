@@ -50,6 +50,7 @@ class SettingDef<T> {
     this.multiline = false,
     this.placeholder,
     this.linksTo,
+    this.groundControl,
   });
 
   final String key;
@@ -182,6 +183,13 @@ class SettingDef<T> {
   /// synced; [defaultValue] only keeps the type.
   final String? linksTo;
 
+  /// A setting outside Settings > Ground Control that only works with it:
+  /// `vision` for Vision Match, `voice` for Voice Match. Both UIs mark its
+  /// row with a GC tag in that feature's icon, and a tap on the tag says
+  /// what Ground Control is. Shown only while the feature is on, through
+  /// [dependsOn].
+  final String? groundControl;
+
   /// Example text shown in the empty editor instead of [description] —
   /// a code sample reads better than prose where code is expected.
   final String? placeholder;
@@ -276,8 +284,11 @@ const Map<String, String> subpageHints = {
   // Native Voice Satellite's own pages.
   'Assistant': 'Pipelines, follow-ups',
   'Realtime': 'OpenAI, xAI Grok, Gemini, tools, talk over answers',
-  'Ground Control Voice Match': 'Recognition, Trimming and Isolation',
   'Conversation': 'What the overlay shows and for how long',
+  // Ground Control's feature pages.
+  'Voice Match': 'Recognition, Trimming and Isolation',
+  'Vision Match':
+      'Face recognition, detection, hand gestures and presence detection',
   // Its entry row sits under the tester, not with the three pages above.
   'Wake word diagnostics':
       'Recent activations and near misses with audio clips',
@@ -1177,6 +1188,45 @@ const handGestureHoldSeconds = SettingDef<num>(
   category: 'Gestures',
 );
 
+/// Gestures > Ground Control Vision Match: whose raised fingers run Show
+/// fingers gestures, anyone or the chosen people recognized at the kiosk.
+/// Touch, clap and button gestures are not affected.
+const gesturesFaceWho = SettingDef<String>(
+  key: 'gestures.face_who',
+  type: SettingType.select,
+  defaultValue: 'anyone',
+  title: 'Finger gestures for',
+  description:
+      'With Chosen people, Show fingers gestures run only while one of the '
+      'people picked below is recognized at the kiosk.',
+  category: 'Gestures',
+  section: 'Ground Control Vision Match',
+  options: ['anyone', 'people'],
+  optionLabels: {'anyone': 'Anyone', 'people': 'Chosen people'},
+  // The gate lives on Ground Control's Vision Match page, so it is the
+  // second gate: the first must share the row's page.
+  alsoDependsOn: 'vision_match.face_recognition',
+  groundControl: 'vision',
+);
+
+/// Who can run finger gestures on Chosen people, stored like
+/// [voiceMatchPeople]. With nobody chosen, anyone recognized.
+const gesturesFacePeople = SettingDef<String>(
+  key: 'gestures.face_people',
+  type: SettingType.string,
+  defaultValue: '[]',
+  title: 'People',
+  description:
+      'Choose who can run finger gestures. If nobody is chosen, anyone '
+      'recognized can.',
+  category: 'Gestures',
+  section: 'Ground Control Vision Match',
+  dependsOn: 'gestures.face_who',
+  dependsOnValue: 'people',
+  normalizer: normalizeVoiceMatchPeople,
+  groundControl: 'vision',
+);
+
 Object normalizeHandGestureHold(Object value) =>
     value is num && value.isFinite ? (value.clamp(0, 3) * 2).round() / 2 : 0;
 
@@ -1507,6 +1557,110 @@ const lockdownExitGesture = SettingDef<String>(
   },
   dependsOn: 'lockdown.enabled',
 );
+
+/// Kiosk Mode > Ground Control Vision Match: the menu opens after the exit
+/// gesture without the PIN while one of the chosen people is recognized at
+/// the kiosk.
+const kioskFaceSkipPin = SettingDef<String>(
+  key: 'kiosk.face_skip_pin',
+  type: SettingType.select,
+  defaultValue: 'nobody',
+  title: 'Skip the PIN for',
+  description:
+      'With Chosen people, the menu opens after the exit gesture without the '
+      'PIN while one of the people picked below is recognized at the kiosk.',
+  category: 'Kiosk',
+  section: 'Ground Control Vision Match',
+  options: ['nobody', 'people'],
+  optionLabels: {'nobody': 'Nobody', 'people': 'Chosen people'},
+  dependsOn: 'kiosk.enabled',
+  alsoDependsOn: 'vision_match.face_recognition',
+  groundControl: 'vision',
+);
+
+/// Who can skip the kiosk PIN, stored like [voiceMatchPeople]. With nobody
+/// chosen, anyone recognized.
+const kioskFacePeople = SettingDef<String>(
+  key: 'kiosk.face_people',
+  type: SettingType.string,
+  defaultValue: '[]',
+  title: 'People',
+  description:
+      'Choose who can skip the PIN. If nobody is chosen, anyone recognized '
+      'can.',
+  category: 'Kiosk',
+  section: 'Ground Control Vision Match',
+  dependsOn: 'kiosk.face_skip_pin',
+  dependsOnValue: 'people',
+  normalizer: normalizeVoiceMatchPeople,
+  groundControl: 'vision',
+);
+
+/// Lockdown Mode > Ground Control Vision Match: Lockdown Mode is turned off
+/// when one of the chosen people arrives at the kiosk, and the exit gesture
+/// skips the kiosk PIN while one of them is there. Shown with Lockdown Mode
+/// off too, since it acts on a lock from Home Assistant.
+const lockdownFaceDisable = SettingDef<String>(
+  key: 'lockdown.face_disable',
+  type: SettingType.select,
+  defaultValue: 'nobody',
+  title: 'Disable Lockdown Mode for',
+  description:
+      'With Chosen people, Lockdown Mode is turned off when one of the people '
+      'picked below is recognized at the kiosk. Leave this on Nobody if you '
+      'lock the screen to clean it.',
+  category: 'Lockdown',
+  section: 'Ground Control Vision Match',
+  options: ['nobody', 'people'],
+  optionLabels: {'nobody': 'Nobody', 'people': 'Chosen people'},
+  alsoDependsOn: 'vision_match.face_recognition',
+  groundControl: 'vision',
+);
+
+const lockdownFacePeople = SettingDef<String>(
+  key: 'lockdown.face_people',
+  type: SettingType.string,
+  defaultValue: '[]',
+  title: 'People',
+  description:
+      'Choose who Lockdown Mode is turned off for. If nobody is chosen, it is '
+      'turned off for anyone recognized.',
+  category: 'Lockdown',
+  section: 'Ground Control Vision Match',
+  dependsOn: 'lockdown.face_disable',
+  dependsOnValue: 'people',
+  normalizer: normalizeVoiceMatchPeople,
+  groundControl: 'vision',
+);
+
+/// Lockdown Mode on again [lockdownFaceRelockAfter] after none of the
+/// chosen people is in view. Off by default.
+const lockdownFaceRelock = SettingDef<bool>(
+  key: 'lockdown.face_relock',
+  type: SettingType.boolean,
+  defaultValue: false,
+  title: 'Turn Lockdown Mode back on',
+  description:
+      'Turn Lockdown Mode back on 10 seconds after none of the chosen people '
+      'are in view.',
+  category: 'Lockdown',
+  section: 'Ground Control Vision Match',
+  dependsOn: 'lockdown.face_disable',
+  dependsOnValue: 'people',
+  groundControl: 'vision',
+);
+
+/// How long after the last chosen person was in view Turn Lockdown Mode
+/// back on locks again.
+const lockdownFaceRelockAfter = Duration(seconds: 10);
+
+/// Whether one of the people stored in [peopleJson] (as [voiceMatchPeople])
+/// is in [inView], the Ground Control person ids Face Recognition names at
+/// the kiosk. With nobody stored, anyone recognized counts.
+bool chosenInView(Set<String> inView, String peopleJson) {
+  final chosen = {for (final p in decodeVoiceMatchPeople(peopleJson)) p.id};
+  return chosen.isEmpty ? inView.isNotEmpty : inView.any(chosen.contains);
+}
 
 // ── App Launcher ───────────────────────────────────────────────────────
 // The minimal app selector (issue #114): a dedicated kiosk that doubles as
@@ -5062,6 +5216,44 @@ const screensaverImmichFill = SettingDef<String>(
   dependsOn: 'screensaver.immich_validated',
 );
 
+// A photo cropped to fill the screen slides so the faces Immich detected in
+// it stay in view, instead of keeping the middle and cutting off heads
+// (issue #1552). The boxes come from the face.read endpoint, so a key
+// without that permission keeps the centered crop.
+const screensaverImmichCropFaces = SettingDef<bool>(
+  key: 'screensaver.immich_crop_faces',
+  type: SettingType.boolean,
+  defaultValue: true,
+  title: 'Crop around faces',
+  description:
+      'Photos cropped to fill the screen keep the faces Immich found in '
+      'view. Needs the face.read permission.',
+  category: 'Screensaver',
+  section: 'Slideshow',
+  subpage: 'Immich Media screensaver',
+  dependsOn: 'screensaver.immich_fill',
+  dependsOnValue: ['smart', 'always'],
+);
+
+// Videos follow Fill the screen like photos (issue #1298), and with Always
+// a portrait video on a landscape screen loses most of its frame. Off shows
+// every video whole between black bars while photos keep filling the
+// screen (issue #1586).
+const screensaverImmichCropVideos = SettingDef<bool>(
+  key: 'screensaver.immich_crop_videos',
+  type: SettingType.boolean,
+  defaultValue: true,
+  title: 'Crop videos',
+  description:
+      'Videos are cropped to fill the screen like photos. Turn off to show '
+      'every video whole.',
+  category: 'Screensaver',
+  section: 'Slideshow',
+  subpage: 'Immich Media screensaver',
+  dependsOn: 'screensaver.immich_fill',
+  dependsOnValue: ['smart', 'always'],
+);
+
 // Two portrait photos side by side instead of one framed by empty screen:
 // the pair fills a landscape panel the way a single portrait shot never
 // can. On by default, like Fill the screen's Smart setting, since filling
@@ -6213,6 +6405,70 @@ const facePreview = SettingDef<bool>(
   dependsOn: 'screensaver.dismiss_on_face',
 );
 
+/// Ground Control Vision Match > Detect faces: whose face dismisses or
+/// postpones the screensaver, anyone or the chosen people, as Voice Match's
+/// Answer picks who a kiosk answers. The group is the one every feature
+/// that reacts to Face Recognition uses.
+const screensaverFaceWho = SettingDef<String>(
+  key: 'screensaver.face_who',
+  type: SettingType.select,
+  defaultValue: 'anyone',
+  title: 'Detect faces',
+  description:
+      'With Chosen people, only the people picked below dismiss or postpone '
+      'the screensaver.',
+  category: 'Screensaver',
+  section: 'Ground Control Vision Match',
+  subpage: 'Face Detection',
+  options: ['anyone', 'people'],
+  optionLabels: {'anyone': 'Anyone', 'people': 'Chosen people'},
+  dependsOn: 'screensaver.dismiss_on_face',
+  alsoDependsOn: 'vision_match.face_recognition',
+  groundControl: 'vision',
+);
+
+/// The people whose face dismisses or postpones the screensaver, on Chosen
+/// people, stored like [voiceMatchPeople]. With nobody chosen, anyone
+/// recognized.
+const screensaverFacePeople = SettingDef<String>(
+  key: 'screensaver.face_people',
+  type: SettingType.string,
+  defaultValue: '[]',
+  title: 'People',
+  description:
+      'Choose who can dismiss or postpone the screensaver by looking at the '
+      'kiosk. If nobody is chosen, anyone recognized can.',
+  category: 'Screensaver',
+  section: 'Ground Control Vision Match',
+  subpage: 'Face Detection',
+  dependsOn: 'screensaver.face_who',
+  dependsOnValue: 'people',
+  normalizer: normalizeVoiceMatchPeople,
+  groundControl: 'vision',
+);
+
+/// On Chosen people, nothing at the kiosk but a chosen person's face
+/// dismisses the screensaver: touch, keys, motion, the other sensors and
+/// gestures from anyone else are ignored and the screensaver takes no
+/// touches. Kiosk Satellite's own features and Home Assistant still
+/// dismiss it. It stays locked while Face Recognition can't run.
+const screensaverFaceLock = SettingDef<bool>(
+  key: 'screensaver.face_lock',
+  type: SettingType.boolean,
+  defaultValue: false,
+  title: 'Only chosen people dismiss it',
+  description:
+      'Touch, buttons, motion, sensors and gestures from anyone else no '
+      'longer dismiss the screensaver. Phoenix Portal and Home Assistant '
+      'still can.',
+  category: 'Screensaver',
+  section: 'Ground Control Vision Match',
+  subpage: 'Face Detection',
+  dependsOn: 'screensaver.face_who',
+  dependsOnValue: 'people',
+  groundControl: 'vision',
+);
+
 const facePreviewSeconds = SettingDef<num>(
   key: 'face.preview_seconds',
   type: SettingType.number,
@@ -6870,6 +7126,22 @@ const cameraRtspDateTimeBackground = SettingDef<bool>(
   dependsOn: 'camera.rtsp.datetime',
 );
 
+// The camera flash as a steady light (issue #1574), for example to watch
+// a 3D printer on the camera stream at night. It needs no camera session of
+// the app's, so it does not gate on the Camera switch. Hidden where the
+// device has no flash (deviceHiddenKeys, filled at boot by the flashlight
+// manager). Per device: the light belongs to the spot this kiosk watches.
+const cameraFlashlight = SettingDef<bool>(
+  key: 'camera.flashlight',
+  type: SettingType.boolean,
+  defaultValue: false,
+  title: 'Turn on flashlight',
+  description: 'Use the camera flash as a steady light.',
+  category: 'Camera',
+  section: 'Flashlight',
+  perDevice: true,
+);
+
 String? validateRtspPort(Object? value) {
   final port = value is num ? value : num.tryParse('$value');
   return port == null ||
@@ -7075,7 +7347,7 @@ const micGainDb = SettingDef<num>(
   type: SettingType.number,
   defaultValue: 0,
   min: -24,
-  max: 24,
+  max: 36,
   step: 1,
   unit: ' dB',
   title: 'Microphone gain',
@@ -7623,7 +7895,7 @@ const voiceEngine1 = SettingDef<String>(
   title: 'Wake word 1',
   description: 'What answers wake word 1.',
   category: 'Voice Satellite',
-  options: ['assist', 'openai', 'xai', 'gemini'],
+  options: ['assist', 'openai', 'xai', 'gemini', 'vercel'],
   hidden: true,
 );
 
@@ -7634,12 +7906,13 @@ const voiceEngine2 = SettingDef<String>(
   title: 'Wake word 2',
   description: 'What answers wake word 2.',
   category: 'Voice Satellite',
-  options: ['assist', 'openai', 'xai', 'gemini'],
+  options: ['assist', 'openai', 'xai', 'gemini', 'vercel'],
   hidden: true,
 );
 
 // Realtime: wake words answered by a speech to speech model, full duplex.
-// OpenAI, xAI Grok and Google Gemini side by side, each with its own connection, and the
+// OpenAI, xAI Grok, Google Gemini and Vercel AI Gateway side by side, each
+// with its own connection, and the
 // conversation and the tools shared. A provider's settings are edited in
 // its Configure dialog, which saves them only once they connect: the
 // Providers group shows one row per provider in their place
@@ -7974,6 +8247,104 @@ const voiceRealtimeGeminiValidated = SettingDef<String>(
   perDevice: true,
 );
 
+const voiceRealtimeVercelApiKey = SettingDef<String>(
+  key: 'voice.realtime_vercel_api_key',
+  type: SettingType.password,
+  defaultValue: '',
+  title: 'API key',
+  description: 'Leave empty when a relay adds it.',
+  category: 'Voice Satellite',
+  subpage: 'Realtime',
+  section: 'Providers',
+  secret: true,
+  dependsOn: 'voice.enabled',
+);
+
+/// The gateway's realtime models, each named after its provider
+/// (SettingsManager's realtime catalog); '' is its default.
+const voiceRealtimeVercelModel = SettingDef<String>(
+  key: 'voice.realtime_vercel_model',
+  type: SettingType.select,
+  defaultValue: '',
+  title: 'Model',
+  description: 'The speech to speech model that answers.',
+  category: 'Voice Satellite',
+  subpage: 'Realtime',
+  section: 'Providers',
+  options: [''],
+  optionLabels: {'': 'Provider default'},
+  dependsOn: 'voice.enabled',
+);
+
+/// The voices of the model's provider; '' is that provider's default.
+const voiceRealtimeVercelVoice = SettingDef<String>(
+  key: 'voice.realtime_vercel_voice',
+  type: SettingType.select,
+  defaultValue: '',
+  title: 'Voice',
+  description: 'How the assistant sounds.',
+  category: 'Voice Satellite',
+  subpage: 'Realtime',
+  section: 'Providers',
+  options: [''],
+  optionLabels: {'': 'Provider default'},
+  dependsOn: 'voice.enabled',
+);
+
+/// OpenAI's reasoning effort, which reaches only the gateway's OpenAI
+/// models: Gemini read its thinking aloud and the others have none.
+const voiceRealtimeVercelReasoning = SettingDef<String>(
+  key: 'voice.realtime_vercel_reasoning',
+  type: SettingType.select,
+  defaultValue: '',
+  title: 'Reasoning effort',
+  description:
+      'More effort answers harder questions better. Only for '
+      'openai/gpt-realtime-2 models.',
+  category: 'Voice Satellite',
+  subpage: 'Realtime',
+  section: 'Providers',
+  options: ['', 'minimal', 'low', 'medium', 'high', 'xhigh'],
+  optionLabels: {
+    '': 'Model default',
+    'minimal': 'Minimal',
+    'low': 'Low',
+    'medium': 'Medium',
+    'high': 'High',
+    'xhigh': 'Extra high',
+  },
+  dependsOn: 'voice.enabled',
+);
+
+const voiceRealtimeVercelEndpoint = SettingDef<String>(
+  key: 'voice.realtime_vercel_endpoint',
+  type: SettingType.string,
+  defaultValue: '',
+  title: 'Endpoint',
+  description:
+      'Leave empty to use the provider. Use a relay on your network to keep '
+      'this kiosk offline.',
+  category: 'Voice Satellite',
+  subpage: 'Realtime',
+  section: 'Providers',
+  placeholder: 'Provider default',
+  dependsOn: 'voice.enabled',
+);
+
+/// What Vercel's last successful Save & Validate checked: a hash of
+/// its endpoint and key. The Assistant selects offer it only while that
+/// still matches. Per device: each kiosk reaches the provider on its own.
+const voiceRealtimeVercelValidated = SettingDef<String>(
+  key: 'voice.realtime_vercel_validated',
+  type: SettingType.string,
+  defaultValue: '',
+  title: 'Realtime connection validated',
+  description: '',
+  category: 'Voice Satellite',
+  hidden: true,
+  perDevice: true,
+);
+
 /// The settings each provider's Configure dialog holds, by provider id.
 /// Neither UI draws them as rows: the first one's place in the Providers
 /// group takes the provider's row, the others add nothing.
@@ -7997,6 +8368,13 @@ const realtimeProviderSettings = <String, List<SettingDef<String>>>{
     voiceRealtimeGeminiVoice,
     voiceRealtimeGeminiEndpoint,
     voiceRealtimeGeminiReasoning,
+  ],
+  'vercel': [
+    voiceRealtimeVercelApiKey,
+    voiceRealtimeVercelModel,
+    voiceRealtimeVercelVoice,
+    voiceRealtimeVercelEndpoint,
+    voiceRealtimeVercelReasoning,
   ],
 };
 
@@ -8165,7 +8543,7 @@ const voiceRealtimeMcpToken = SettingDef<String>(
   dependsOnValue: 'custom',
 );
 
-// Ground Control: Phoenix Portal Ground Control, a Home Assistant app or
+// Ground Control: Kiosk Satellite Ground Control, a Home Assistant app or
 // Docker container, runs what is too heavy for a kiosk on a capable machine.
 // The kiosk signs in with its Home Assistant token and finds it by mDNS
 // unless an address is set. Its features have their own pages: Voice Match
@@ -8177,8 +8555,8 @@ const groundControlEnabled = SettingDef<bool>(
   defaultValue: false,
   title: 'Enable Ground Control',
   description:
-      'Connect to Phoenix Portal Ground Control, which runs Voice Match on '
-      'a capable machine.',
+      'Connect to Kiosk Satellite Ground Control, which runs Voice Match and '
+      'Vision Match on a capable machine.',
   category: 'Ground Control',
 );
 
@@ -8191,24 +8569,278 @@ const groundControlAddress = SettingDef<String>(
       'Leave empty to find Ground Control on the network. Enter one for '
       'Ground Control on another network.',
   category: 'Ground Control',
-  section: 'Connection',
   placeholder: '192.168.1.10:10900',
   dependsOn: 'ground_control.enabled',
 );
 
-/// Ground Control's features, each a row under Features that opens its page:
-/// Voice Match lives under Voice Satellite. Vision Match, coming soon,
-/// is a row of its own under this one (GroundControlComingSoonRow, and
-/// ground_control.js on the remote).
-const groundControlVoiceMatch = SettingDef<bool>(
-  key: 'ground_control.voice_match',
+// Ground Control's feature pages, Voice Match and Vision Match, follow
+// Connection on its page.
+
+// Vision Match, with Ground Control: the camera's face and hand looks run on
+// Ground Control instead of this device, each feature by its own switch. The
+// camera and motion detection stay here, and motion still decides when a
+// frame is worth sending. A feature on Ground Control waits for it when it
+// doesn't answer: the models on this device stand in only with it off.
+
+const visionMatchEnabled = SettingDef<bool>(
+  key: 'vision_match.enabled',
   type: SettingType.boolean,
   defaultValue: false,
-  title: 'Voice Match',
-  description: 'Recognition, Trimming and Isolation.',
+  title: 'Enable Vision Match',
+  description:
+      'Face Detection, Hand Gestures and Face Recognition. Needs Ground '
+      'Control.',
   category: 'Ground Control',
-  section: 'Features',
-  linksTo: 'voice_match.enabled',
+  subpage: 'Vision Match',
+  dependsOn: 'camera.enabled',
+  alsoDependsOn: 'ground_control.enabled',
+);
+
+/// Dismiss and Postpone on face, on Ground Control.
+const visionMatchFaceDetection = SettingDef<bool>(
+  key: 'vision_match.face_detection',
+  type: SettingType.boolean,
+  defaultValue: true,
+  title: 'Enable Face Detection',
+  description:
+      'Run face detection on Ground Control. Disable to run on-device.',
+  category: 'Ground Control',
+  subpage: 'Vision Match',
+  section: 'Face Detection',
+  dependsOn: 'vision_match.enabled',
+);
+
+/// Vision Match > Face Detection > Presence sensors: the Presence and
+/// Looking at the kiosk binary sensors in Home Assistant, from Ground
+/// Control's face looks (VisionPresence). Off by default: with it on the
+/// camera stays bound and faces are looked for after motion with the screen
+/// off too.
+const visionMatchPresenceSensors = SettingDef<bool>(
+  key: 'vision_match.presence_sensors',
+  type: SettingType.boolean,
+  defaultValue: false,
+  title: 'Presence sensors',
+  description:
+      'Add the Presence and Looking at the kiosk sensors to Home Assistant. '
+      'The camera stays on and faces are checked whenever something moves, '
+      'even with the screen off.',
+  category: 'Ground Control',
+  subpage: 'Vision Match',
+  section: 'Face Detection',
+  dependsOn: 'vision_match.enabled',
+  alsoDependsOn: 'vision_match.face_detection',
+);
+
+/// Who is looking at the kiosk, from the faces enrolled on Ground Control,
+/// in the Face sensor. Needs Face Detection on Ground Control: its looks are
+/// what Ground Control recognizes.
+const visionMatchFaceRecognition = SettingDef<bool>(
+  key: 'vision_match.face_recognition',
+  type: SettingType.boolean,
+  defaultValue: true,
+  title: 'Enable Face Recognition',
+  description:
+      'Recognize who is looking at the kiosk and show it in the Face sensor. '
+      'Needs Face Detection on Ground Control.',
+  category: 'Ground Control',
+  subpage: 'Vision Match',
+  section: 'Face Recognition',
+  dependsOn: 'vision_match.enabled',
+  alsoDependsOn: 'vision_match.face_detection',
+);
+
+/// Confirm voices with faces: a voice under the recognition threshold is
+/// taken for the person Face Recognition sees at the kiosk, when they are
+/// also the closest voiceprint. Off by default: a guest talking while
+/// someone enrolled stands at the kiosk can then be taken for them now and
+/// then.
+const visionMatchFaceConfirmsVoice = SettingDef<bool>(
+  key: 'vision_match.face_confirms_voice',
+  type: SettingType.boolean,
+  defaultValue: false,
+  title: 'Confirm voices with faces',
+  description:
+      "Accept a close voice match when the same person's face is recognized "
+      'at the kiosk. Only the person with the closest voiceprint can be '
+      'matched this way.',
+  category: 'Ground Control',
+  subpage: 'Vision Match',
+  section: 'Face Recognition',
+  dependsOn: 'vision_match.face_recognition',
+  alsoDependsOn: 'voice_match.enabled',
+);
+
+/// Vision Match > Recognition cards: a card with the person's picture and
+/// name when someone arrives at the kiosk (RecognitionCards). Shown again
+/// for the same person after [recognitionArrivalAway] away.
+const visionMatchShowArrivals = SettingDef<bool>(
+  key: 'vision_match.show_arrivals',
+  type: SettingType.boolean,
+  defaultValue: true,
+  title: 'Show arrivals',
+  description:
+      "Show a card with the person's picture and name when someone is "
+      'recognized at the kiosk. It shows again for the same person after they '
+      'have been away for a minute.',
+  category: 'Ground Control',
+  subpage: 'Vision Match',
+  section: 'Recognition cards',
+  dependsOn: 'vision_match.face_recognition',
+);
+
+/// A small card each time a recognized face lets something through: the
+/// kiosk PIN skipped, Lockdown Mode turned off, a voice confirmed.
+const visionMatchShowActions = SettingDef<bool>(
+  key: 'vision_match.show_actions',
+  type: SettingType.boolean,
+  defaultValue: true,
+  title: 'Show face actions',
+  description:
+      'Show a small card each time something on the kiosk changes because a '
+      'face was recognized.',
+  category: 'Ground Control',
+  subpage: 'Vision Match',
+  section: 'Recognition cards',
+  dependsOn: 'vision_match.face_recognition',
+);
+
+/// The corner both cards show in. While the camera preview shows, they show
+/// beside it in the preview's corner instead.
+const visionMatchCardPosition = SettingDef<String>(
+  key: 'vision_match.card_position',
+  type: SettingType.select,
+  defaultValue: 'bottom_left',
+  title: 'Card position',
+  description:
+      'The corner of the screen where both cards show. While the camera '
+      'preview shows, they show next to it.',
+  category: 'Ground Control',
+  subpage: 'Vision Match',
+  section: 'Recognition cards',
+  options: cornerOptions,
+  optionLabels: cornerLabels,
+  dependsOn: 'vision_match.face_recognition',
+);
+
+/// How long someone has to be out of view before their arrival card shows
+/// again.
+const recognitionArrivalAway = Duration(minutes: 1);
+
+/// Vision Match > Used in other settings: rows to the settings outside
+/// Ground Control that react to Face Recognition, with their value.
+const visionMatchLinkFaceWho = SettingDef<String>(
+  key: 'vision_match.link_face_who',
+  type: SettingType.string,
+  defaultValue: '',
+  title: 'Detect faces',
+  description: 'Screensaver > Face Detection > Ground Control Vision Match',
+  category: 'Ground Control',
+  subpage: 'Vision Match',
+  section: 'Used in other settings',
+  dependsOn: 'vision_match.face_recognition',
+  linksTo: 'screensaver.face_who',
+);
+
+const visionMatchLinkScreensaverLock = SettingDef<String>(
+  key: 'vision_match.link_screensaver_lock',
+  type: SettingType.string,
+  defaultValue: '',
+  title: 'Only chosen people dismiss it',
+  description: 'Screensaver > Face Detection > Ground Control Vision Match',
+  category: 'Ground Control',
+  subpage: 'Vision Match',
+  section: 'Used in other settings',
+  dependsOn: 'vision_match.face_recognition',
+  linksTo: 'screensaver.face_lock',
+);
+
+const visionMatchLinkKioskPin = SettingDef<String>(
+  key: 'vision_match.link_kiosk_pin',
+  type: SettingType.string,
+  defaultValue: '',
+  title: 'Skip the PIN for',
+  description: 'Kiosk Mode > Ground Control Vision Match',
+  category: 'Ground Control',
+  subpage: 'Vision Match',
+  section: 'Used in other settings',
+  dependsOn: 'vision_match.face_recognition',
+  linksTo: 'kiosk.face_skip_pin',
+);
+
+const visionMatchLinkLockdownDisable = SettingDef<String>(
+  key: 'vision_match.link_lockdown_disable',
+  type: SettingType.string,
+  defaultValue: '',
+  title: 'Disable Lockdown Mode for',
+  description: 'Lockdown Mode > Ground Control Vision Match',
+  category: 'Ground Control',
+  subpage: 'Vision Match',
+  section: 'Used in other settings',
+  dependsOn: 'vision_match.face_recognition',
+  linksTo: 'lockdown.face_disable',
+);
+
+const visionMatchLinkLockdownRelock = SettingDef<String>(
+  key: 'vision_match.link_lockdown_relock',
+  type: SettingType.string,
+  defaultValue: '',
+  title: 'Turn Lockdown Mode back on',
+  description: 'Lockdown Mode > Ground Control Vision Match',
+  category: 'Ground Control',
+  subpage: 'Vision Match',
+  section: 'Used in other settings',
+  dependsOn: 'vision_match.face_recognition',
+  linksTo: 'lockdown.face_relock',
+);
+
+const visionMatchLinkGestureWho = SettingDef<String>(
+  key: 'vision_match.link_gesture_who',
+  type: SettingType.string,
+  defaultValue: '',
+  title: 'Finger gestures for',
+  description: 'Gestures > Ground Control Vision Match',
+  category: 'Ground Control',
+  subpage: 'Vision Match',
+  section: 'Used in other settings',
+  dependsOn: 'vision_match.face_recognition',
+  linksTo: 'gestures.face_who',
+);
+
+const visionMatchLinkCalendarFocus = SettingDef<String>(
+  key: 'vision_match.link_calendar_focus',
+  type: SettingType.string,
+  defaultValue: '',
+  title: 'Focus on who is at the kiosk',
+  description: 'Calendar > Ground Control Vision Match',
+  category: 'Ground Control',
+  subpage: 'Vision Match',
+  section: 'Used in other settings',
+  dependsOn: 'vision_match.face_recognition',
+  linksTo: 'calendar.face_focus',
+);
+
+/// The People setting each Chosen people option lists, for the values on
+/// Vision Match > Used in other settings.
+const groundControlPeopleOf = {
+  'screensaver.face_who': screensaverFacePeople,
+  'kiosk.face_skip_pin': kioskFacePeople,
+  'lockdown.face_disable': lockdownFacePeople,
+  'gestures.face_who': gesturesFacePeople,
+};
+
+/// Show fingers gestures, on Ground Control.
+const visionMatchHandGestures = SettingDef<bool>(
+  key: 'vision_match.hand_gestures',
+  type: SettingType.boolean,
+  defaultValue: true,
+  title: 'Enable Hand Gestures',
+  description:
+      'Run palm and fingers gestures detection on Ground Control. Disable to '
+      'run on-device.',
+  category: 'Ground Control',
+  subpage: 'Vision Match',
+  section: 'Hand Gestures',
+  dependsOn: 'vision_match.enabled',
 );
 
 // Voice Match, with Ground Control: Recognition (who is talking), Trimming
@@ -8223,8 +8855,8 @@ const voiceMatchEnabled = SettingDef<bool>(
   description:
       'Who is talking, and only their voice in the command. Needs Ground '
       'Control.',
-  category: 'Voice Satellite',
-  subpage: 'Ground Control Voice Match',
+  category: 'Ground Control',
+  subpage: 'Voice Match',
   dependsOn: 'voice.enabled',
   alsoDependsOn: 'ground_control.enabled',
 );
@@ -8237,8 +8869,8 @@ const voiceMatchPolicy = SettingDef<String>(
   defaultValue: 'anyone',
   title: 'Answer',
   description: 'Chosen people ignores the TV, guests and everyone else.',
-  category: 'Voice Satellite',
-  subpage: 'Ground Control Voice Match',
+  category: 'Ground Control',
+  subpage: 'Voice Match',
   section: 'Recognition',
   options: ['anyone', 'people'],
   optionLabels: {'anyone': 'Anyone', 'people': 'Chosen people'},
@@ -8256,8 +8888,8 @@ const voiceMatchPeople = SettingDef<String>(
   description:
       'Who this kiosk answers. With nobody chosen, it answers anyone '
       'enrolled.',
-  category: 'Voice Satellite',
-  subpage: 'Ground Control Voice Match',
+  category: 'Ground Control',
+  subpage: 'Voice Match',
   section: 'Recognition',
   dependsOn: 'voice_match.policy',
   dependsOnValue: 'people',
@@ -8304,8 +8936,8 @@ const voiceMatchRejected = SettingDef<String>(
   defaultValue: 'quiet',
   title: 'Voice not chosen',
   description: 'What happens when someone else says the wake word.',
-  category: 'Voice Satellite',
-  subpage: 'Ground Control Voice Match',
+  category: 'Ground Control',
+  subpage: 'Voice Match',
   section: 'Recognition',
   options: ['quiet', 'chime'],
   optionLabels: {'quiet': 'Stay quiet', 'chime': 'Play the error chime'},
@@ -8323,8 +8955,8 @@ const voiceMatchSpeakerSensor = SettingDef<bool>(
   description:
       'Adds a Speaker sensor to this kiosk in Home Assistant, for automations '
       'and agent instructions.',
-  category: 'Voice Satellite',
-  subpage: 'Ground Control Voice Match',
+  category: 'Ground Control',
+  subpage: 'Voice Match',
   section: 'Recognition',
   dependsOn: 'voice_match.enabled',
 );
@@ -8338,8 +8970,8 @@ const voiceMatchShowSpeaker = SettingDef<bool>(
       "The speaker's name before the command on the voice overlay, in their "
       'color. On a device with a light ring, the listening arc takes the '
       'color.',
-  category: 'Voice Satellite',
-  subpage: 'Ground Control Voice Match',
+  category: 'Ground Control',
+  subpage: 'Voice Match',
   section: 'Recognition',
   dependsOn: 'voice_match.enabled',
 );
@@ -8353,8 +8985,8 @@ const voiceMatchAllowEnroll = SettingDef<bool>(
       "Lets the Ground Control app record a person's voice with this kiosk's "
       'microphone. The kiosk shows the text to read, or the light ring '
       'shows the progress.',
-  category: 'Voice Satellite',
-  subpage: 'Ground Control Voice Match',
+  category: 'Ground Control',
+  subpage: 'Voice Match',
   section: 'Recognition',
   dependsOn: 'voice_match.enabled',
 );
@@ -8370,8 +9002,8 @@ const voiceMatchEndOnOtherVoice = SettingDef<bool>(
       'Other voices, like a TV or other people, are cut out between the '
       'words of the person who said the wake word, and the command ends '
       'when they stop.',
-  category: 'Voice Satellite',
-  subpage: 'Ground Control Voice Match',
+  category: 'Ground Control',
+  subpage: 'Voice Match',
   section: 'Trimming',
   dependsOn: 'voice_match.enabled',
 );
@@ -8388,8 +9020,8 @@ const voiceMatchIsolation = SettingDef<bool>(
       'Other voices talking over the words of the person who said the wake '
       'word are removed too. The command waits for it once they stop. Needs '
       'Isolation on in Ground Control.',
-  category: 'Voice Satellite',
-  subpage: 'Ground Control Voice Match',
+  category: 'Ground Control',
+  subpage: 'Voice Match',
   section: 'Isolation',
   dependsOn: 'voice_match.end_on_other_voice',
 );
@@ -9029,6 +9661,26 @@ const timersPauseScreensaver = SettingDef<bool>(
   category: 'Timers',
   dependsOn: 'voice.timer_pills',
   dependsOnValue: false,
+);
+
+/// The size of the names, buttons and other timers in the full screen
+/// Timers view (issue #1544). The time of the first timer takes the room
+/// they leave. On a small screen the view grows them only as far as the
+/// room allows, so the time stays large and nothing overlaps. Unlike the
+/// rows above, it applies with the pills on too: the view still opens
+/// from the menu, a gesture or Compass.
+const timersViewScale = SettingDef<num>(
+  key: 'timers.view_scale',
+  type: SettingType.number,
+  defaultValue: 100,
+  title: 'Timers view scale',
+  description: 'The size of the timer names and buttons in the Timers view.',
+  category: 'Timers',
+  min: 75,
+  max: 200,
+  step: 5,
+  unit: '%',
+  dependsOn: 'timers.enabled',
 );
 
 /// The kiosk menu's Timers row: a link to Drawer menu items, which decides
@@ -12873,24 +13525,26 @@ String? _validateMusicPick(Object? value) {
   }
 }
 
-const alarmsSnoozeMinutes = SettingDef<String>(
+const alarmsSnoozeMinutes = SettingDef<num>(
   key: 'alarms.snooze_minutes',
-  type: SettingType.select,
-  defaultValue: '10',
+  type: SettingType.number,
+  defaultValue: 10,
   title: 'Snooze length',
   description: 'How long Snooze holds an alarm off.',
   category: 'Alarms',
   section: 'Defaults',
-  options: ['5', '10', '15', '20', '25', '30'],
-  optionLabels: {
-    '5': '5 minutes',
-    '10': '10 minutes',
-    '15': '15 minutes',
-    '20': '20 minutes',
-    '25': '25 minutes',
-    '30': '30 minutes',
-  },
+  min: 1,
+  max: 60,
+  step: 1,
+  unit: 'min',
 );
+
+/// The minutes in a snooze length stored before the slider, when it was
+/// a pick like '10' (issue #1585). Null for anything that is not 1 to 60.
+int? snoozeMinutesFrom(String pick) {
+  final minutes = int.tryParse(pick.trim());
+  return minutes != null && minutes >= 1 && minutes <= 60 ? minutes : null;
+}
 
 const alarmsSilenceAfterMinutes = SettingDef<String>(
   key: 'alarms.silence_after_minutes',
@@ -13147,6 +13801,26 @@ const calendarAllowDelete = SettingDef<bool>(
   section: 'Editing',
 );
 
+/// Calendar > Ground Control Vision Match: the calendars of the people
+/// Face Recognition names at the kiosk stand out. Their chips get a ring,
+/// their lanes come first in Day, Up next is the person at the kiosk's and
+/// New event starts on their calendar. Nothing is hidden or saved.
+const calendarFaceFocus = SettingDef<bool>(
+  key: 'calendar.face_focus',
+  type: SettingType.boolean,
+  defaultValue: true,
+  title: 'Focus on who is at the kiosk',
+  description:
+      'Rings the chip of the person at the kiosk, puts their lane first in '
+      'Day and picks their calendar for new events.',
+  category: 'Calendar',
+  section: 'Ground Control Vision Match',
+  // The gate lives on Ground Control's Vision Match page, so it is the
+  // second gate, as for Finger gestures for.
+  alsoDependsOn: 'vision_match.face_recognition',
+  groundControl: 'vision',
+);
+
 /// Where the kiosk menu's Calendar row had its own switch. A link to
 /// Drawer menu items now (issue #1194), which decides every row.
 const calendarMenu = SettingDef<bool>(
@@ -13206,6 +13880,9 @@ String? validateCalendarList(Object? value) {
 /// a page of its own.
 const fleetSyncCategories = <(String, String, String)>[
   ('Navigation', 'Navigation', ''),
+  // Enable Ground Control, its address and its feature pages, Voice Match
+  // and Vision Match.
+  ('Ground Control', 'Ground Control', ''),
   // ha.satellite_entity stays per kiosk; its row (Assigned satellite) is
   // on the Voice Satellite page, so the note goes there.
   ('Home Assistant', 'Home Assistant', ''),
@@ -13259,6 +13936,7 @@ const fleetCredentials = <(String, String)>[
   ('voice.realtime_openai_api_key', 'OpenAI API key'),
   ('voice.realtime_xai_api_key', 'xAI API key'),
   ('voice.realtime_gemini_api_key', 'Gemini API key'),
+  ('voice.realtime_vercel_api_key', 'Vercel AI Gateway API key'),
   ('voice.realtime_mcp_token', 'MCP server token'),
   (fleetPluginSecrets, 'Plugin secrets'),
 ];
@@ -13275,6 +13953,7 @@ const fleetCredentialKeys = {
   'voice.realtime_openai_api_key',
   'voice.realtime_xai_api_key',
   'voice.realtime_gemini_api_key',
+  'voice.realtime_vercel_api_key',
   'voice.realtime_mcp_token',
   fleetPluginSecrets,
 };
@@ -13782,6 +14461,7 @@ const fleetFollowsKey = {
 
 /// What a new follower gets unless the leader says otherwise.
 const fleetDefaultCategories = {
+  'Ground Control',
   'Home Assistant',
   'Voice Satellite',
   'Browser',
@@ -14034,6 +14714,19 @@ String effectiveHostname(String typed, String deviceName) {
   final chosen = esphomeNodeSlug(typed);
   if (chosen.isNotEmpty) return chosen;
   return esphomeNodeFromDeviceName(deviceName);
+}
+
+/// The name this kiosk goes by in Ground Control: the hostname above,
+/// else `kiosk-satellite-` and the end of the fleet id (the Android ID),
+/// the name the Bluetooth proxy takes without one. So a kiosk with no
+/// device name and no mDNS name still connects (Ground Control #15).
+/// Empty only while the fleet id is not written yet.
+String groundControlDeviceId(String typed, String deviceName, String fleetId) {
+  final named = effectiveHostname(typed, deviceName);
+  if (named.isNotEmpty) return named;
+  final id = esphomeNodeSlug(fleetId).replaceAll('-', '');
+  if (id.isEmpty) return '';
+  return 'kiosk-satellite-${id.length > 6 ? id.substring(id.length - 6) : id}';
 }
 
 const uiLanguage = SettingDef<String>(
@@ -14950,6 +15643,8 @@ const List<SettingDef<Object>> allSettings = [
   gestureMappings,
   clapStrictness,
   handGestureHoldSeconds,
+  gesturesFaceWho,
+  gesturesFacePeople,
   ...ledSettings,
   kioskAllowDrawer,
   kioskAllowDashboard,
@@ -14968,12 +15663,17 @@ const List<SettingDef<Object>> allSettings = [
   kioskAllowTheme,
   kioskAllowApps,
   kioskAllowedApps,
+  kioskFaceSkipPin,
+  kioskFacePeople,
   lockdownEnabled,
   lockdownMenu,
   lockdownAutoUnlockMinutes,
   lockdownBlackout,
   lockdownAllowScreensaver,
   lockdownExitGesture,
+  lockdownFaceDisable,
+  lockdownFacePeople,
+  lockdownFaceRelock,
   homeLauncherEnabled,
   homeKeepPinning,
   launcherEnabled,
@@ -15217,6 +15917,8 @@ const List<SettingDef<Object>> allSettings = [
   screensaverImmichShuffle,
   screensaverImmichTransition,
   screensaverImmichFill,
+  screensaverImmichCropFaces,
+  screensaverImmichCropVideos,
   screensaverImmichPairPortrait,
   screensaverImmichPairLandscape,
   screensaverImmichEdgeTaps,
@@ -15285,6 +15987,9 @@ const List<SettingDef<Object>> allSettings = [
   screensaverDismissOnFace,
   screensaverDismissOnFaceScreenOffOnly,
   screensaverPostponeOnFace,
+  screensaverFaceWho,
+  screensaverFacePeople,
+  screensaverFaceLock,
   faceSensitivity,
   facePreview,
   facePreviewSeconds,
@@ -15329,6 +16034,7 @@ const List<SettingDef<Object>> allSettings = [
   cameraRtspDateTime,
   cameraRtspDateTimeBackground,
   cameraRtspTls,
+  cameraFlashlight,
   screensaverScheduleEnabled,
   screensaverSchedule,
   wakeWordEnabled,
@@ -15378,6 +16084,12 @@ const List<SettingDef<Object>> allSettings = [
   voiceRealtimeGeminiSearch,
   voiceRealtimeGeminiProactive,
   voiceRealtimeGeminiValidated,
+  voiceRealtimeVercelApiKey,
+  voiceRealtimeVercelModel,
+  voiceRealtimeVercelVoice,
+  voiceRealtimeVercelEndpoint,
+  voiceRealtimeVercelReasoning,
+  voiceRealtimeVercelValidated,
   voiceRealtimeInstructions,
   voiceRealtimeIdleSeconds,
   voiceRealtimeSpeed,
@@ -15389,7 +16101,6 @@ const List<SettingDef<Object>> allSettings = [
   voiceRealtimeMcpToken,
   groundControlEnabled,
   groundControlAddress,
-  groundControlVoiceMatch,
   voiceMatchEnabled,
   voiceMatchPolicy,
   voiceMatchPeople,
@@ -15399,6 +16110,23 @@ const List<SettingDef<Object>> allSettings = [
   voiceMatchAllowEnroll,
   voiceMatchEndOnOtherVoice,
   voiceMatchIsolation,
+  visionMatchEnabled,
+  visionMatchFaceDetection,
+  visionMatchPresenceSensors,
+  visionMatchFaceRecognition,
+  visionMatchFaceConfirmsVoice,
+  visionMatchShowArrivals,
+  visionMatchShowActions,
+  visionMatchCardPosition,
+  visionMatchHandGestures,
+  // Used in other settings stays the last group on the page.
+  visionMatchLinkFaceWho,
+  visionMatchLinkScreensaverLock,
+  visionMatchLinkKioskPin,
+  visionMatchLinkLockdownDisable,
+  visionMatchLinkLockdownRelock,
+  visionMatchLinkGestureWho,
+  visionMatchLinkCalendarFocus,
   voiceWakeWordSensitivity,
   voiceWakeWordFineTune,
   voiceNoiseGate,
@@ -15428,6 +16156,7 @@ const List<SettingDef<Object>> allSettings = [
   timersShowOnStart,
   timersShowBeforeEnd,
   timersPauseScreensaver,
+  timersViewScale,
   timersMenu,
   voiceTimersShare,
   voiceTimersShareWith,
@@ -15702,6 +16431,7 @@ const List<SettingDef<Object>> allSettings = [
   calendarWeatherEntity,
   calendarAllowEdit,
   calendarAllowDelete,
+  calendarFaceFocus,
   calendarIdleCloseMinutes,
   calendarMenu,
   homeScreen,

@@ -967,7 +967,7 @@ void main() {
         },
       ]),
       'ks.alarms.tone': 'gentle.mp3',
-      'ks.alarms.snooze_minutes': '5',
+      'ks.alarms.snooze_minutes': 5,
     }, firstDelay: const Duration(days: 1));
     expect(await analytics.sendSnapshot(force: true), isTrue);
     final u = bodyOf(sent.single)['usage'] as Map;
@@ -987,6 +987,184 @@ void main() {
     expect(text, isNot(contains('06:30')));
     expect(text, isNot(contains('rooster')));
     expect(text, isNot(contains('gentle')));
+  });
+
+  group('Ground Control', () {
+    Map<String, Object?>? gcState;
+
+    Future<Map> usage(Map<String, Object> initial) async {
+      await build(initial, firstDelay: const Duration(days: 1));
+      commands.register(
+        Command(
+          name: 'groundControlStatus',
+          description: 'stub',
+          handler: (_) async => CommandResult.ok(gcState),
+        ),
+      );
+      expect(await analytics.sendSnapshot(force: true), isTrue);
+      return bodyOf(sent.single)['usage'] as Map;
+    }
+
+    setUp(() {
+      gcState = {
+        'enabled': true,
+        'status': 'connected',
+        'baseUrl': 'http://192.168.1.10:10900',
+        'version': '1.2.0',
+        'model': 'accurate',
+        'haApp': true,
+        'install': {
+          'install': 'docker',
+          'arch': 'aarch64',
+          'cuda': '13.0',
+          'onGpu': true,
+        },
+        'people': [
+          {'id': 'p1', 'name': 'Alice'},
+          {'id': 'p2', 'name': 'Bob'},
+        ],
+      };
+    });
+
+    test('off reports only the switch', () async {
+      final u = await usage({});
+      expect(u['gc_enabled'], isFalse);
+      for (final k in [
+        'gc_address',
+        'gc_version',
+        'voice_match_model',
+        'gc_ha_app',
+        'gc_install',
+        'gc_arch',
+        'gc_cuda',
+        'gc_on_gpu',
+        'gc_people',
+        'voice_match_enabled',
+        'voice_match_policy',
+        'vision_match_enabled',
+      ]) {
+        expect(u.containsKey(k), isFalse, reason: k);
+      }
+    });
+
+    test('on reports what it runs and a count of people, never their names '
+        'or the address', () async {
+      final u = await usage({
+        'ks.ground_control.enabled': true,
+        'ks.ground_control.address': '192.168.1.10:10900',
+        'ks.voice.enabled': true,
+        'ks.voice_match.enabled': true,
+        'ks.voice_match.policy': 'people',
+        'ks.voice_match.people': jsonEncode([
+          {'id': 'p1', 'name': 'Alice'},
+        ]),
+      });
+      expect(u['gc_enabled'], isTrue);
+      expect(u['gc_address'], 'manual');
+      expect(u['gc_version'], '1.2.0');
+      expect(u['voice_match_model'], 'accurate');
+      expect(u['gc_ha_app'], isTrue);
+      expect(u['gc_install'], 'docker');
+      expect(u['gc_arch'], 'aarch64');
+      expect(u['gc_cuda'], '13.0');
+      expect(u['gc_on_gpu'], isTrue);
+      expect(u['gc_people'], 2);
+      expect(u['voice_match_enabled'], isTrue);
+      expect(u['voice_match_policy'], 'people');
+      final text = jsonEncode(u);
+      expect(text, isNot(contains('Alice')));
+      expect(text, isNot(contains('Bob')));
+      expect(text, isNot(contains('p1')));
+      expect(text, isNot(contains('192.168.1.10')));
+    });
+
+    test('Vision Match reports the features it runs and how faces are '
+        'used, never who was chosen', () async {
+      final u = await usage({
+        'ks.ground_control.enabled': true,
+        'ks.vision_match.enabled': true,
+        'ks.vision_match.presence_sensors': true,
+        'ks.vision_match.show_actions': false,
+        'ks.screensaver.face_who': 'people',
+        'ks.screensaver.face_people': jsonEncode([
+          {'id': 'p1', 'name': 'Alice'},
+        ]),
+        'ks.kiosk.face_skip_pin': 'people',
+        'ks.lockdown.face_disable': 'people',
+        'ks.lockdown.face_relock': true,
+      });
+      expect(u['vision_match_enabled'], isTrue);
+      expect(u['vision_match_face_detection'], isTrue);
+      expect(u['vision_match_hand_gestures'], isTrue);
+      expect(u['vision_match_presence_sensors'], isTrue);
+      expect(u['vision_match_face_recognition'], isTrue);
+      // Needs Voice Match, which is off.
+      expect(u['vision_match_confirm_voices'], isFalse);
+      expect(u['vision_match_show_arrivals'], isTrue);
+      expect(u['vision_match_show_actions'], isFalse);
+      expect(u['vision_match_screensaver_faces'], 'people');
+      expect(u['vision_match_skip_pin'], 'people');
+      expect(u['vision_match_lockdown_off'], 'people');
+      expect(u['vision_match_lockdown_relock'], isTrue);
+      expect(u['vision_match_finger_gestures'], 'anyone');
+      expect(u['vision_match_calendar_focus'], isTrue);
+      // Off by default, and only on Chosen people.
+      expect(u['vision_match_screensaver_lock'], isFalse);
+      expect(jsonEncode(u), isNot(contains('Alice')));
+    });
+
+    test('Vision Match leaves out what Face Detection being off turns '
+        'off', () async {
+      final u = await usage({
+        'ks.ground_control.enabled': true,
+        'ks.vision_match.enabled': true,
+        'ks.vision_match.face_detection': false,
+      });
+      expect(u['vision_match_face_detection'], isFalse);
+      expect(u['vision_match_hand_gestures'], isTrue);
+      for (final k in [
+        'vision_match_presence_sensors',
+        'vision_match_face_recognition',
+        'vision_match_show_arrivals',
+        'vision_match_skip_pin',
+      ]) {
+        expect(u.containsKey(k), isFalse, reason: k);
+      }
+    });
+
+    test('a kiosk that never connected leaves out what Ground Control '
+        'runs', () async {
+      gcState = {'enabled': true, 'status': 'searching', 'version': ''};
+      final u = await usage({'ks.ground_control.enabled': true});
+      expect(u['gc_address'], 'mdns');
+      expect(u.containsKey('gc_version'), isFalse);
+      expect(u.containsKey('gc_install'), isFalse);
+      expect(u.containsKey('gc_people'), isFalse);
+      expect(u.containsKey('voice_match_model'), isFalse);
+      expect(u['voice_match_enabled'], isFalse);
+      expect(u.containsKey('voice_match_policy'), isFalse);
+      expect(u['vision_match_enabled'], isFalse);
+      expect(u.containsKey('vision_match_face_detection'), isFalse);
+    });
+
+    test('an older Ground Control leaves out how it is installed', () async {
+      gcState!.remove('install');
+      final u = await usage({'ks.ground_control.enabled': true});
+      expect(u['gc_version'], '1.2.0');
+      for (final k in ['gc_install', 'gc_arch', 'gc_cuda', 'gc_on_gpu']) {
+        expect(u.containsKey(k), isFalse, reason: k);
+      }
+    });
+
+    test('Chosen people with nobody picked reads as enrolled', () async {
+      final u = await usage({
+        'ks.ground_control.enabled': true,
+        'ks.voice.enabled': true,
+        'ks.voice_match.enabled': true,
+        'ks.voice_match.policy': 'people',
+      });
+      expect(u['voice_match_policy'], 'enrolled');
+    });
   });
 
   test('custom pages read as counts and places, never as names or '

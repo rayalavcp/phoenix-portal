@@ -788,7 +788,7 @@
   "settingsMenuGroundControl": "Ground Control",
   "@settingsMenuGroundControl": {
     "context": "Settings:Menu",
-    "description": "Phoenix Portal Ground Control, the companion app that runs Voice Match on a capable machine. A product name: keep Ground Control unchanged.",
+    "description": "Kiosk Satellite Ground Control, the companion app that runs Voice Match on a capable machine. A product name: keep Ground Control unchanged.",
     "x-locations": {
       "device": [
         "Settings > menu",

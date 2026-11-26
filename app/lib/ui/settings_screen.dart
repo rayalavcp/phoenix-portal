@@ -76,6 +76,7 @@ import 'theme.dart';
 import 'toast.dart';
 import 'voice_settings.dart';
 import 'ground_control_settings.dart';
+import 'ground_control_tag.dart';
 import 'mic_level_meter.dart';
 import 'settings_search.dart';
 import 'subpage_icons.dart';
@@ -182,6 +183,7 @@ List<Widget> _sectionedCards(
                   def.category == 'Home Assistant' ||
                   def.category == 'Screen & Audio' ||
                   def.category == 'Screensaver' ||
+                  def.category == 'Ground Control' ||
                   def.category == 'Voice Satellite' ||
                   def.category == 'Timers' ||
                   def.category == 'Browser' ||
@@ -242,7 +244,7 @@ const _updateDocsUrl =
 const _categories = <(String, String, Object, String)>[
   // How the kiosk is moved around: the drawer menu or Compass.
   ('Navigation', 'Navigation', Icons.explore_outlined, 'Classic or Compass'),
-  // Phoenix Portal Ground Control and its features. It
+  // Kiosk Satellite Ground Control and its features. It
   // wears the Phoenix Portal mark, as the Ground Control app does.
   (
     'Ground Control',
@@ -3182,11 +3184,23 @@ class _CategoryContentState extends State<_CategoryContent> {
       ),
     // The people a kiosk on Chosen people answers: names and a checkbox
     // list of everyone enrolled in Ground Control. Mirrored on the remote.
-    if (widget.category == 'Voice Satellite')
+    if (widget.category == 'Ground Control')
       voiceMatchPeople.key: SearchLandingTarget(
         id: voiceMatchPeople.key,
         child: VoiceMatchPeopleRow(container: container),
       ),
+    // The Ground Control Vision Match groups' People on Chosen people:
+    // the same picker.
+    for (final people in const [
+      (category: 'Screensaver', def: screensaverFacePeople),
+      (category: 'Kiosk', def: kioskFacePeople),
+      (category: 'Lockdown', def: lockdownFacePeople),
+    ])
+      if (widget.category == people.category)
+        people.def.key: SearchLandingTarget(
+          id: people.def.key,
+          child: VoiceMatchPeopleRow(container: container, def: people.def),
+        ),
     if (widget.category == 'Voice Satellite')
       voiceTtsOutput.key: SearchLandingTarget(
         id: voiceTtsOutput.key,
@@ -3448,10 +3462,12 @@ class _CategoryContentState extends State<_CategoryContent> {
   /// rows, live telemetry. Keyed and forwarded the same way.
   Map<String, Widget> _rowExtras(AppContainer container) => {
     // Ground Control: whether the service was found, who is enrolled and
-    // Open for its app.
-    groundControlEnabled.key: GroundControlStatusRow(container: container),
-    // Under Features: what Ground Control will do next.
-    groundControlVoiceMatch.key: const GroundControlComingSoonRow(),
+    // Open for its app, under the switch and the address it uses (the
+    // address shows only with Ground Control on, and so do these).
+    groundControlAddress.key: GroundControlStatusRow(container: container),
+    // Under Enable Face Recognition: start the guided capture here.
+    if (container.settings.get(visionMatchFaceRecognition))
+      visionMatchFaceRecognition.key: FaceEnrollRow(container: container),
     if (widget.category == 'Sendspin')
       sendspinDuckPercent.key: AlbumArtCacheRow(container: container),
     // Under the key's copy box: paste one from another kiosk or make a
@@ -4706,7 +4722,6 @@ extension on _CategoryContentState {
           'Wake Word',
           'Assistant',
           'Realtime',
-          'Ground Control Voice Match',
           'Appearance',
           'Conversation',
           'Chimes',
@@ -7620,7 +7635,7 @@ class _NotificationSoundTileState extends State<_NotificationSoundTile> {
     ];
     if (_isChime) {
       return SettingsRow(
-        title: Text(def.localizedTitle(context)),
+        title: settingTitle(context, def),
         subtitle: Text(def.localizedDescription(context)),
         stack: true,
         trailing: SizedBox(
@@ -11598,7 +11613,7 @@ class _SliderTileState extends State<_SliderTile> {
     return Column(
       children: [
         ListTile(
-          title: Text(def.localizedTitle(context)),
+          title: settingTitle(context, def),
           subtitle: Text(def.localizedDescription(context)),
           trailing: Text(
             _label(value),
@@ -11806,10 +11821,34 @@ class SettingTile extends StatelessWidget {
     // A row that stands for another setting: a plain row to it, mirrored
     // on the remote (rows.js).
     if (def.linksTo case final target?) {
+      // Vision Match > Used in other settings: the setting's value too.
+      final to = c.settings.defByKey(target);
+      final value = to?.groundControl == null
+          ? null
+          : groundControlValueText(context, c.settings, to!);
       return ListTile(
         title: Text(def.localizedTitle(context)),
         subtitle: Text(def.localizedDescription(context)),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: value == null
+            ? const Icon(Icons.chevron_right)
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 220),
+                    child: Text(
+                      value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.chevron_right),
+                ],
+              ),
         onTap: () => openSettingRow(context, c, target),
       );
     }
@@ -11825,7 +11864,7 @@ class SettingTile extends StatelessWidget {
     // shared picker, never typed as JSON.
     if (def.key == uiDrawerItems.key) {
       return ListTile(
-        title: Text(def.localizedTitle(context)),
+        title: settingTitle(context, def),
         subtitle: Text(def.localizedDescription(context)),
         trailing: const Icon(Icons.edit_outlined),
         onTap: () => _pickDrawerItems(context),
@@ -11840,7 +11879,7 @@ class SettingTile extends StatelessWidget {
             : c.settings.defByKey(def.offWhen!);
         final off = offBy != null && def.offBy(c.settings.get(offBy));
         return SwitchListTile(
-          title: Text(def.localizedTitle(context)),
+          title: settingTitle(context, def),
           subtitle: off
               ? Text(
                   '${def.localizedDescription(context)}\n'
@@ -11863,7 +11902,7 @@ class SettingTile extends StatelessWidget {
         final options = _optionsFor(def);
         if (options.isEmpty && def.key == cameraRtspResolution.key) {
           return ListTile(
-            title: Text(def.localizedTitle(context)),
+            title: settingTitle(context, def),
             subtitle: Text(
               cameraText(
                 context,
@@ -11925,7 +11964,7 @@ class SettingTile extends StatelessWidget {
               ? Color.fromARGB(255, parts[0]!, parts[1]!, parts[2]!)
               : const Color(0xFFFAFAFA);
           return ListTile(
-            title: Text(def.localizedTitle(context)),
+            title: settingTitle(context, def),
             subtitle: Text(def.localizedDescription(context)),
             trailing: GestureDetector(
               onTap: () async {
@@ -11965,7 +12004,7 @@ class SettingTile extends StatelessWidget {
           final isUrl = isClockBackgroundUrl(path);
           return SettingsRow(
             stack: true,
-            title: Text(def.localizedTitle(context)),
+            title: settingTitle(context, def),
             subtitle: Text(
               path.isEmpty
                   ? screensaverText(context, 'No photo selected')
@@ -12046,7 +12085,7 @@ class SettingTile extends StatelessWidget {
             count = (jsonDecode(value as String) as List).length;
           } catch (_) {}
           return ListTile(
-            title: Text(def.localizedTitle(context)),
+            title: settingTitle(context, def),
             subtitle: Text(
               count == 0
                   ? screensaverText(context, 'No photos selected')
@@ -12064,7 +12103,7 @@ class SettingTile extends StatelessWidget {
         // the moment the user understands why.
         if (def.key == screensaverLocalFolder.key) {
           return ListTile(
-            title: Text(def.localizedTitle(context)),
+            title: settingTitle(context, def),
             subtitle: Text(
               display,
               maxLines: 1,
@@ -12138,7 +12177,7 @@ class SettingTile extends StatelessWidget {
         // The screensaver's media is picked from Home Assistant, not typed.
         if (def.key == screensaverMediaId.key) {
           return ListTile(
-            title: Text(def.localizedTitle(context)),
+            title: settingTitle(context, def),
             subtitle: Text(
               display,
               maxLines: 1,
@@ -12173,7 +12212,7 @@ class SettingTile extends StatelessWidget {
         if (def.key == launcherApps.key) {
           final chosen = decodeLauncherApps(value as String);
           return ListTile(
-            title: Text(def.localizedTitle(context)),
+            title: settingTitle(context, def),
             subtitle: Text(
               chosen.isEmpty
                   ? launcherText(
@@ -12195,7 +12234,7 @@ class SettingTile extends StatelessWidget {
               : const <LauncherApp>[];
           if (apps.isEmpty) {
             return ListTile(
-              title: Text(def.localizedTitle(context)),
+              title: settingTitle(context, def),
               subtitle: Text(
                 kioskText(
                   context,
@@ -12240,7 +12279,7 @@ class SettingTile extends StatelessWidget {
         if (immichNamed != null) {
           final chosen = decodeImmichNamed(value as String);
           return ListTile(
-            title: Text(def.localizedTitle(context)),
+            title: settingTitle(context, def),
             subtitle: Text(
               chosen.isEmpty
                   ? screensaverText(context, immichNamed.empty)
@@ -12283,7 +12322,7 @@ class SettingTile extends StatelessWidget {
                 if (view.id == id) view,
           ];
           return ListTile(
-            title: Text(def.localizedTitle(context)),
+            title: settingTitle(context, def),
             subtitle: Text(
               views.isEmpty
                   ? screensaverText(
@@ -12320,7 +12359,7 @@ class SettingTile extends StatelessWidget {
             def.key == androidUpdateWindowEnd.key) {
           final current = value as String;
           return ListTile(
-            title: Text(def.localizedTitle(context)),
+            title: settingTitle(context, def),
             subtitle: Text(def.localizedDescription(context)),
             trailing: TimeBox(
               value: current,
@@ -12335,7 +12374,7 @@ class SettingTile extends StatelessWidget {
             def.key == screensaverImmichTakenTo.key) {
           final current = value as String;
           return ListTile(
-            title: Text(def.localizedTitle(context)),
+            title: settingTitle(context, def),
             subtitle: Text(def.localizedDescription(context)),
             trailing: DateBox(
               value: current,
@@ -12352,7 +12391,7 @@ class SettingTile extends StatelessWidget {
         if (def.key == btproxyKey.key || def.key == intercomKey.key) {
           return SettingsRow(
             stack: true,
-            title: Text(def.localizedTitle(context)),
+            title: settingTitle(context, def),
             subtitle: Text(def.localizedDescription(context)),
             trailing: CopyBox(
               value: value as String,
@@ -12361,7 +12400,7 @@ class SettingTile extends StatelessWidget {
           );
         }
         return ListTile(
-          title: Text(def.localizedTitle(context)),
+          title: settingTitle(context, def),
           // A multiline blob (pasted JavaScript) is edited, not read off the
           // row — the description carries the row instead.
           subtitle: Text(
@@ -12670,7 +12709,7 @@ class SettingTile extends StatelessWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text(def.localizedTitle(context)),
+          title: settingTitle(context, def),
           content: SizedBox(
             width: def.multiline ? 560 : 420,
             child: TextField(
@@ -13769,7 +13808,7 @@ class _ToastsHiddenRow extends StatelessWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: Text(def.localizedTitle(context)),
+          title: settingTitle(context, def),
           content: SizedBox(
             width: 420,
             child: EdgeFade(
@@ -13824,7 +13863,7 @@ class _ToastsHiddenRow extends StatelessWidget {
           ].join(', ');
     final field = ChoiceBox(text: text, onTap: () => _open(context));
     return SettingsRow(
-      title: Text(def.localizedTitle(context)),
+      title: settingTitle(context, def),
       stack: true,
       subtitle: Text(def.localizedDescription(context)),
       trailing: tightPane(context) ? field : SizedBox(width: 300, child: field),
@@ -13871,7 +13910,7 @@ class _WakeToScreensaverRow extends StatelessWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: Text(def.localizedTitle(context)),
+          title: settingTitle(context, def),
           content: SizedBox(
             width: 420,
             child: EdgeFade(
@@ -13941,7 +13980,7 @@ class _WakeToScreensaverRow extends StatelessWidget {
           ].join(', ');
     final field = ChoiceBox(text: text, onTap: () => _open(context));
     return SettingsRow(
-      title: Text(def.localizedTitle(context)),
+      title: settingTitle(context, def),
       stack: true,
       subtitle: Text(def.localizedDescription(context)),
       trailing: tightPane(context) ? field : SizedBox(width: 300, child: field),

@@ -79,6 +79,7 @@ const navigationMessageIds = <String, String>{
   "Full screen view, pills, shared timers": "settingsMenuTimersSummary",
   "Ground Control": "settingsMenuGroundControl",
   "Voice Match and Vision Match": "settingsMenuGroundControlFeatures",
+  "Flashlight": "cameraFlashlightHeading",
   "Kids Portal": "settingsMenuKidsPortal",
   "Games, screen time, bedtime": "settingsMenuKidsPortalSummary",
   "Home Screen": "settingsMenuHomeScreen",

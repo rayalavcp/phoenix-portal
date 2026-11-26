@@ -2,17 +2,19 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../../core/command_registry.dart';
 import '../../core/events.dart';
 import '../../core/manager.dart';
+import '../gestures/gesture_mappings.dart';
 import '../settings/definitions.dart' as defs;
 import '../settings/settings_manager.dart';
 import 'client_key.dart';
 import 'mine.dart';
 
-/// Phoenix Portal Ground Control: finds the service, keeps this kiosk's
+/// Kiosk Satellite Ground Control: finds the service, keeps this kiosk's
 /// control connection to it and tells the rest of the app where it is.
 ///
 /// The service is a Home Assistant app or a Docker container that runs
@@ -76,6 +78,51 @@ class GroundControlManager extends Manager {
   String model = '';
   List<Map<String, Object?>> people = const [];
 
+  /// Ground Control person id to their Home Assistant picture's address,
+  /// or null for a person without one, looked up once.
+  final _pictures = <String, Future<String?>>{};
+
+  /// The picture of the Home Assistant person a Ground Control person is
+  /// linked to (their Person under What's theirs), as an address to load
+  /// with the Home Assistant token. Null when they have none.
+  Future<String?> pictureOf(String personId) =>
+      _pictures[personId] ??= _lookUpPicture(personId);
+
+  Future<String?> _lookUpPicture(String personId) async {
+    final person = people.where((p) => p['id'] == personId).firstOrNull;
+    final things = person?['things'];
+    final entity = things is Map ? things['person'] : null;
+    final base = _settings
+        .get(defs.haUrl)
+        .trim()
+        .replaceFirst(RegExp(r'/+$'), '');
+    final token = _settings.get(defs.haToken);
+    if (entity is! String || entity.isEmpty || base.isEmpty || token.isEmpty) {
+      return null;
+    }
+    try {
+      final r = await http
+          .get(
+            Uri.parse('$base/api/states/$entity'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 10));
+      if (r.statusCode != 200) return null;
+      final attrs = (jsonDecode(r.body) as Map)['attributes'];
+      final picture = attrs is Map ? attrs['entity_picture'] : null;
+      if (picture is! String || picture.isEmpty) return null;
+      if (picture.startsWith('http://') || picture.startsWith('https://')) {
+        return picture;
+      }
+      return '$base${picture.startsWith('/') ? '' : '/'}$picture';
+    } on Object catch (e) {
+      log.debug(name, 'no picture for $entity: $e');
+      // Try again next time: Home Assistant may have been away.
+      _pictures.remove(personId);
+      return null;
+    }
+  }
+
   ({String? id, String name, String? by})? _speaking;
 
   /// Who Voice Match placed in this kiosk's last voice turn, with their
@@ -99,6 +146,12 @@ class GroundControlManager extends Manager {
   /// The app's page in Home Assistant (`/hassio/ingress/<slug>`) when the
   /// service runs as a Home Assistant app.
   String? appPath;
+
+  /// How the service is installed, for the Ground Control page and Kiosk
+  /// Satellite Analytics: `install` (ha_app, docker or python), `arch`,
+  /// `cuda` (the CUDA image's version, empty for the CPU image) and `onGpu`.
+  /// Empty from a Ground Control that doesn't say.
+  Map<String, Object?> install = const {};
 
   /// Where Open goes: the app's page in Home Assistant, or the Docker
   /// container's own web page. Null until connected.
@@ -153,10 +206,27 @@ class GroundControlManager extends Manager {
     defs.voiceMatchSpeakerSensor.key,
     defs.voiceMatchShowSpeaker.key,
     defs.voiceMatchAllowEnroll.key,
+    defs.visionMatchEnabled.key,
+    defs.visionMatchFaceDetection.key,
+    defs.visionMatchFaceRecognition.key,
+    defs.visionMatchFaceConfirmsVoice.key,
+    defs.visionMatchHandGestures.key,
+    defs.screensaverDismissOnFace.key,
+    defs.screensaverPostponeOnFace.key,
+    defs.gestureMappings.key,
   };
 
-  /// The Voice Match features this kiosk has on, for the Kiosks page of
-  /// the Ground Control app.
+  /// Face Recognition on this kiosk: Vision Match with its faces looked at
+  /// on Ground Control, and the switch.
+  bool get faceRecognition =>
+      _settings.get(defs.groundControlEnabled) &&
+      _settings.get(defs.cameraEnabled) &&
+      _settings.get(defs.visionMatchEnabled) &&
+      _settings.get(defs.visionMatchFaceDetection) &&
+      _settings.get(defs.visionMatchFaceRecognition);
+
+  /// The Voice Match and Vision Match features this kiosk has on, for the
+  /// Kiosks page of the Ground Control app.
   Map<String, Object?> get features {
     final s = _settings;
     final people = [
@@ -172,6 +242,19 @@ class GroundControlManager extends Manager {
       'isolation': s.get(defs.voiceMatchIsolation),
       'speaker_sensor': s.get(defs.voiceMatchSpeakerSensor),
       'show_speaker': s.get(defs.voiceMatchShowSpeaker),
+      'vision_match': s.get(defs.visionMatchEnabled),
+      'face_detection': s.get(defs.visionMatchFaceDetection),
+      'face_recognition': faceRecognition,
+      // Confirm voices with faces: Ground Control takes a close voice for
+      // the person it sees at the kiosk.
+      'face_confirms_voice':
+          faceRecognition && s.get(defs.visionMatchFaceConfirmsVoice),
+      'hand_gestures': s.get(defs.visionMatchHandGestures),
+      'dismiss_on_face': s.get(defs.screensaverDismissOnFace),
+      'postpone_on_face': s.get(defs.screensaverPostponeOnFace),
+      'finger_gestures': decodeGestureMappings(
+        s.get(defs.gestureMappings),
+      ).where((m) => m.triggerType == 'fingers').length,
     };
   }
 
@@ -179,6 +262,7 @@ class GroundControlManager extends Manager {
   Future<void> init() async {
     _subs.add(
       bus.on<SettingChanged>().listen((e) {
+        if (_faceRecognitionKeys.contains(e.key)) _faceRecognitionChanged();
         if (_featureKeys.contains(e.key)) {
           _sendSettings();
           return;
@@ -199,14 +283,56 @@ class GroundControlManager extends Manager {
         if (e.name.isNotEmpty || e.score != null) _speakerEvent(e);
       }),
     );
+    _subs
+      ..add(
+        bus.on<FaceArrived>().listen(
+          (e) => _faceEvent('arrived', e.id, e.name),
+        ),
+      )
+      ..add(bus.on<FaceLeft>().listen((e) => _faceEvent('left', e.id, e.name)))
+      ..add(
+        bus.on<FaceInViewChanged>().listen((e) {
+          _inView = e;
+          _faceRecognitionChanged();
+        }),
+      )
+      ..add(
+        bus.on<VisionPresenceChanged>().listen((e) {
+          _presence = e;
+          _faceRecognitionChanged();
+        }),
+      )
+      ..add(
+        bus.on<FacePinSkipped>().listen(
+          (e) => _faceEvent('pin_skipped', e.id, e.name, {
+            'mode': e.lockdown ? 'lockdown' : 'kiosk',
+          }),
+        ),
+      )
+      ..add(
+        bus.on<FaceLockdownChanged>().listen((e) {
+          if (!e.locked) _faceEvent('lockdown_off', e.id, e.name ?? '');
+        }),
+      );
     commands.register(
       Command(
         name: 'groundControlStatus',
         description:
-            'Phoenix Portal Ground Control: whether it is on and connected, '
+            'Kiosk Satellite Ground Control: whether it is on and connected, '
             'its address and version, and who is enrolled',
         quiet: true,
         handler: (_) async => CommandResult.ok(describe()),
+      ),
+    );
+    commands.register(
+      Command(
+        name: 'faceRecognitionState',
+        description:
+            'Face Recognition: who is at the kiosk, everyone '
+            'recognized in view and, with Presence sensors on, whether '
+            'someone is in front of the kiosk and looking at it',
+        quiet: true,
+        handler: (_) async => CommandResult.ok(faceRecognitionState()),
       ),
     );
     commands.register(
@@ -239,6 +365,9 @@ class GroundControlManager extends Manager {
     'model': model,
     'people': people,
     'appUrl': appUrl,
+    // Runs as a Home Assistant app, not a Docker container.
+    'haApp': appPath != null,
+    'install': install,
     'allowEnroll': _enrollAllowed,
     'enrollment': enrollment,
   };
@@ -258,6 +387,88 @@ class GroundControlManager extends Manager {
         'by': e.name.isEmpty ? '' : e.by ?? 'voice',
       }),
     );
+  }
+
+  /// The latest of who Face Recognition sees and of the Presence sensors.
+  FaceInViewChanged _inView = const FaceInViewChanged();
+  VisionPresenceChanged? _presence;
+  String? _faceRecognitionSent;
+
+  /// The settings [faceRecognitionState] follows.
+  static final _faceRecognitionKeys = {
+    defs.groundControlEnabled.key,
+    defs.cameraEnabled.key,
+    defs.visionMatchEnabled.key,
+    defs.visionMatchFaceDetection.key,
+    defs.visionMatchFaceRecognition.key,
+    defs.visionMatchPresenceSensors.key,
+  };
+
+  /// What plugins with the face.recognition capability and Home Assistant
+  /// and custom pages read of Face Recognition: whether it runs, the person
+  /// at the kiosk (empty name when nobody known is in view), everyone
+  /// recognized in view with the person at the kiosk first, and the
+  /// Presence and Looking at the kiosk sensors, null while Presence sensors
+  /// is off. Ground Control's person ids stay private: the Home Assistant
+  /// person is the key to act on.
+  Map<String, Object?> faceRecognitionState() {
+    final s = _settings;
+    final on = faceRecognition;
+    final sensors =
+        s.get(defs.groundControlEnabled) &&
+        s.get(defs.cameraEnabled) &&
+        s.get(defs.visionMatchEnabled) &&
+        s.get(defs.visionMatchFaceDetection) &&
+        s.get(defs.visionMatchPresenceSensors);
+    final view = on ? _inView : const FaceInViewChanged();
+    String person(String? id) => thingsOf(id, people)['person'] ?? '';
+    final id = view.id;
+    return {
+      'enabled': on,
+      'name': id == null ? '' : view.name,
+      'person': person(id),
+      'color': id == null ? null : view.color ?? view.colors[id],
+      'people': [
+        for (final p in view.people)
+          {'name': p.name, 'person': person(p.id), 'color': view.colors[p.id]},
+      ],
+      'present': sensors ? _presence?.present ?? false : null,
+      'looking': sensors ? _presence?.looking ?? false : null,
+    };
+  }
+
+  /// Publishes [FaceRecognitionChanged] when what it reports moved.
+  void _faceRecognitionChanged() {
+    final state = faceRecognitionState();
+    final value = jsonEncode(state);
+    if (value == _faceRecognitionSent) return;
+    _faceRecognitionSent = value;
+    bus.publish(FaceRecognitionChanged(state));
+  }
+
+  /// Face Recognition on Home Assistant's bus as
+  /// `esphome.kiosk_satellite_face`, for automations: someone arrived or
+  /// left on the arrival card's rule, or the PIN was skipped or Lockdown
+  /// Mode turned off because they were recognized. With their Home
+  /// Assistant person when Ground Control has one.
+  void _faceEvent(
+    String type,
+    String? id,
+    String who, [
+    Map<String, Object?> extra = const {},
+  ]) {
+    final person = thingsOf(id, people)['person'] ?? '';
+    bus.publish(
+      HaEventRequested('kiosk_satellite_face', {
+        'event_type': type,
+        'name': who,
+        'person': person,
+        ...extra,
+      }),
+    );
+    if (type == 'arrived' || type == 'left') {
+      bus.publish(FaceArrivalReported(type: type, name: who, person: person));
+    }
   }
 
   /// Tell the service when an enrollment it asked for did not start or
@@ -411,10 +622,7 @@ class GroundControlManager extends Manager {
     return {
       'type': 'hello',
       'token': _settings.get(defs.haToken),
-      'device_id': defs.effectiveHostname(
-        _settings.get(defs.deviceHostname),
-        deviceName,
-      ),
+      'device_id': deviceId,
       'name': deviceName.isNotEmpty ? deviceName : '${data['name'] ?? ''}',
       'model': '${data['model'] ?? ''}',
       'version': '${data['appVersion'] ?? ''}',
@@ -459,9 +667,10 @@ class GroundControlManager extends Manager {
   }
 
   /// The id this kiosk goes by in Ground Control, for the session sockets too.
-  String get deviceId => defs.effectiveHostname(
+  String get deviceId => defs.groundControlDeviceId(
     _settings.get(defs.deviceHostname),
     _settings.get(defs.deviceName).trim(),
+    _settings.get(defs.fleetId),
   );
 
   void _onMessage(int gen, Object? data) {
@@ -495,15 +704,56 @@ class GroundControlManager extends Manager {
           for (final p in (msg['people'] as List? ?? const []))
             if (p is Map) p.cast<String, Object?>(),
         ];
+        // A person may have been linked to another Home Assistant person.
+        _pictures.clear();
+        _faceRecognitionChanged();
         version = '${msg['version'] ?? version}';
         model = '${msg['model'] ?? model}';
         final path = msg['app_path'];
         appPath = path is String && path.startsWith('/') ? path : null;
+        final kind = msg['install'];
+        if (kind is String) {
+          install = {
+            'install': kind,
+            'arch': '${msg['arch'] ?? ''}',
+            'cuda': '${msg['cuda'] ?? ''}',
+            'onGpu': msg['on_gpu'] == true,
+          };
+        } else {
+          // An older Ground Control: nothing left from the one before it.
+          install = const {};
+        }
         _attempt = 0;
         _setStatus('connected', baseUrl);
       case 'error':
+        log.warn(name, 'Ground Control turned this kiosk away: ${msg['code']}');
         if (msg['code'] == 'unauthorized') _setStatus('refused', null);
         if (msg['code'] == 'not_kiosk_satellite') _setStatus('unsigned', null);
+      case 'enroll_face':
+        final personId = '${msg['person_id'] ?? ''}';
+        if (personId.isEmpty) return;
+        if (!faceRecognition) {
+          log.info(
+            name,
+            'face enrollment for ${msg['name']} refused: Face Recognition is off',
+          );
+          _send({
+            'type': 'enroll_error',
+            'person_id': personId,
+            'code': 'off',
+            'message': '',
+          });
+          return;
+        }
+        bus.publish(
+          FaceEnrollRequested(
+            personId: personId,
+            name: '${msg['name'] ?? ''}',
+            color: msg['color'] is String ? msg['color'] as String : null,
+          ),
+        );
+      case 'enroll_face_stop':
+        bus.publish(const FaceEnrollStopRequested());
       case 'enroll':
         final personId = '${msg['person_id'] ?? ''}';
         if (personId.isEmpty) return;

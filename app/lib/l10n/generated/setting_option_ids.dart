@@ -378,14 +378,6 @@ const settingOptionMessageIds = <String, Map<String, String>>{
     "default": "voiceVadDefault",
     "voice-only": "voiceSkinVoiceOnly"
   },
-  "alarms.snooze_minutes": {
-    "5": "alarmsOption5Minutes",
-    "10": "alarmsOption10Minutes",
-    "15": "alarmsOption15Minutes",
-    "20": "alarmsOption20Minutes",
-    "25": "alarmsOption25Minutes",
-    "30": "alarmsOption30Minutes"
-  },
   "alarms.silence_after_minutes": {
     "5": "alarmsOption5Minutes",
     "10": "alarmsOption10Minutes",
@@ -448,6 +440,20 @@ const settingOptionMessageIds = <String, Map<String, String>>{
     "low": "voiceRealtimeReasoningLow",
     "medium": "voiceRealtimeReasoningMedium",
     "high": "voiceRealtimeReasoningHigh"
+  },
+  "voice.realtime_vercel_model": {
+    "": "voiceRealtimeProviderDefault"
+  },
+  "voice.realtime_vercel_voice": {
+    "": "voiceRealtimeProviderDefault"
+  },
+  "voice.realtime_vercel_reasoning": {
+    "": "voiceRealtimeReasoningDefault",
+    "minimal": "voiceRealtimeReasoningMinimal",
+    "low": "voiceRealtimeReasoningLow",
+    "medium": "voiceRealtimeReasoningMedium",
+    "high": "voiceRealtimeReasoningHigh",
+    "xhigh": "voiceRealtimeReasoningExtraHigh"
   },
   "screensaver.media_metadata_position": {
     "top_left": "screensaverMediaTopLeft",
@@ -584,6 +590,28 @@ const settingOptionMessageIds = <String, Map<String, String>>{
     "top": "screensaverImmichProgressBarTop",
     "bottom": "screensaverImmichProgressBarBottom"
   },
+  "screensaver.face_who": {
+    "anyone": "screensaverFaceWhoOptionAnyone",
+    "people": "screensaverFaceWhoOptionPeople"
+  },
+  "kiosk.face_skip_pin": {
+    "nobody": "kioskFaceSkipPinNobody",
+    "people": "kioskFaceSkipPinPeople"
+  },
+  "lockdown.face_disable": {
+    "nobody": "kioskFaceSkipPinNobody",
+    "people": "kioskFaceSkipPinPeople"
+  },
+  "vision_match.card_position": {
+    "top_left": "screensaverMediaTopLeft",
+    "top_right": "screensaverMediaTopRight",
+    "bottom_left": "screensaverMediaBottomLeft",
+    "bottom_right": "screensaverMediaBottomRight"
+  },
+  "gestures.face_who": {
+    "anyone": "gesturesFaceWhoOptionAnyone",
+    "people": "gesturesFaceWhoOptionPeople"
+  },
   "phoenix.profile": {
     "family": "kidsProfileFamily",
     "kids": "kidsProfileKids",
@@ -645,6 +673,7 @@ const settingPlaceholderMessageIds = <String, String>{
   "voice.realtime_openai_endpoint": "voiceRealtimeProviderDefault",
   "voice.realtime_xai_endpoint": "voiceRealtimeProviderDefault",
   "voice.realtime_gemini_endpoint": "voiceRealtimeProviderDefault",
+  "voice.realtime_vercel_endpoint": "voiceRealtimeProviderDefault",
   "timers.tts_engine": "esphomeTtsFirst",
   "timers.tts_language": "esphomeTtsDefault",
   "timers.tts_voice": "esphomeTtsDefault"

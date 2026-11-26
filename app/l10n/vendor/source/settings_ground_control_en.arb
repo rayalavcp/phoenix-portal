@@ -13,7 +13,20 @@
       ]
     }
   },
-  "settingGroundControlEnabledDescription": "Connect to Phoenix Portal Ground Control, which runs Voice Match on a capable machine.",
+  "settingGroundControlEnabledDescriptionVisionMatch": "Connect to Kiosk Satellite Ground Control, which runs Voice Match and Vision Match on a capable machine.",
+  "@settingGroundControlEnabledDescriptionVisionMatch": {
+    "context": "Settings > Ground Control",
+    "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Enable Ground Control"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Enable Ground Control"
+      ]
+    }
+  },
+  "settingGroundControlEnabledDescription": "Connect to Kiosk Satellite Ground Control, which runs Voice Match on a capable machine.",
   "@settingGroundControlEnabledDescription": {
     "context": "Settings > Ground Control",
     "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged.",
@@ -156,6 +169,32 @@
       ]
     }
   },
+  "groundControlArchitecture": "Architecture",
+  "@groundControlArchitecture": {
+    "context": "Settings > Ground Control",
+    "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. The label of a value: the CPU architecture of the machine Ground Control runs on, such as amd64 or aarch64.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Architecture row"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Architecture row"
+      ]
+    }
+  },
+  "groundControlRunsOn": "Runs on",
+  "@groundControlRunsOn": {
+    "context": "Settings > Ground Control",
+    "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. The label of a value: what Ground Control runs its models on, CPU or CUDA.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Runs on row"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Runs on row"
+      ]
+    }
+  },
   "groundControlFeatures": "Features",
   "@groundControlFeatures": {
     "context": "Settings > Ground Control",
@@ -182,55 +221,578 @@
       ]
     }
   },
-  "settingGroundControlVoiceMatchFeaturesDescription": "Recognition, Trimming and Isolation.",
-  "@settingGroundControlVoiceMatchFeaturesDescription": {
-    "context": "Settings > Ground Control",
-    "description": "Translate the visible label or help. Keep Recognition, Trimming, Isolation, Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged.",
-    "x-locations": {
-      "device": [
-        "Settings > Ground Control > Features > Voice Match"
-      ],
-      "remoteAdmin": [
-        "Ground Control > Features > Voice Match"
-      ]
-    }
-  },
-  "groundControlVisionMatch": "Vision Match",
-  "@groundControlVisionMatch": {
-    "context": "Settings > Ground Control",
+  "settingVisionMatchEnabledTitle": "Vision Match",
+  "@settingVisionMatchEnabledTitle": {
+    "context": "Settings > Ground Control > Vision Match",
     "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.",
     "x-locations": {
       "device": [
-        "Settings > Ground Control > Features > Vision Match"
+        "Settings > Ground Control > Vision Match"
       ],
       "remoteAdmin": [
-        "Ground Control > Features > Vision Match"
+        "Ground Control > Vision Match"
       ]
     }
   },
-  "groundControlVisionMatchDescription": "Facial recognition using this device's camera.",
-  "@groundControlVisionMatchDescription": {
-    "context": "Settings > Ground Control",
-    "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged.",
+  "settingVisionMatchEnableTitle": "Enable Vision Match",
+  "@settingVisionMatchEnableTitle": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.",
     "x-locations": {
       "device": [
-        "Settings > Ground Control > Features > Vision Match"
+        "Settings > Ground Control > Vision Match > Enable Vision Match"
       ],
       "remoteAdmin": [
-        "Ground Control > Features > Vision Match"
+        "Ground Control > Vision Match > Enable Vision Match"
       ]
     }
   },
-  "groundControlComingSoon": "Coming soon",
-  "@groundControlComingSoon": {
-    "context": "Settings > Ground Control",
-    "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Shown in place of a value: the feature isn't available yet.",
+  "settingVisionMatchFaceDetectionTitle": "Enable Face Detection",
+  "@settingVisionMatchFaceDetectionTitle": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.",
     "x-locations": {
       "device": [
-        "Settings > Ground Control > Features > Vision Match"
+        "Settings > Ground Control > Vision Match > Face Detection > Enable Face Detection"
       ],
       "remoteAdmin": [
-        "Ground Control > Features > Vision Match"
+        "Ground Control > Vision Match > Face Detection > Enable Face Detection"
+      ]
+    }
+  },
+  "settingVisionMatchHandGesturesTitle": "Enable Hand Gestures",
+  "@settingVisionMatchHandGesturesTitle": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Hand Gestures > Enable Hand Gestures"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Hand Gestures > Enable Hand Gestures"
+      ]
+    }
+  },
+  "visionMatchFeaturesHint": "Face recognition, detection, hand gestures and presence detection",
+  "@visionMatchFeaturesHint": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match"
+      ]
+    }
+  },
+  "settingVisionMatchEnabledDescriptionGroundControl": "Face Detection, Hand Gestures and Face Recognition. Needs Ground Control.",
+  "@settingVisionMatchEnabledDescriptionGroundControl": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Enable Vision Match"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Enable Vision Match"
+      ]
+    }
+  },
+  "settingVisionMatchFaceDetectionDescriptionGroundControl": "Run face detection on Ground Control. Disable to run on-device.",
+  "@settingVisionMatchFaceDetectionDescriptionGroundControl": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Face Detection > Enable Face Detection"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Face Detection > Enable Face Detection"
+      ]
+    }
+  },
+  "settingVisionMatchHandGesturesDescriptionGroundControl": "Run palm and fingers gestures detection on Ground Control. Disable to run on-device.",
+  "@settingVisionMatchHandGesturesDescriptionGroundControl": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Hand Gestures > Enable Hand Gestures"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Hand Gestures > Enable Hand Gestures"
+      ]
+    }
+  },
+  "settingVisionMatchFaceRecognitionTitle": "Enable Face Recognition",
+  "@settingVisionMatchFaceRecognitionTitle": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Face Recognition > Enable Face Recognition"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Face Recognition > Enable Face Recognition"
+      ]
+    }
+  },
+  "settingVisionMatchFaceRecognitionDescriptionGroundControl": "Recognize who is looking at the kiosk and show it in the Face sensor. Needs Face Detection on Ground Control.",
+  "@settingVisionMatchFaceRecognitionDescriptionGroundControl": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is. Face is the name of a sensor in Home Assistant.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Face Recognition > Enable Face Recognition"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Face Recognition > Enable Face Recognition"
+      ]
+    }
+  },
+  "groundControlFaceRecognition": "Face Recognition",
+  "@groundControlFaceRecognition": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Face Recognition section heading"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Face Recognition section heading"
+      ]
+    }
+  },
+  "faceEnrollRowTitle": "Enroll a face",
+  "@faceEnrollRowTitle": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Face Recognition > Enroll a face"
+      ]
+    }
+  },
+  "faceEnrollRowDescription": "Pick a person, then follow the steps on the screen. It takes about half a minute.",
+  "@faceEnrollRowDescription": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Face Recognition > Enroll a face"
+      ]
+    }
+  },
+  "faceEnrollPickTitle": "Whose face?",
+  "@faceEnrollPickTitle": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Enroll a face > person picker title"
+      ]
+    }
+  },
+  "faceEnrollNewPerson": "New person",
+  "@faceEnrollNewPerson": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Enroll a face > person picker"
+      ]
+    }
+  },
+  "faceEnrollEnrolled": "Face enrolled",
+  "@faceEnrollEnrolled": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Enroll a face > person picker, under a person whose face is already enrolled"
+      ]
+    }
+  },
+  "faceEnrollNameLabel": "Name",
+  "@faceEnrollNameLabel": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Enroll a face > New person > name field"
+      ]
+    }
+  },
+  "faceEnrollStart": "Start",
+  "@faceEnrollStart": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Enroll a face > button that starts the capture"
+      ]
+    }
+  },
+  "settingVisionMatchFaceConfirmsVoiceTitle": "Confirm voices with faces",
+  "@settingVisionMatchFaceConfirmsVoiceTitle": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Setting label. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Face Recognition"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Face Recognition"
+      ]
+    }
+  },
+  "settingVisionMatchFaceConfirmsVoiceDescription": "Accept a close voice match when the same person's face is recognized at the kiosk. Only the person with the closest voiceprint can be matched this way.",
+  "@settingVisionMatchFaceConfirmsVoiceDescription": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Setting help. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Face Recognition > Confirm voices with faces"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Face Recognition > Confirm voices with faces"
+      ]
+    }
+  },
+  "groundControlUsedElsewhere": "Used in other settings",
+  "@groundControlUsedElsewhere": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Section heading: settings on other pages that work with Face Recognition, each a link to it. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match"
+      ]
+    }
+  },
+  "settingVisionMatchLinkFaceWhoDescription": "Screensaver > Face Detection > Ground Control Vision Match",
+  "@settingVisionMatchLinkFaceWhoDescription": {
+    "context": "Settings > Ground Control > Vision Match > Used in other settings",
+    "description": "Where the Faces that count setting is, as a path of page names. Use the translated names of these pages.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Used in other settings > Faces that count"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Used in other settings > Faces that count"
+      ]
+    }
+  },
+  "groundControlValueOn": "On",
+  "@groundControlValueOn": {
+    "context": "Settings > Ground Control > Vision Match > Used in other settings",
+    "description": "The value of a switch on another page.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Used in other settings"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Used in other settings"
+      ]
+    }
+  },
+  "groundControlValueOff": "Off",
+  "@groundControlValueOff": {
+    "context": "Settings > Ground Control > Vision Match > Used in other settings",
+    "description": "The value of a switch on another page.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Used in other settings"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Used in other settings"
+      ]
+    }
+  },
+  "groundControlValuePeople": "{option}: {names}",
+  "@groundControlValuePeople": {
+    "context": "Settings > Ground Control > Vision Match > Used in other settings",
+    "description": "Faces that count set to Chosen people, with the people chosen.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Used in other settings > Faces that count"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Used in other settings > Faces that count"
+      ]
+    },
+    "placeholders": {
+      "option": {
+        "type": "String",
+        "description": "The option, Chosen people."
+      },
+      "names": {
+        "type": "String",
+        "description": "The chosen people, comma separated."
+      }
+    }
+  },
+  "groundControlTagHint": "A Ground Control setting. Learn more",
+  "@groundControlTagHint": {
+    "context": "Settings, GC tag",
+    "description": "Read by screen readers for the GC tag after the title of a setting that works with Ground Control. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.",
+    "x-locations": {
+      "device": [
+        "Settings > any setting with a GC tag"
+      ],
+      "remoteAdmin": [
+        "Any setting with a GC tag"
+      ]
+    }
+  },
+  "groundControlTagTitle": "A Ground Control setting",
+  "@groundControlTagTitle": {
+    "context": "Settings, GC tag",
+    "description": "Title of the dialog a tap on the GC tag opens. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.",
+    "x-locations": {
+      "device": [
+        "Settings > GC tag > dialog"
+      ],
+      "remoteAdmin": [
+        "GC tag > dialog"
+      ]
+    }
+  },
+  "groundControlTagVision": "This setting needs Kiosk Satellite Ground Control. Ground Control is a separate app that runs on a computer in your home. The setting uses Face Recognition and only shows while Face Recognition is on in Settings > Ground Control > Vision Match.",
+  "@groundControlTagVision": {
+    "context": "Settings, GC tag",
+    "description": "Dialog text for a setting that needs Face Recognition. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.",
+    "x-locations": {
+      "device": [
+        "Settings > GC tag > dialog"
+      ],
+      "remoteAdmin": [
+        "GC tag > dialog"
+      ]
+    }
+  },
+  "groundControlTagVoice": "This setting needs Kiosk Satellite Ground Control. Ground Control is a separate app that runs on a computer in your home. The setting uses Voice Match and only shows while Voice Match is on in Settings > Ground Control > Voice Match.",
+  "@groundControlTagVoice": {
+    "context": "Settings, GC tag",
+    "description": "Dialog text for a setting that needs Voice Match. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.",
+    "x-locations": {
+      "device": [
+        "Settings > GC tag > dialog"
+      ],
+      "remoteAdmin": [
+        "GC tag > dialog"
+      ]
+    }
+  },
+  "settingVisionMatchLinkKioskPinDescription": "Kiosk Mode > Ground Control Vision Match",
+  "@settingVisionMatchLinkKioskPinDescription": {
+    "context": "Settings > Ground Control > Vision Match > Used in other settings",
+    "description": "Where the setting is, as a path of page names. Use the translated name of the Kiosk Mode page. Ground Control and Vision Match are names: keep them unchanged.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Used in other settings"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Used in other settings"
+      ]
+    }
+  },
+  "settingVisionMatchLinkLockdownDescription": "Lockdown Mode > Ground Control Vision Match",
+  "@settingVisionMatchLinkLockdownDescription": {
+    "context": "Settings > Ground Control > Vision Match > Used in other settings",
+    "description": "Where the setting is, as a path of page names. Use the translated name of the Lockdown Mode page. Ground Control and Vision Match are names: keep them unchanged.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Used in other settings"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Used in other settings"
+      ]
+    }
+  },
+  "groundControlRecognitionCards": "Recognition cards",
+  "@groundControlRecognitionCards": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Section heading: the cards on the kiosk screen that show who Face Recognition named and what it let through. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match"
+      ]
+    }
+  },
+  "settingVisionMatchShowArrivalsTitle": "Show arrivals",
+  "@settingVisionMatchShowArrivalsTitle": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Setting label. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Recognition cards"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Recognition cards"
+      ]
+    }
+  },
+  "settingVisionMatchShowArrivalsDescription": "Show a card with the person's picture and name when someone is recognized at the kiosk. It shows again for the same person after they have been away for a minute.",
+  "@settingVisionMatchShowArrivalsDescription": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Setting help. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Recognition cards > Show arrivals"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Recognition cards > Show arrivals"
+      ]
+    }
+  },
+  "settingVisionMatchShowActionsTitle": "Show face actions",
+  "@settingVisionMatchShowActionsTitle": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Setting label. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Recognition cards"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Recognition cards"
+      ]
+    }
+  },
+  "settingVisionMatchShowActionsGeneralDescription": "Show a small card each time something on the kiosk changes because a face was recognized.",
+  "@settingVisionMatchShowActionsGeneralDescription": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Setting help. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Recognition cards > Show face actions"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Recognition cards > Show face actions"
+      ]
+    }
+  },
+  "settingVisionMatchCardPositionTitle": "Card position",
+  "@settingVisionMatchCardPositionTitle": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Setting label.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Recognition cards"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Recognition cards"
+      ]
+    }
+  },
+  "settingVisionMatchCardPositionDescription": "The corner of the screen where both cards show. While the camera preview shows, they show next to it.",
+  "@settingVisionMatchCardPositionDescription": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Setting help.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Recognition cards > Card position"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Recognition cards > Card position"
+      ]
+    }
+  },
+  "recognitionCardPinSkipped": "PIN skipped",
+  "@recognitionCardPinSkipped": {
+    "context": "Kiosk screen > recognition card",
+    "description": "Next to the person's picture on the small card on the kiosk screen: the kiosk PIN was not asked because a chosen person was recognized. Keep it to two or three words.",
+    "x-locations": {
+      "device": [
+        "Kiosk screen > recognition card"
+      ]
+    }
+  },
+  "recognitionCardLockdownOff": "Lockdown Mode off",
+  "@recognitionCardLockdownOff": {
+    "context": "Kiosk screen > recognition card",
+    "description": "Next to the person's picture on the small card on the kiosk screen: Lockdown Mode was turned off because a chosen person was recognized. Keep it to two or three words.",
+    "x-locations": {
+      "device": [
+        "Kiosk screen > recognition card"
+      ]
+    }
+  },
+  "recognitionCardVoiceConfirmed": "Voice confirmed",
+  "@recognitionCardVoiceConfirmed": {
+    "context": "Kiosk screen > recognition card",
+    "description": "Next to the person's picture on the small card on the kiosk screen: a voice close to the person's voiceprint was accepted because their face was recognized. Keep it to two or three words.",
+    "x-locations": {
+      "device": [
+        "Kiosk screen > recognition card"
+      ]
+    }
+  },
+  "recognitionCardCalendarFocused": "Calendar focused",
+  "@recognitionCardCalendarFocused": {
+    "context": "Kiosk screen > recognition card",
+    "description": "Next to the person's picture on the small card on the kiosk screen: the calendar put the person's calendar forward because their face was recognized (Settings > Calendar > Focus on who is at the kiosk). Keep it to two or three words.",
+    "x-locations": {
+      "device": [
+        "Kiosk screen > recognition card"
+      ]
+    }
+  },
+  "settingVisionMatchPresenceSensorsTitle": "Presence sensors",
+  "@settingVisionMatchPresenceSensorsTitle": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Setting label: binary sensors in Home Assistant for someone in front of the kiosk and someone looking at it. Keep Ground Control, Vision Match, Face Recognition, Phoenix Portal and Home Assistant unchanged.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Face Detection > Presence sensors"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Face Detection > Presence sensors"
+      ]
+    }
+  },
+  "settingVisionMatchPresenceSensorsDescription": "Add the Presence and Looking at the kiosk sensors to Home Assistant. The camera stays on and faces are checked whenever something moves, even with the screen off.",
+  "@settingVisionMatchPresenceSensorsDescription": {
+    "context": "Settings > Ground Control > Vision Match",
+    "description": "Setting help. Presence and Looking at the kiosk are the names of the sensors in Home Assistant: keep them in English. Keep Ground Control, Vision Match, Face Recognition, Phoenix Portal and Home Assistant unchanged.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Face Detection > Presence sensors"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Face Detection > Presence sensors"
+      ]
+    }
+  },
+  "settingVisionMatchLinkGestureWhoDescription": "Gestures > Ground Control Vision Match",
+  "@settingVisionMatchLinkGestureWhoDescription": {
+    "context": "Settings > Ground Control > Vision Match > Used in other settings",
+    "description": "Where the setting is, as a path of page names. Use the translated name of the Gestures page. Ground Control and Vision Match are names: keep them unchanged.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Used in other settings"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Used in other settings"
+      ]
+    }
+  },
+  "settingVisionMatchLinkCalendarFocusDescription": "Calendar > Ground Control Vision Match",
+  "@settingVisionMatchLinkCalendarFocusDescription": {
+    "context": "Settings > Ground Control > Vision Match > Used in other settings",
+    "description": "Where the setting is, as a path of page names. Use the translated name of the Calendar page. Ground Control and Vision Match are names: keep them unchanged.",
+    "x-locations": {
+      "device": [
+        "Settings > Ground Control > Vision Match > Used in other settings"
+      ],
+      "remoteAdmin": [
+        "Ground Control > Vision Match > Used in other settings"
       ]
     }
   }

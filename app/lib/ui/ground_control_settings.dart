@@ -7,11 +7,13 @@ import '../core/events.dart';
 import '../l10n/messages.dart';
 import '../managers/settings/definitions.dart' as defs;
 import 'entity_picker.dart';
+import 'ground_control_tag.dart';
 import 'kit.dart';
 
 /// The Ground Control page's status rows, under Enable Ground Control:
-/// whether the kiosk found and signed in to Phoenix Portal Ground Control,
-/// who is enrolled there and Open for its app. Mirrored in the remote admin
+/// whether the kiosk found and signed in to Kiosk Satellite Ground Control,
+/// who is enrolled there, Open for its app and its version, architecture and
+/// whether it runs on the CPU or with CUDA. Mirrored in the remote admin
 /// (ground_control.js).
 class GroundControlStatusRow extends StatefulWidget {
   const GroundControlStatusRow({super.key, required this.container});
@@ -116,6 +118,14 @@ class _GroundControlStatusRowState extends State<GroundControlStatusRow> {
     );
     final app = m.appUrl;
     if (app == null) return status;
+    final valueStyle = Theme.of(
+      context,
+    ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant);
+    Widget value(String title, String text) => SettingsRow(
+      title: Text(voiceText(context, title)),
+      trailing: Text(text, style: valueStyle),
+    );
+    final arch = '${m.install['arch'] ?? ''}';
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -135,32 +145,13 @@ class _GroundControlStatusRowState extends State<GroundControlStatusRow> {
             child: Text(voiceText(context, 'Open')),
           ),
         ),
+        // What the service said about itself when the kiosk connected. An
+        // older Ground Control only gives its version.
+        if (m.version.isNotEmpty) value('Version', m.version),
+        if (arch.isNotEmpty) value('Architecture', arch),
+        if (m.install.isNotEmpty)
+          value('Runs on', m.install['onGpu'] == true ? 'CUDA' : 'CPU'),
       ],
-    );
-  }
-}
-
-/// A Ground Control feature that isn't here yet, under Features after the
-/// ones that are: Vision Match, coming soon. Mirrored in the remote
-/// admin (ground_control.js).
-class GroundControlComingSoonRow extends StatelessWidget {
-  const GroundControlComingSoonRow({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return SettingsRow(
-      title: Text(voiceText(context, 'Vision Match')),
-      subtitle: Text(
-        voiceText(context, "Facial recognition using this device's camera."),
-      ),
-      trailing: Text(
-        voiceText(context, 'Coming soon'),
-        style: theme.textTheme.bodyMedium?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
     );
   }
 }
@@ -168,10 +159,16 @@ class GroundControlComingSoonRow extends StatelessWidget {
 /// The people Answer can choose: everyone enrolled in Ground Control, then
 /// the chosen ones it no longer has, dimmed, so a pick is never lost while
 /// Ground Control is away. Mirrored on the remote admin (ground_control.js).
-PickSpec voiceMatchPeopleSpec(BuildContext context, AppContainer container) {
+PickSpec voiceMatchPeopleSpec(
+  BuildContext context,
+  AppContainer container, [
+  defs.SettingDef<String> def = defs.voiceMatchPeople,
+]) {
   final strings = l10n(context);
   return PickSpec(
-    key: 'voice-match:people',
+    key: def == defs.voiceMatchPeople
+        ? 'voice-match:people'
+        : 'ground-control:${def.key}',
     loader: () async {
       final found = <PickItem>[
         for (final p in container.groundControl.people)
@@ -188,7 +185,7 @@ PickSpec voiceMatchPeopleSpec(BuildContext context, AppContainer container) {
       return PickList([
         ...found,
         for (final p in defs.decodeVoiceMatchPeople(
-          container.settings.get(defs.voiceMatchPeople),
+          container.settings.get(def),
         ))
           if (!ids.contains(p.id))
             PickItem(
@@ -210,13 +207,23 @@ PickSpec voiceMatchPeopleSpec(BuildContext context, AppContainer container) {
   );
 }
 
-/// Ground Control Voice Match > People, under Answer on Chosen people: the
+/// Ground Control > Voice Match > People, under Answer on Chosen people: the
 /// people this kiosk answers, by name in a box that opens a checkbox list of
 /// everyone enrolled. Mirrored on the remote admin (rows.js).
+///
+/// Also Screensaver > Face Detection > People ([def]), whose faces dismiss
+/// or postpone the screensaver on Detect faces: Chosen people.
 class VoiceMatchPeopleRow extends StatefulWidget {
-  const VoiceMatchPeopleRow({super.key, required this.container});
+  const VoiceMatchPeopleRow({
+    super.key,
+    required this.container,
+    this.def = defs.voiceMatchPeople,
+  });
 
   final AppContainer container;
+
+  /// The setting that holds the picks, stored as [defs.voiceMatchPeople].
+  final defs.SettingDef<String> def;
 
   @override
   State<VoiceMatchPeopleRow> createState() => _VoiceMatchPeopleRowState();
@@ -235,7 +242,7 @@ class _VoiceMatchPeopleRowState extends State<VoiceMatchPeopleRow> {
     _subs
       ..add(
         c.bus.on<SettingChanged>().listen((e) {
-          if (e.key == defs.voiceMatchPeople.key && mounted) setState(() {});
+          if (e.key == widget.def.key && mounted) setState(() {});
         }),
       )
       ..add(
@@ -254,12 +261,12 @@ class _VoiceMatchPeopleRowState extends State<VoiceMatchPeopleRow> {
   }
 
   List<defs.VoiceMatchPick> get _picks =>
-      defs.decodeVoiceMatchPeople(c.settings.get(defs.voiceMatchPeople));
+      defs.decodeVoiceMatchPeople(c.settings.get(widget.def));
 
   Future<void> _pick(PickSpec spec) async {
     final ids = await showItemMultiPicker(
       context,
-      title: defs.voiceMatchPeople.localizedTitle(context),
+      title: widget.def.localizedTitle(context),
       spec: spec,
       selected: [for (final p in _picks) p.id],
     );
@@ -268,7 +275,7 @@ class _VoiceMatchPeopleRowState extends State<VoiceMatchPeopleRow> {
     // Named from the list, so a renamed person is stored under the new name.
     final stored = {for (final p in _picks) p.id: p.name};
     await c.settings.set(
-      defs.voiceMatchPeople,
+      widget.def,
       defs.encodeVoiceMatchPeople([
         for (final id in ids)
           (id: id, name: list?.find(id)?.name ?? stored[id] ?? ''),
@@ -279,7 +286,7 @@ class _VoiceMatchPeopleRowState extends State<VoiceMatchPeopleRow> {
 
   @override
   Widget build(BuildContext context) {
-    final spec = voiceMatchPeopleSpec(context, c);
+    final spec = voiceMatchPeopleSpec(context, c, widget.def);
     if (!identical(_people, c.groundControl.people)) {
       _people = c.groundControl.people;
       PickCatalog.load(spec.key, spec.loader);
@@ -306,7 +313,9 @@ class _VoiceMatchPeopleRowState extends State<VoiceMatchPeopleRow> {
               Expanded(
                 child: Text(
                   picks.isEmpty
-                      ? l10n(context).voiceMatchPeopleNone
+                      ? (widget.def == defs.voiceMatchPeople
+                            ? l10n(context).voiceMatchPeopleNone
+                            : l10n(context).screensaverFacePeopleNone)
                       : names.join(', '),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -339,11 +348,9 @@ class _VoiceMatchPeopleRowState extends State<VoiceMatchPeopleRow> {
                   if (!have.contains(p.id)) p.name.isEmpty ? p.id : p.name,
               ]
             : const <String>[];
-        final description = Text(
-          defs.voiceMatchPeople.localizedDescription(context),
-        );
+        final description = Text(widget.def.localizedDescription(context));
         return SettingsRow(
-          title: Text(defs.voiceMatchPeople.localizedTitle(context)),
+          title: settingTitle(context, widget.def),
           stack: true,
           subtitle: missing.isEmpty
               ? description
@@ -363,6 +370,95 @@ class _VoiceMatchPeopleRowState extends State<VoiceMatchPeopleRow> {
               : SizedBox(width: 300, child: field),
         );
       },
+    );
+  }
+}
+
+/// Under Enable Face Recognition: Enroll a face picks a person from Ground
+/// Control, or a new one, and starts the guided capture on this kiosk. The
+/// settings close so the capture fills the screen.
+class FaceEnrollRow extends StatelessWidget {
+  const FaceEnrollRow({super.key, required this.container});
+
+  final AppContainer container;
+
+  Future<void> _start(BuildContext context) async {
+    final t = l10n(context);
+    final people = container.groundControl.people;
+    final picked = await showRadioPicker<String>(
+      context,
+      title: t.faceEnrollPickTitle,
+      options: [
+        for (final p in people)
+          if ('${p['id'] ?? ''}'.isNotEmpty)
+            PickerOption(
+              '${p['id']}',
+              '${p['name'] ?? ''}',
+              detail: p['has_face'] == true ? t.faceEnrollEnrolled : null,
+            ),
+        PickerOption('', t.faceEnrollNewPerson),
+      ],
+    );
+    if (picked == null || !context.mounted) return;
+    String? id = picked.isEmpty ? null : picked;
+    var name = id == null
+        ? ''
+        : '${people.firstWhere((p) => p['id'] == id)['name'] ?? ''}';
+    String? color = id == null
+        ? null
+        : people.firstWhere((p) => p['id'] == id)['color'] as String?;
+    if (id == null) {
+      name = await _askName(context) ?? '';
+      if (name.isEmpty || !context.mounted) return;
+    }
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    container.bus.publish(
+      FaceEnrollRequested(personId: id, name: name, color: color),
+    );
+  }
+
+  Future<String?> _askName(BuildContext context) {
+    final t = l10n(context);
+    final field = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(t.faceEnrollNewPerson),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: TextField(
+            controller: field,
+            autofocus: true,
+            maxLength: 40,
+            decoration: InputDecoration(labelText: t.faceEnrollNameLabel),
+            onSubmitted: (v) => Navigator.of(context).pop(v.trim()),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(t.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(field.text.trim()),
+            child: Text(t.faceEnrollStart),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = l10n(context);
+    final connected = container.groundControl.status == 'connected';
+    return SettingsRow(
+      leading: const Icon(Icons.face_retouching_natural),
+      title: Text(t.faceEnrollRowTitle),
+      subtitle: Text(t.faceEnrollRowDescription),
+      enabled: connected,
+      trailing: const Icon(Icons.chevron_right),
+      onTap: connected ? () => unawaited(_start(context)) : null,
     );
   }
 }

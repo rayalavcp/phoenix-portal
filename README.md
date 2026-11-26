@@ -116,7 +116,11 @@ by link or upload (the Portal's browser won't download APKs). See [install/MORPH
 **Everything Kiosk Satellite does.** Phoenix is built on Kiosk Satellite and keeps all of it:
 Assist voice control with wake words, synchronized music (Music Assistant, AirPlay), screensavers,
 camera motion and presence wake, ESPHome entities in Home Assistant, intercom between Portals,
-alarms, timers, gestures, remote administration and fleet management.
+alarms, timers, gestures, remote administration and fleet management. It is up to date with
+Kiosk Satellite 2026.11.32, including **Ground Control** (Voice Match and Vision Match: who is
+speaking, face recognition and presence) when you run
+[Kiosk Satellite Ground Control](https://github.com/jxlarrea/kiosk-satellite-ground-control) on a
+computer at home.
 
 **Made for the Portal.** Phoenix fixes the first-generation Portal's white-on-white installer
 dialog, can block Meta OS updates, takes over the home screen, and updates itself from this

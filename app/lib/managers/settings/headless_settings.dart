@@ -55,11 +55,31 @@ class HeadlessSettings {
     defs.disableImpeller.key,
     defs.legacyWebView.key,
     defs.remoteEnabled.key,
+    // Ground Control: Vision Match works on the camera's frames.
+    defs.visionMatchEnabled.key,
+    defs.visionMatchFaceDetection.key,
+    defs.visionMatchPresenceSensors.key,
+    defs.visionMatchFaceRecognition.key,
+    defs.visionMatchFaceConfirmsVoice.key,
+    defs.visionMatchLinkFaceWho.key,
+    defs.visionMatchLinkScreensaverLock.key,
+    defs.visionMatchShowArrivals.key,
+    defs.visionMatchShowActions.key,
+    defs.visionMatchCardPosition.key,
+    defs.visionMatchLinkKioskPin.key,
+    defs.visionMatchLinkLockdownDisable.key,
+    defs.visionMatchLinkLockdownRelock.key,
+    defs.visionMatchLinkGestureWho.key,
+    defs.visionMatchLinkCalendarFocus.key,
+    defs.visionMatchHandGestures.key,
     // Voice: listening never leaves the foreground, there is none.
     defs.wakeWordBackground.key,
     defs.wakeWordReturnToBackground.key,
-    defs.voiceTimerAlertPill.key,
-    defs.voiceTimerNameOnAlert.key,
+    // Timers: no Timers view to open or screensaver to hold.
+    defs.timersShowOnStart.key,
+    defs.timersShowBeforeEnd.key,
+    defs.timersPauseScreensaver.key,
+    defs.timersViewScale.key,
     // Intercom: no talk button, and the buttons are gestures.
     defs.intercomTalkMode.key,
     defs.intercomHangupKey.key,
@@ -72,6 +92,8 @@ class HeadlessSettings {
     defs.alarmsSkipMinutes.key,
     // Gestures: the hand hold needs the camera.
     defs.handGestureHoldSeconds.key,
+    defs.gesturesFaceWho.key,
+    defs.gesturesFacePeople.key,
     // DLNA: everything is background audio here.
     defs.dlnaAudioBackground.key,
   };
@@ -107,8 +129,9 @@ class HeadlessSettings {
       case 'ESPHome':
         return def.subpage == 'Notifications' && def.section == 'Appearance';
       case 'Voice Satellite':
-        return const {'Appearance', 'Conversation'}.contains(def.subpage) ||
-            def.section == 'Pills';
+        return const {'Appearance', 'Conversation'}.contains(def.subpage);
+      case 'Timers':
+        return def.section == 'Pills';
     }
     return false;
   }
@@ -127,6 +150,8 @@ class HeadlessSettings {
     defs.wakeWordBackground: true,
     defs.wakeWordReturnToBackground: false,
     defs.dlnaAudioBackground: true,
+    // The pills would blank the timer names Home Assistant gets.
+    defs.voiceTimerPills: false,
     defs.intercomTalkMode: 'handsfree',
     // The dashboard runtime runs inside the WebView.
     defs.voiceRuntime: 'native',
@@ -136,9 +161,10 @@ class HeadlessSettings {
   Future<void> init() async {
     for (final def in defs.allSettings) {
       // A link to Drawer menu items goes with the menu, which is not here.
+      // Other links stay, like Voice Match under Ground Control's Features.
       if (_hiddenCategories.contains(def.category) ||
           _hiddenKeys.contains(def.key) ||
-          def.linksTo != null ||
+          def.linksTo == defs.uiDrawerItems.key ||
           _hiddenPart(def)) {
         defs.deviceHiddenKeys.add(def.key);
       }

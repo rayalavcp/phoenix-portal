@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 
 import '../app_container.dart';
@@ -11,6 +12,7 @@ import '../core/locale_dates.dart';
 import '../l10n/generated/ui_strings.dart';
 import '../l10n/messages.dart';
 import '../managers/calendar/calendar_edits.dart';
+import '../managers/calendar/calendar_face_focus.dart';
 import '../managers/calendar/calendar_manager.dart';
 import '../managers/calendar/calendar_model.dart';
 import '../core/events.dart';
@@ -21,6 +23,7 @@ import 'compass/compass_center.dart';
 import 'home/home_glass.dart';
 import 'home/home_themes.dart';
 import 'theme.dart' as ks;
+import 'ground_control_tag.dart' show faceRecognitionIconPath;
 import 'kit.dart';
 import 'theme.dart';
 import 'weather_readings.dart' show weatherConditionIcon;
@@ -396,6 +399,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
   /// Their touches are being reported ([_hearDialogs]).
   bool _hearing = false;
 
+  /// Focus on who is at the kiosk as this screen shows it. A change waits
+  /// until nobody has touched the screen for [_focusHold], so nothing moves
+  /// under a finger.
+  CalendarFocus _focus = CalendarFocus.none;
+  Timer? _touchHold;
+
+  /// The person whose calendar this screen last put forward, for the
+  /// action card: it shows once per person while the calendar is open.
+  String? _focusedFor;
+  static const _focusHold = Duration(seconds: 5);
+
   @override
   void initState() {
     super.initState();
@@ -403,6 +417,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _armIdle();
     _armMidnight();
     cal.calendars.addListener(_watch);
+    _focus = cal.focus.value;
+    _announceFocus();
+    cal.focus.addListener(_onFocus);
     _settingsSub = c.bus.on<SettingChanged>().listen((e) {
       if ((e.key == defs.calendarAllowEdit.key ||
               e.key == defs.calendarAllowDelete.key) &&
@@ -426,6 +443,31 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (mounted) setState(() {});
   }
 
+  /// Shows the latest focus, once the last touch is [_focusHold] old. The
+  /// hold calls this again when it ends.
+  void _onFocus() {
+    if (_touchHold?.isActive ?? false) return;
+    final next = cal.focus.value;
+    if (next == _focus || !mounted) return;
+    setState(() => _focus = next);
+    _announceFocus();
+  }
+
+  /// Vision Match's action card, the standard sign that a face changed
+  /// something: when the calendar first shows a person's calendar first.
+  void _announceFocus() {
+    final id = _focus.leadId;
+    if (id == null || id == _focusedFor) return;
+    _focusedFor = id;
+    c.bus.publish(FaceCalendarFocused(id: id, name: _focus.leadName));
+  }
+
+  /// Someone touched the calendar or a dialog over it.
+  void _touch() {
+    _touchHold?.cancel();
+    _touchHold = Timer(_focusHold, _onFocus);
+  }
+
   /// Start on the view and day [CalendarManager.open] asked for, or the
   /// default view on today.
   void _take() {
@@ -447,6 +489,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
     setState(_take);
     _armIdle();
     _watch();
+    // Opened again: the people in front of it show at once, with the card.
+    _touchHold?.cancel();
+    _focusedFor = null;
+    _onFocus();
+    _announceFocus();
   }
 
   @override
@@ -460,6 +507,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
   void dispose() {
     _idle?.cancel();
     _midnight?.cancel();
+    _touchHold?.cancel();
+    cal.focus.removeListener(_onFocus);
     _settingsSub?.cancel();
     // Idle or the screensaver closed the calendar under an open event or
     // form: take those down with it.
@@ -612,6 +661,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   void _reportTouch(PointerEvent event) {
     if (event is PointerDownEvent) {
+      _touch();
       c.bus.publish(const ActivityDetected(source: 'touch'));
     }
   }
@@ -630,8 +680,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
       calendarWritable(cal).isNotEmpty;
 
   /// New event at [start], or at the next hour on today and 9 on another
-  /// day, on [calendar] or the first one that takes events.
+  /// day, on [calendar], the person at the kiosk's or the first one that
+  /// takes events.
   void _newEvent({DateTime? start, String? calendar}) {
+    final lead = _focus.lead;
+    calendar ??= lead != null && !cal.hidden.value.contains(lead) ? lead : null;
     final now = DateTime.now();
     final at =
         start ??
@@ -703,6 +756,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         // As the screensaver every finger here belongs to the calendar:
         // the kiosk's own report of the touch must not dismiss it.
         if (widget.screensaver) c.screensaver.markControlTouch();
+        _touch();
         _armIdle();
         // A touch means the ring has been seen.
         cal.highlight.value = null;
@@ -727,6 +781,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 cal.pictures,
                 cal.features,
                 cal.highlight,
+                c.screensaver.faceLocked,
               ]),
               builder: (context, _) {
                 final narrow = layout == CalendarLayout.narrow;
@@ -757,6 +812,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         child: _TopChips(
                           container: c,
                           named: layout == CalendarLayout.roomy,
+                          focus: _focus,
                         ),
                       ),
                     // A phone's header has no room left: New event waits at
@@ -775,8 +831,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     // its button ends the screensaver. Beside Now Playing
                     // as the Compass center that would only open both
                     // again, so it has none there.
+                    // A screensaver only the chosen people dismiss has
+                    // no close button.
                     if (!(widget.screensaver &&
-                        c.screensaver.nowPlayingIsCenter))
+                        (c.screensaver.nowPlayingIsCenter ||
+                            c.screensaver.faceLocked.value)))
                       Positioned(
                         top: narrow ? 0 : 4,
                         right: narrow ? 4 : 8,
@@ -879,6 +938,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ? (start, calendar) => _newEvent(start: start, calendar: calendar)
           : null,
       highlight: c.calendar.highlight.value,
+      focus: _focus,
     );
     if (narrow) {
       return switch (_view) {
@@ -911,10 +971,14 @@ class _ViewArgs {
     required this.onSelect,
     this.onNew,
     this.highlight,
+    this.focus = CalendarFocus.none,
   });
 
   /// The event a voice request was about, ringed until it fades.
   final CalendarHighlight? highlight;
+
+  /// The calendars of the people Face Recognition names at the kiosk.
+  final CalendarFocus focus;
 
   /// The ringed event's start when it is a timed one on [day], for the
   /// Day timeline to scroll to.
@@ -1273,10 +1337,17 @@ class _SegmentScrollState extends State<_SegmentScroll> {
 /// phone). A tap hides the calendar on this kiosk and the choice stays.
 /// More than fit scroll under the edge fade.
 class _TopChips extends StatelessWidget {
-  const _TopChips({required this.container, required this.named});
+  const _TopChips({
+    required this.container,
+    required this.named,
+    required this.focus,
+  });
 
   final AppContainer container;
   final bool named;
+
+  /// Its people's chips get a ring in their color.
+  final CalendarFocus focus;
 
   @override
   Widget build(BuildContext context) {
@@ -1286,6 +1357,9 @@ class _TopChips extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     void toggle(String entity) =>
         unawaited(cal.setHidden(entity, !hidden.contains(entity)));
+    Color? ring(String entity) => !hidden.contains(entity) && focus.has(entity)
+        ? paint.base(entity)
+        : null;
     final chips = [
       for (final source in cal.enabled)
         if (named)
@@ -1296,6 +1370,10 @@ class _TopChips extends StatelessWidget {
               on: !hidden.contains(source.entity),
               tint: paint.soft(source.entity),
               border: scheme.outlineVariant,
+              ring: ring(source.entity),
+              trailing: ring(source.entity) == null
+                  ? null
+                  : CalendarFaceIcon(color: scheme.onSurfaceVariant),
               avatar: CalendarAvatar(
                 container: container,
                 entity: source.entity,
@@ -1316,12 +1394,15 @@ class _TopChips extends StatelessWidget {
                 width: 42,
                 height: 44,
                 child: Center(
-                  child: CalendarAvatar(
-                    container: container,
-                    entity: source.entity,
-                    paint: paint,
-                    size: 30,
-                    muted: hidden.contains(source.entity),
+                  child: CalendarRing(
+                    color: ring(source.entity),
+                    child: CalendarAvatar(
+                      container: container,
+                      entity: source.entity,
+                      paint: paint,
+                      size: 30,
+                      muted: hidden.contains(source.entity),
+                    ),
                   ),
                 ),
               ),
@@ -1351,6 +1432,8 @@ class CalendarChip extends StatelessWidget {
     required this.border,
     required this.avatar,
     required this.onTap,
+    this.ring,
+    this.trailing,
   });
 
   final String label;
@@ -1359,6 +1442,12 @@ class CalendarChip extends StatelessWidget {
   final Color border;
   final Widget avatar;
   final VoidCallback onTap;
+
+  /// Its person is at the kiosk or in view: a ring in their color.
+  final Color? ring;
+
+  /// After the label, such as the face icon of a person in view.
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -1369,14 +1458,18 @@ class CalendarChip extends StatelessWidget {
       child: Material(
         color: on ? tint : Colors.transparent,
         shape: StadiumBorder(
-          side: on ? BorderSide.none : BorderSide(color: border),
+          side: ring != null
+              ? BorderSide(color: ring!, width: 2)
+              : on
+              ? BorderSide.none
+              : BorderSide(color: border),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
           child: Container(
             height: 38,
-            padding: const EdgeInsets.fromLTRB(5, 0, 16, 0),
+            padding: EdgeInsets.fromLTRB(5, 0, trailing == null ? 16 : 12, 0),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1390,6 +1483,7 @@ class CalendarChip extends StatelessWidget {
                     color: on ? scheme.onSurface : scheme.onSurfaceVariant,
                   ),
                 ),
+                if (trailing != null) ...[const SizedBox(width: 6), trailing!],
               ],
             ),
           ),
@@ -1397,6 +1491,56 @@ class CalendarChip extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A ring in [color] around an avatar, clear of it, for a person Face
+/// Recognition names at the kiosk. Without a color the avatar stays as it
+/// is, or keeps the ring's room with [reserve] so a row of them lines up.
+class CalendarRing extends StatelessWidget {
+  const CalendarRing({
+    super.key,
+    required this.color,
+    required this.child,
+    this.reserve = false,
+  });
+
+  final Color? color;
+  final Widget child;
+  final bool reserve;
+
+  @override
+  Widget build(BuildContext context) {
+    final ring = color;
+    if (ring == null) {
+      return reserve
+          ? Padding(padding: const EdgeInsets.all(4), child: child)
+          : child;
+    }
+    return Container(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: ring, width: 2),
+      ),
+      child: child,
+    );
+  }
+}
+
+/// Vision Match's face icon, after the name of a person in view.
+class CalendarFaceIcon extends StatelessWidget {
+  const CalendarFaceIcon({super.key, required this.color, this.size = 16});
+
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => SvgPicture.string(
+    '<svg viewBox="0 0 24 24"><path d="$faceRecognitionIconPath"/></svg>',
+    width: size,
+    height: size,
+    colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+  );
 }
 
 class _OfflineLine extends StatelessWidget {
@@ -2022,9 +2166,18 @@ class _DayLanes extends StatelessWidget {
   Widget build(BuildContext context) {
     final cal = args.cal;
     final hidden = cal.hidden.value;
-    final lanes = [
+    final shown = [
       for (final c in cal.enabled)
         if (!hidden.contains(c.entity)) c,
+    ];
+    // The people at the kiosk get the first lanes, the person at the
+    // kiosk's first, then everyone else in the order of Settings.
+    final focus = args.focus;
+    final lanes = [
+      for (final entity in focus.entities)
+        ...shown.where((c) => c.entity == entity),
+      for (final c in shown)
+        if (!focus.has(c.entity)) c,
     ];
     final day = args.anchor;
     final events = eventsOn(args.events, day);
@@ -2084,11 +2237,18 @@ class _DayLanes extends StatelessWidget {
         lanesRow(
           (lane) => Row(
             children: [
-              CalendarAvatar(
-                container: args.container,
-                entity: lane.entity,
-                paint: args.paint,
-                size: short ? 24 : 30,
+              CalendarRing(
+                color: focus.has(lane.entity)
+                    ? args.paint.base(lane.entity)
+                    : null,
+                // Every lane's name on the same line as the ringed ones.
+                reserve: !focus.isEmpty,
+                child: CalendarAvatar(
+                  container: args.container,
+                  entity: lane.entity,
+                  paint: args.paint,
+                  size: short ? 24 : 30,
+                ),
               ),
               const SizedBox(width: 8),
               Flexible(
@@ -2102,6 +2262,10 @@ class _DayLanes extends StatelessWidget {
                   ),
                 ),
               ),
+              if (focus.has(lane.entity)) ...[
+                const SizedBox(width: 6),
+                CalendarFaceIcon(color: scheme.onSurfaceVariant),
+              ],
             ],
           ),
         ),
@@ -2771,8 +2935,17 @@ class _TodayPanel extends StatelessWidget {
     final now = DateTime.now();
     final today = args.today;
     final coming = upNext(args.events, now);
-    final next = coming.isEmpty ? null : coming.first;
-    final later = coming.skip(1).toList();
+    // The person at the kiosk's next event when they have one left today,
+    // the household's otherwise.
+    final lead = args.focus.lead;
+    final theirs = lead == null || args.focus.leadName.isEmpty
+        ? null
+        : coming.where((e) => e.calendars.contains(lead)).firstOrNull;
+    final next = theirs ?? (coming.isEmpty ? null : coming.first);
+    final later = [
+      for (final e in coming)
+        if (!identical(e, next)) e,
+    ];
     final allDay = [
       for (final e in eventsOn(args.events, today))
         if (e.allDay || _coversDay(e, today)) e,
@@ -2858,12 +3031,19 @@ class _TodayPanel extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(
-                      s.calendarUpNext.toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: .6,
+                    Flexible(
+                      child: Text(
+                        (theirs != null
+                                ? s.calendarUpNextFor(args.focus.leadName)
+                                : s.calendarUpNext)
+                            .toUpperCase(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: .6,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),

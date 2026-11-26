@@ -695,6 +695,11 @@ class UiStringsEn extends UiStrings {
   String get calendarEditingSection => 'Editing';
 
   @override
+  String calendarUpNextFor(String name) {
+    return 'Up next for $name';
+  }
+
+  @override
   String get cameraViewerTitle => 'Camera view';
 
   @override
@@ -1271,6 +1276,76 @@ class UiStringsEn extends UiStrings {
 
   @override
   String get esphomeTypeText => 'text';
+
+  @override
+  String faceEnrollTitle(String name) {
+    return 'Enrolling $name';
+  }
+
+  @override
+  String faceEnrollStepOf(String step, String total) {
+    return 'Step $step of $total';
+  }
+
+  @override
+  String get faceEnrollStepLook => 'Look at the screen';
+
+  @override
+  String get faceEnrollStepSideA => 'Turn your head a little to one side';
+
+  @override
+  String get faceEnrollStepSideB => 'Now a little to the other side';
+
+  @override
+  String get faceEnrollStepFar => 'Take a step back';
+
+  @override
+  String get faceEnrollHintNoFace => 'No face in view';
+
+  @override
+  String get faceEnrollHintSeveral => 'Only one person should be in view';
+
+  @override
+  String get faceEnrollHintCloser => 'Come a little closer';
+
+  @override
+  String get faceEnrollHintFarther => 'Step back a little more';
+
+  @override
+  String get faceEnrollHintTurnMore => 'Turn a little more';
+
+  @override
+  String get faceEnrollHintTurnLess => 'Turn back a little';
+
+  @override
+  String get faceEnrollHintOtherSide => 'Now to the other side';
+
+  @override
+  String get faceEnrollHintDark => 'Too dark to see your face';
+
+  @override
+  String get faceEnrollHintOtherFace => 'That\'s a different face';
+
+  @override
+  String faceEnrollSaved(String name) {
+    return 'Face enrolled for $name';
+  }
+
+  @override
+  String get faceEnrollSavedPartly =>
+      'Part of the face was enrolled. Enroll again to finish.';
+
+  @override
+  String get faceEnrollTooShort =>
+      'The face wasn\'t seen long enough. Nothing was saved.';
+
+  @override
+  String get faceEnrollUnavailable =>
+      'Face Recognition needs Ground Control with Vision Match and Face Recognition on.';
+
+  @override
+  String get faceEnrollLost =>
+      'The connection to Ground Control was lost. Nothing was saved.';
 
   @override
   String get filesUpload => 'Upload file';
@@ -1976,6 +2051,9 @@ class UiStringsEn extends UiStrings {
 
   @override
   String get fleetGeminiApiKey => 'Gemini API key';
+
+  @override
+  String get fleetVercelApiKey => 'Vercel AI Gateway API key';
 
   @override
   String get fleetMcpServerToken => 'MCP server token';
@@ -5523,6 +5601,13 @@ class UiStringsEn extends UiStrings {
       'the calendars hidden with their chips';
 
   @override
+  String get settingCalendarFaceFocusTitle => 'Focus on who is at the kiosk';
+
+  @override
+  String get settingCalendarFaceFocusDescription =>
+      'Rings the chip of the person at the kiosk, puts their lane first in Day and picks their calendar for new events.';
+
+  @override
   String get settingCameraEnabledTitle => 'Enable camera';
 
   @override
@@ -5575,6 +5660,16 @@ class UiStringsEn extends UiStrings {
 
   @override
   String get cameraOnlyCamera => 'The only camera this device has.';
+
+  @override
+  String get cameraFlashlightHeading => 'Flashlight';
+
+  @override
+  String get settingCameraFlashlightTitle => 'Turn on flashlight';
+
+  @override
+  String get settingCameraFlashlightDescription =>
+      'Use the camera flash as a steady light.';
 
   @override
   String get settingMotionSensorTitle => 'Motion sensor';
@@ -8632,11 +8727,38 @@ class UiStringsEn extends UiStrings {
   }
 
   @override
+  String get gestureGroundControlVisionMatch => 'Ground Control Vision Match';
+
+  @override
+  String get settingGesturesFaceWhoTitle => 'Finger gestures for';
+
+  @override
+  String get settingGesturesFaceWhoDescription =>
+      'With Chosen people, Show fingers gestures run only while one of the people picked below is recognized at the kiosk.';
+
+  @override
+  String get gesturesFaceWhoOptionAnyone => 'Anyone';
+
+  @override
+  String get gesturesFaceWhoOptionPeople => 'Chosen people';
+
+  @override
+  String get settingGesturesFacePeopleTitle => 'People';
+
+  @override
+  String get settingGesturesFacePeopleDescription =>
+      'Choose who can run finger gestures. If nobody is chosen, anyone recognized can.';
+
+  @override
   String get settingGroundControlEnabledTitle => 'Enable Ground Control';
 
   @override
+  String get settingGroundControlEnabledDescriptionVisionMatch =>
+      'Connect to Kiosk Satellite Ground Control, which runs Voice Match and Vision Match on a capable machine.';
+
+  @override
   String get settingGroundControlEnabledDescription =>
-      'Connect to Phoenix Portal Ground Control, which runs Voice Match on a capable machine.';
+      'Connect to Kiosk Satellite Ground Control, which runs Voice Match on a capable machine.';
 
   @override
   String get settingGroundControlAddressTitle => 'Address';
@@ -8674,24 +8796,176 @@ class UiStringsEn extends UiStrings {
   String get groundControlApp => 'Ground Control app';
 
   @override
+  String get groundControlArchitecture => 'Architecture';
+
+  @override
+  String get groundControlRunsOn => 'Runs on';
+
+  @override
   String get groundControlFeatures => 'Features';
 
   @override
   String get settingGroundControlVoiceMatchTitle => 'Voice Match';
 
   @override
-  String get settingGroundControlVoiceMatchFeaturesDescription =>
-      'Recognition, Trimming and Isolation.';
+  String get settingVisionMatchEnabledTitle => 'Vision Match';
 
   @override
-  String get groundControlVisionMatch => 'Vision Match';
+  String get settingVisionMatchEnableTitle => 'Enable Vision Match';
 
   @override
-  String get groundControlVisionMatchDescription =>
-      'Facial recognition using this device\'s camera.';
+  String get settingVisionMatchFaceDetectionTitle => 'Enable Face Detection';
 
   @override
-  String get groundControlComingSoon => 'Coming soon';
+  String get settingVisionMatchHandGesturesTitle => 'Enable Hand Gestures';
+
+  @override
+  String get visionMatchFeaturesHint =>
+      'Face recognition, detection, hand gestures and presence detection';
+
+  @override
+  String get settingVisionMatchEnabledDescriptionGroundControl =>
+      'Face Detection, Hand Gestures and Face Recognition. Needs Ground Control.';
+
+  @override
+  String get settingVisionMatchFaceDetectionDescriptionGroundControl =>
+      'Run face detection on Ground Control. Disable to run on-device.';
+
+  @override
+  String get settingVisionMatchHandGesturesDescriptionGroundControl =>
+      'Run palm and fingers gestures detection on Ground Control. Disable to run on-device.';
+
+  @override
+  String get settingVisionMatchFaceRecognitionTitle =>
+      'Enable Face Recognition';
+
+  @override
+  String get settingVisionMatchFaceRecognitionDescriptionGroundControl =>
+      'Recognize who is looking at the kiosk and show it in the Face sensor. Needs Face Detection on Ground Control.';
+
+  @override
+  String get groundControlFaceRecognition => 'Face Recognition';
+
+  @override
+  String get faceEnrollRowTitle => 'Enroll a face';
+
+  @override
+  String get faceEnrollRowDescription =>
+      'Pick a person, then follow the steps on the screen. It takes about half a minute.';
+
+  @override
+  String get faceEnrollPickTitle => 'Whose face?';
+
+  @override
+  String get faceEnrollNewPerson => 'New person';
+
+  @override
+  String get faceEnrollEnrolled => 'Face enrolled';
+
+  @override
+  String get faceEnrollNameLabel => 'Name';
+
+  @override
+  String get faceEnrollStart => 'Start';
+
+  @override
+  String get settingVisionMatchFaceConfirmsVoiceTitle =>
+      'Confirm voices with faces';
+
+  @override
+  String get settingVisionMatchFaceConfirmsVoiceDescription =>
+      'Accept a close voice match when the same person\'s face is recognized at the kiosk. Only the person with the closest voiceprint can be matched this way.';
+
+  @override
+  String get groundControlUsedElsewhere => 'Used in other settings';
+
+  @override
+  String get settingVisionMatchLinkFaceWhoDescription =>
+      'Screensaver > Face Detection > Ground Control Vision Match';
+
+  @override
+  String get groundControlValueOn => 'On';
+
+  @override
+  String get groundControlValueOff => 'Off';
+
+  @override
+  String groundControlValuePeople(String option, String names) {
+    return '$option: $names';
+  }
+
+  @override
+  String get groundControlTagHint => 'A Ground Control setting. Learn more';
+
+  @override
+  String get groundControlTagTitle => 'A Ground Control setting';
+
+  @override
+  String get groundControlTagVision =>
+      'This setting needs Kiosk Satellite Ground Control. Ground Control is a separate app that runs on a computer in your home. The setting uses Face Recognition and only shows while Face Recognition is on in Settings > Ground Control > Vision Match.';
+
+  @override
+  String get groundControlTagVoice =>
+      'This setting needs Kiosk Satellite Ground Control. Ground Control is a separate app that runs on a computer in your home. The setting uses Voice Match and only shows while Voice Match is on in Settings > Ground Control > Voice Match.';
+
+  @override
+  String get settingVisionMatchLinkKioskPinDescription =>
+      'Kiosk Mode > Ground Control Vision Match';
+
+  @override
+  String get settingVisionMatchLinkLockdownDescription =>
+      'Lockdown Mode > Ground Control Vision Match';
+
+  @override
+  String get groundControlRecognitionCards => 'Recognition cards';
+
+  @override
+  String get settingVisionMatchShowArrivalsTitle => 'Show arrivals';
+
+  @override
+  String get settingVisionMatchShowArrivalsDescription =>
+      'Show a card with the person\'s picture and name when someone is recognized at the kiosk. It shows again for the same person after they have been away for a minute.';
+
+  @override
+  String get settingVisionMatchShowActionsTitle => 'Show face actions';
+
+  @override
+  String get settingVisionMatchShowActionsGeneralDescription =>
+      'Show a small card each time something on the kiosk changes because a face was recognized.';
+
+  @override
+  String get settingVisionMatchCardPositionTitle => 'Card position';
+
+  @override
+  String get settingVisionMatchCardPositionDescription =>
+      'The corner of the screen where both cards show. While the camera preview shows, they show next to it.';
+
+  @override
+  String get recognitionCardPinSkipped => 'PIN skipped';
+
+  @override
+  String get recognitionCardLockdownOff => 'Lockdown Mode off';
+
+  @override
+  String get recognitionCardVoiceConfirmed => 'Voice confirmed';
+
+  @override
+  String get recognitionCardCalendarFocused => 'Calendar focused';
+
+  @override
+  String get settingVisionMatchPresenceSensorsTitle => 'Presence sensors';
+
+  @override
+  String get settingVisionMatchPresenceSensorsDescription =>
+      'Add the Presence and Looking at the kiosk sensors to Home Assistant. The camera stays on and faces are checked whenever something moves, even with the screen off.';
+
+  @override
+  String get settingVisionMatchLinkGestureWhoDescription =>
+      'Gestures > Ground Control Vision Match';
+
+  @override
+  String get settingVisionMatchLinkCalendarFocusDescription =>
+      'Calendar > Ground Control Vision Match';
 
   @override
   String get haCustomPages => 'Custom Pages';
@@ -9747,6 +10021,29 @@ class UiStringsEn extends UiStrings {
   String get kioskGestureNone => 'Disabled (remote admin only)';
 
   @override
+  String get kioskGroundControlVisionMatch => 'Ground Control Vision Match';
+
+  @override
+  String get settingKioskFaceSkipPinTitle => 'Skip the PIN for';
+
+  @override
+  String get settingKioskFaceSkipPinDescription =>
+      'With Chosen people, the menu opens after the exit gesture without the PIN while one of the people picked below is recognized at the kiosk.';
+
+  @override
+  String get kioskFaceSkipPinNobody => 'Nobody';
+
+  @override
+  String get kioskFaceSkipPinPeople => 'Chosen people';
+
+  @override
+  String get settingKioskFacePeopleTitle => 'People';
+
+  @override
+  String get settingKioskFacePeopleDescription =>
+      'Choose who can skip the PIN. If nobody is chosen, anyone recognized can.';
+
+  @override
   String get kioskForeground =>
       'Phoenix Portal can bring itself back in the foreground.';
 
@@ -10035,6 +10332,24 @@ class UiStringsEn extends UiStrings {
   @override
   String get lockdownSearch =>
       'Remote-only touch shield. Set it up from the Remote Admin UI; its grants live under Required system permissions.';
+
+  @override
+  String get settingLockdownFaceDisableTitle => 'Disable Lockdown Mode for';
+
+  @override
+  String get settingLockdownFaceDisableDescription =>
+      'With Chosen people, Lockdown Mode is turned off when one of the people picked below is recognized at the kiosk. Leave this on Nobody if you lock the screen to clean it.';
+
+  @override
+  String get settingLockdownFacePeopleDescription =>
+      'Choose who Lockdown Mode is turned off for. If nobody is chosen, it is turned off for anyone recognized.';
+
+  @override
+  String get settingLockdownFaceRelockTitle => 'Turn Lockdown Mode back on';
+
+  @override
+  String get settingLockdownFaceRelockDescription =>
+      'Turn Lockdown Mode back on 10 seconds after none of the chosen people are in view.';
 
   @override
   String get lockdownOverlayHeld =>
@@ -12461,6 +12776,40 @@ class UiStringsEn extends UiStrings {
       'Not available on x86 devices.';
 
   @override
+  String get settingScreensaverFaceWhoTitle => 'Detect faces';
+
+  @override
+  String get settingScreensaverFaceWhoDescription =>
+      'With Chosen people, only the people picked below dismiss or postpone the screensaver.';
+
+  @override
+  String get screensaverFaceWhoOptionAnyone => 'Anyone';
+
+  @override
+  String get screensaverFaceWhoOptionPeople => 'Chosen people';
+
+  @override
+  String get settingScreensaverFacePeopleTitle => 'People';
+
+  @override
+  String get settingScreensaverFacePeopleDescription =>
+      'Choose who can dismiss or postpone the screensaver by looking at the kiosk. If nobody is chosen, anyone recognized can.';
+
+  @override
+  String get screensaverFacePeopleNone => 'Anyone recognized';
+
+  @override
+  String get screensaverGroundControlVisionMatch =>
+      'Ground Control Vision Match';
+
+  @override
+  String get settingScreensaverFaceLockTitle => 'Only chosen people dismiss it';
+
+  @override
+  String get settingScreensaverFaceLockDescription =>
+      'Touch, buttons, motion, sensors and gestures from anyone else no longer dismiss the screensaver. Phoenix Portal and Home Assistant still can.';
+
+  @override
   String get settingFacePreviewTitle => 'Show camera preview';
 
   @override
@@ -12490,6 +12839,9 @@ class UiStringsEn extends UiStrings {
 
   @override
   String get screensaverDetectionPreviewSection => 'Camera Preview';
+
+  @override
+  String get facePreviewRecognized => 'Recognized';
 
   @override
   String get settingScreensaverEnabledTitle => 'Screensaver';
@@ -13138,6 +13490,20 @@ class UiStringsEn extends UiStrings {
   @override
   String get settingScreensaverImmichFillDescription =>
       'Off keeps the whole photo between black bars. Smart enlarges photos shaped close to the screen, framing the rest over a blurred backdrop. Always enlarges every photo, cutting off what does not fit.';
+
+  @override
+  String get settingScreensaverImmichCropFacesTitle => 'Crop around faces';
+
+  @override
+  String get settingScreensaverImmichCropFacesDescription =>
+      'Photos cropped to fill the screen keep the faces Immich found in view. Needs the face.read permission.';
+
+  @override
+  String get settingScreensaverImmichCropVideosTitle => 'Crop videos';
+
+  @override
+  String get settingScreensaverImmichCropVideosDescription =>
+      'Videos are cropped to fill the screen like photos. Turn off to show every video whole.';
 
   @override
   String get settingScreensaverImmichPairPortraitTitle =>
@@ -15456,6 +15822,10 @@ class UiStringsEn extends UiStrings {
       'More effort answers harder questions better. Needs a model that thinks, such as gemini-3.8-live-extended-thinking.';
 
   @override
+  String get settingVoiceRealtimeVercelReasoningDescription =>
+      'More effort answers harder questions better. Only for openai/gpt-realtime-2 models.';
+
+  @override
   String get settingVoiceRealtimeGeminiSearchTitle => 'Google Search';
 
   @override
@@ -15838,6 +16208,13 @@ class UiStringsEn extends UiStrings {
       'Keep the screensaver from starting while the Timers view shows a running timer.';
 
   @override
+  String get settingTimersViewScaleTitle => 'Timers view scale';
+
+  @override
+  String get settingTimersViewScaleDescription =>
+      'The size of the timer names and buttons in the Timers view.';
+
+  @override
   String get settingTimersSilenceAfterTitle => 'Silence after';
 
   @override
@@ -15850,9 +16227,6 @@ class UiStringsEn extends UiStrings {
   @override
   String get settingTimersDismissAfterDescription =>
       'Clears a finished timer as if Dismiss was tapped.';
-
-  @override
-  String get voiceMatchGroundControlPage => 'Ground Control Voice Match';
 
   @override
   String get settingVoiceMatchPolicyDescriptionChosen =>

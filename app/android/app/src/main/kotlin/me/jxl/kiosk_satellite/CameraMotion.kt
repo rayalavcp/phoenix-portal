@@ -197,6 +197,7 @@ class CameraMotion(
         // wake-up that still feels immediate.
         private const val VISION_ACTIVITY_WINDOW_NS = 3_000_000_000L
         private const val VISION_MIN_INTERVAL_NS = 500_000_000L
+        private const val ENROLL_INTERVAL_NS = 250_000_000L
         private const val VISION_DUTY = 5L
 
         // While a raised hand is being timed, the pace tightens: for the
@@ -480,6 +481,24 @@ class CameraMotion(
      *  only on [analysisExecutor]. */
     private var faceDetector: FaceDetector? = null
     private var handTracker: HandTracker? = null
+
+    /**
+     * Vision Match: the face looks go to Ground Control instead of
+     * [faceDetector], the hand looks instead of [handTracker], each by its
+     * own switch (see [GroundControlVision]). Set at bind time like the
+     * other legs.
+     */
+    @Volatile private var remoteFaces = false
+    @Volatile private var remoteHands = false
+
+    /**
+     * Face Recognition's guided capture: while it runs, a frame goes to
+     * Ground Control every [ENROLL_INTERVAL_NS] whatever moves, one waiting
+     * at a time, and nothing else is analyzed.
+     */
+    @Volatile private var enrollFrames = false
+    private var lastEnrollNs = 0L
+    private val groundControl = GroundControlVision()
 
     /** What this listen wants emitted: motion ticks, face sightings,
      *  raised hands, any mix. Set in onListen before the bind, read on
@@ -860,6 +879,24 @@ class CameraMotion(
                 }
                 result.success(null)
             }
+            // Vision Match: Ground Control's vision socket is ready, with how
+            // many looks a second it keeps up with.
+            "visionReady" -> {
+                val args = call.arguments as? Map<*, *>
+                groundControl.setMaxLooks(
+                    (args?.get("face") as? Number)?.toDouble(),
+                    (args?.get("hands") as? Number)?.toDouble(),
+                )
+                Log.i(TAG, "Ground Control vision ready: ${args?.get("face")} face and ${args?.get("hands")} hand looks a second")
+                result.success(null)
+            }
+            // Vision Match: a look's answer, or its failure (no faces and
+            // no hand in it), from Ground Control.
+            "visionResult" -> {
+                val args = call.arguments as? Map<*, *> ?: emptyMap<Any, Any>()
+                onAnalysis { onGroundControlLook(args) }
+                result.success(null)
+            }
             "showPreview" -> {
                 val ms = ((call.arguments as? Map<*, *>)?.get("ms") as? Number)
                     ?.toLong()?.coerceIn(0L, 60_000L) ?: 0L
@@ -952,6 +989,11 @@ class CameraMotion(
                 gameVision?.close()
                 gameVision = null
             }
+            remoteFaces = args?.get("remoteFaces") == true
+            remoteHands = args?.get("remoteHands") == true
+            enrollFrames = args?.get("enroll") == true
+            lastEnrollNs = 0L
+            groundControl.reset()
             faceMinWidth =
                 ((args?.get("faceMinWidth") as? Number)?.toFloat() ?: 0.1f).coerceIn(0.01f, 1f)
             lastFaceEmitNs = 0L
@@ -1167,7 +1209,8 @@ class CameraMotion(
             val jpegHung = deviceCamera?.jpegHung(cameraId) == true
             val legSize =
                 if (captureLevel >= 2) Size(320, 240)
-                else if (palmsWanted || previewWanted || boundVideo || gameMode) Size(640, 480) else Size(320, 240)
+                else if (palmsWanted || previewWanted || boundVideo || gameMode || (remoteFaces && facesWanted) || enrollFrames) Size(640, 480)
+                else Size(320, 240)
             val analysisSize = listOfNotNull(
                 legSize,
                 pluginSize?.takeIf { captureLevel < 2 },
@@ -1181,6 +1224,17 @@ class CameraMotion(
             if (boundVideo) applyStreamingExposure(analysisBuilder, cameraProvider, selector)
             else applyLowLightExposure(analysisBuilder, cameraProvider, selector)
             val imageAnalysis = analysisBuilder.build()
+            // The frames' rotationDegrees is relative to this. Left unset,
+            // CameraX took ROTATION_0 on a tablet held in landscape whose
+            // natural orientation is portrait (Tab S8: front sensor at 270,
+            // display at ROTATION_90), so upright frames came labeled 270
+            // and every reader of the label turned them on their side: the
+            // face and hand models, the camera preview and Ground Control.
+            // It follows the display for the whole session too: a session
+            // bound as the app starts can meet the display still in its
+            // natural orientation, before the Activity turns it.
+            imageAnalysis.targetRotation = currentDisplayRotation()
+            followDisplayRotation(mySession, imageAnalysis)
             var firstFrame = true
             imageAnalysis.setAnalyzer(analysisExecutor) { image ->
                 if (session == mySession && firstFrame) {
@@ -1386,6 +1440,7 @@ class CameraMotion(
                     cameraProvider.bindToLifecycle(owner, selector, imageAnalysis)
                 }
                 boundCamera = camera
+                Flashlight.attach(camera, owner)
                 deviceCamera?.sharedCaptureCamera = camera.cameraInfo
                 deviceCamera?.sharedAnalysis = includeAnalysis && deviceCamera?.sharedCapture == null
                 deviceCamera?.sharedDiagnosticSession = diagnosticId
@@ -1401,7 +1456,7 @@ class CameraMotion(
                 } catch (_: Exception) {
                     facing == CameraSelector.DEFAULT_FRONT_CAMERA
                 }
-                if (fingersWanted) {
+                if (fingersWanted && !remoteHands) {
                     analysisExecutor.execute {
                         try {
                             val tracker = handTracker ?: HandTracker(context) { hands, read, atNs ->
@@ -1539,8 +1594,17 @@ class CameraMotion(
             lastFrameAtMs = SystemClock.elapsedRealtime()
             deviceCamera?.captureAnalysisFrame(image)
             if (!motionWanted && !facesWanted && !fingersWanted && !headsWanted && !gameHands && !gameBody &&
-                !previewWanted && pluginFrames == null) return
+                !previewWanted && pluginFrames == null && !enrollFrames) return
             val now = System.nanoTime()
+            if (enrollFrames) {
+                if (!paused && now - lastEnrollNs >= ENROLL_INTERVAL_NS && !groundControl.busy(now)) {
+                    lastEnrollNs = now
+                    groundControl.prepare(image, true, false, now)?.let { look ->
+                        mainHandler.post { sink.success(look + mapOf("enroll" to true, "mirror" to boundFront)) }
+                    }
+                }
+                return
+            }
             // A plugin holding the camera is offered every frame, never
             // during a voice turn. The bridge paces and copies them.
             if (pluginFrames != null && !paused) PluginCameraFrames.offer(image, boundFront)
@@ -1551,8 +1615,12 @@ class CameraMotion(
                 lastPreviewNs = now
                 emitPreview(image, sink)
             }
-            // Drop frames that arrive before the next slot is due.
-            if (lastProcessedNs != 0L && now - lastProcessedNs < frameIntervalNs) return
+            // Drop frames that arrive before the next slot is due, except
+            // for the face looks of someone waiting for a name.
+            if (lastProcessedNs != 0L && now - lastProcessedNs < frameIntervalNs) {
+                hurriedFaceLook(image, now, sink)
+                return
+            }
             lastProcessedNs = now
 
             // A game's hands and body first, on the newest frame: the
@@ -1688,7 +1756,7 @@ class CameraMotion(
                 }
             }
             if ((facesWanted || palmsWanted) && !paused) {
-                val face = if (facesWanted) {
+                val face = if (facesWanted && !remoteFaces) {
                     faceDetector ?: FaceDetector(context).also { faceDetector = it }
                 } else null
                 if (firstAnalyzedNs == 0L) firstAnalyzedNs = now
@@ -1726,7 +1794,12 @@ class CameraMotion(
                     else -> VISION_DUTY
                 }
                 val paced = (costMs * 1_000_000L * duty).toLong()
-                visionIntervalNs = max(VISION_MIN_INTERVAL_NS, paced)
+                // Someone in view whom Face Recognition has not named yet
+                // is looked at faster (see GroundControlVision.hurried).
+                val floor = if (remoteFaces && groundControl.hurried(now)) {
+                    GroundControlVision.UNNAMED_INTERVAL_NS
+                } else VISION_MIN_INTERVAL_NS
+                visionIntervalNs = max(floor, max(paced, if (remoteFaces) groundControl.faceIntervalNs else 0L))
                 val due = now - lastVisionRunNs >= visionIntervalNs
                 val burst = !due && burstCredit && bigChange &&
                     now - lastVisionRunNs >= VISION_MIN_INTERVAL_NS
@@ -1745,6 +1818,10 @@ class CameraMotion(
                         now - lastSightingNs <= window ||
                         now - firstAnalyzedNs <= window
                 }
+                // With Vision Match the due looks go to Ground Control as one
+                // frame, after the same gate, at most one waiting at a time.
+                var remoteFace = false
+                var remoteHand = false
                 if (fingersWanted && worthIt) {
                     // The tracker's graph runs on several cores per frame
                     // (145% of one core when offered every frame), so
@@ -1755,7 +1832,14 @@ class CameraMotion(
                     // gesture's latency is made of, and the user chose that
                     // over the cores it costs while someone is in view.
                     val feedEvery = if (palmCount > 0 || entering) HAND_FEED_TRACKED_NS else HAND_FEED_IDLE_NS
-                    if (now - lastHandFeedNs >= feedEvery) {
+                    if (remoteHands) {
+                        if (now - lastHandFeedNs >= max(feedEvery, groundControl.handIntervalNs) &&
+                            !groundControl.busy(now)
+                        ) {
+                            lastHandFeedNs = now
+                            remoteHand = true
+                        }
+                    } else if (now - lastHandFeedNs >= feedEvery) {
                         lastHandFeedNs = now
                         if (feedHands(image, now)) lastSightingNs = now
                     }
@@ -1764,6 +1848,16 @@ class CameraMotion(
                     burstCredit = !burst
                     lastVisionRunNs = now
                     if (detectFace(face, image, now, sink)) lastSightingNs = now
+                }
+                if (remoteFaces && facesWanted && (due || burst) && worthIt && !groundControl.busy(now)) {
+                    burstCredit = !burst
+                    lastVisionRunNs = now
+                    remoteFace = true
+                }
+                if (remoteFace || remoteHand) {
+                    groundControl.prepare(image, remoteFace, remoteHand, now)?.let { look ->
+                        mainHandler.post { sink.success(look) }
+                    }
                 }
             }
 
@@ -1802,6 +1896,46 @@ class CameraMotion(
      * [PREVIEW_DUTY]). Nothing in here may take the kiosk down: it runs
      * on the analyzer's thread, so a failing frame is a skipped frame.
      */
+    /** Updates the session's analysis rotation as the display turns. Main thread. */
+    private var rotationListener: DisplayManager.DisplayListener? = null
+
+    private fun followDisplayRotation(mySession: Int, imageAnalysis: ImageAnalysis) {
+        stopFollowingDisplayRotation()
+        val listener = object : DisplayManager.DisplayListener {
+            override fun onDisplayAdded(id: Int) {}
+            override fun onDisplayRemoved(id: Int) {}
+            override fun onDisplayChanged(id: Int) {
+                if (session != mySession) return
+                val rotation = currentDisplayRotation()
+                if (imageAnalysis.targetRotation != rotation) {
+                    imageAnalysis.targetRotation = rotation
+                    Log.i(TAG, "analysis rotation follows the display: $rotation")
+                }
+            }
+        }
+        try {
+            (context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager)
+                .registerDisplayListener(listener, mainHandler)
+            rotationListener = listener
+        } catch (e: Exception) {
+            Log.w(TAG, "display rotation not followed: $e")
+        }
+    }
+
+    private fun stopFollowingDisplayRotation() {
+        val listener = rotationListener ?: return
+        rotationListener = null
+        try {
+            (context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager).unregisterDisplayListener(listener)
+        } catch (_: Exception) {}
+    }
+
+    /** The default display's rotation now, ROTATION_0 when it can't be read. */
+    private fun currentDisplayRotation(): Int = try {
+        @Suppress("DEPRECATION")
+        (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay.rotation
+    } catch (_: Exception) { Surface.ROTATION_0 }
+
     private fun emitPreview(image: ImageProxy, sink: EventChannel.EventSink) {
         try {
             val startNs = SystemClock.elapsedRealtimeNanos()
@@ -1849,6 +1983,61 @@ class CameraMotion(
         lastFaceEmitNs = now
         mainHandler.post { sink.success(mapOf("face" to face.width.toDouble())) }
         return true
+    }
+
+    /**
+     * Vision Match with Face Recognition: a face look from a frame between
+     * two analysis slots, while someone in view waits for a name (see
+     * [GroundControlVision.hurried]). The slots are as far apart as the
+     * Motion frame rate asks, half a second by default, which is the pace
+     * the faster looks are there to beat. Nothing else reads this frame:
+     * the motion grid keeps its own rate. With the hand looks on Ground
+     * Control the slots are a quarter second apart already and a face look
+     * rides with a hand look there, so none is sent from here: one waiting
+     * for its answer would hold up the hand look of the next slot.
+     */
+    private fun hurriedFaceLook(image: ImageProxy, now: Long, sink: EventChannel.EventSink) {
+        if (!remoteFaces || !facesWanted || paused) return
+        if (remoteHands && fingersWanted) return
+        if (!groundControl.hurried(now)) return
+        val every = max(GroundControlVision.UNNAMED_INTERVAL_NS, groundControl.faceIntervalNs)
+        if (now - lastVisionRunNs < every || groundControl.busy(now)) return
+        lastVisionRunNs = now
+        groundControl.prepare(image, true, false, now)?.let { look ->
+            mainHandler.post { sink.success(look) }
+        }
+    }
+
+    /**
+     * Vision Match: Ground Control's answer to a look, on the analyzer
+     * thread. Faces go through the same size check and rate limit as the
+     * on-device detector's, the hand through [onHandResult]. A failed look
+     * ("failed": true) only frees the slot for the next one.
+     */
+    private fun onGroundControlLook(args: Map<*, *>) {
+        val id = (args["id"] as? Number)?.toInt() ?: return
+        val look = groundControl.answered(id) ?: return
+        if (paused || args["failed"] == true) return
+        val now = System.nanoTime()
+        val sink = activeSink ?: return
+        if (look.face) {
+            val faces = args["faces"] as? List<*> ?: emptyList<Any>()
+            if (faces.isNotEmpty()) lastSightingNs = now
+            groundControl.faceLook(faces.isNotEmpty(), GroundControlVision.nobodyNamed(args), now)
+            val width = GroundControlVision.frontalWidth(faces, look.uprightWidth, look.uprightHeight)
+            if (width != null) {
+                Log.d(TAG, "face (Ground Control): width=${"%.2f".format(width)}")
+                if (width >= faceMinWidth && now - lastFaceEmitNs >= EMIT_INTERVAL_NS) {
+                    lastFaceEmitNs = now
+                    mainHandler.post { sink.success(mapOf("face" to width.toDouble())) }
+                }
+            }
+        }
+        if (look.hands) {
+            val (hands, read) = GroundControlVision.handReport(args["hand"] as? Map<*, *>)
+            onHandResult(hands, read, look.sentAtNs)
+            if (palmCount > 0) lastSightingNs = now
+        }
     }
 
     /**
@@ -2031,6 +2220,7 @@ class CameraMotion(
 
     /** Fresh gate and presence state for a (re)bound session. */
     private fun resetVisionGate() {
+        groundControl.reset()
         lastActivityNs = 0L
         lastVisionRunNs = 0L
         lastSightingNs = 0L
@@ -2327,6 +2517,7 @@ class CameraMotion(
         deviceCamera?.sharedDiagnosticSession = null
         deviceCamera?.motionSessionActive = false
         boundCamera = null
+        stopFollowingDisplayRotation()
         analysis?.clearAnalyzer()
         lifecycle?.destroy()
         lifecycle = null

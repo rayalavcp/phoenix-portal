@@ -437,6 +437,30 @@ To conserve system resources, the face detection model executes only when frame 
 
 Under [Lockdown Mode](kiosk.md), face events will neither dismiss nor postpone screensavers.
 
+### Ground Control Vision Match
+
+With [Face Recognition](vision-match.md#face-recognition) on Ground Control, the **Ground Control Vision Match** group on the Face Detection page sets whose face dismisses or postpones the screensaver. It works like **Answer** on the Voice Match page.
+
+| Setting | What it does |
+| --- | --- |
+| Detect faces | **Anyone**, the default, counts any face looking at the kiosk. With **Chosen people**, only the people picked under **People** dismiss or postpone the screensaver. A guest or a passing child looking at the kiosk doesn't. |
+| People | Shown on Chosen people. Pick people from Ground Control in the same list as Voice Match's **People**. If nobody is picked, anyone recognized counts. |
+| Only chosen people dismiss it | Shown on Chosen people. Off by default. Nothing at the kiosk but a chosen person's face dismisses the screensaver. See [Only chosen people dismiss it](#only-chosen-people-dismiss-it). |
+
+A face counts once Ground Control recognizes it. That takes a look or two, so the screensaver is dismissed a little later than with Anyone. The kiosk looks up to 5 times a second while a face in view has no name yet and the screensaver is dismissed by the look that brings the name. A chosen person still counts when someone else is in view too. The group appears only while Face Recognition is on.
+
+#### Only chosen people dismiss it
+
+With **Only chosen people dismiss it** on, the screensaver ends at the kiosk only when one of the chosen people looks at it.
+
+- **Ignored:** touch, the device's buttons including Back and Home, motion, proximity, the person sensor and anyone else's face. The screensaver takes no touches, so its widgets, links and buttons do nothing and Now Playing has no close or library button. A touch on a black screen still brings the screensaver back.
+- **Gestures:** only Show fingers gestures with **Finger gestures for** set to **Chosen people** run while the screensaver is up. Claps, touch gestures and finger gestures open to anyone do nothing.
+- **Still dismisses it:** Kiosk Satellite's own features, such as a ringing alarm or timer, an intercom call or a camera view that opens for a doorbell, plus Home Assistant, the remote admin and the APIs.
+- **Motion:** faces are looked for even with **Dismiss on motion** on, since motion doesn't dismiss the screensaver.
+- **Without Face Recognition:** if Ground Control can't be reached or the camera is off, the screensaver stays locked and only Kiosk Satellite and Home Assistant can end it.
+
+A photo of a chosen person can be recognized as them. It keeps children and guests from using the kiosk, not a determined person. See [Face Recognition Is Not Security](vision-match.md#face-recognition-is-not-security).
+
 ### Camera Preview
 
 **Show camera preview** (under Camera Preview) displays a temporary visual overlay showing what the camera detected upon a face wake event. It renders a small, circular live camera preview with a white border in a screen corner for a few seconds before fading out. This shows the exact frames analyzed by the detector, aiding in camera placement and sensitivity tuning. The preview renders live frames without saving or transmitting data, and touch events pass through the preview to the underlying dashboard.
@@ -448,6 +472,8 @@ Under [Lockdown Mode](kiosk.md), face events will neither dismiss nor postpone s
 | Preview position | Selects the display corner for the preview overlay (top-right default). |
 
 The preview triggers exclusively when a face dismisses an active screensaver; it does not display for postpone events. The camera stream remains active during the preview window and releases immediately afterward unless Postpone screensaver on face is enabled. Enabling Camera Preview increases the analysis resolution from 320x240 to 640x480 to improve preview image clarity.
+
+With Face Recognition on Ground Control, a ring in the recognized person's color appears around the preview and their card slides out beside it. **Show arrivals** and **Show face actions** under **Settings > Ground Control > Vision Match** decide which cards show. See [Recognition Cards](vision-match.md#recognition-cards).
 
 ## Proximity Detection
 

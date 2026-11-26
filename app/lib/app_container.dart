@@ -41,6 +41,7 @@ import 'managers/kiosk/kiosk_manager.dart';
 import 'managers/launcher/app_launcher_manager.dart';
 import 'managers/launcher/home_launcher_manager.dart';
 import 'managers/led/led_manager.dart';
+import 'managers/flashlight/flashlight_manager.dart';
 import 'managers/motion/motion_entity_manager.dart';
 import 'managers/motion/motion_manager.dart';
 import 'managers/motion/onvif_events_manager.dart';
@@ -82,6 +83,8 @@ import 'managers/update/update_manager.dart';
 import 'managers/voice/voice_manager.dart';
 import 'managers/voice/voice_requests_manager.dart';
 import 'managers/ground_control/ground_control_manager.dart';
+import 'managers/ground_control/mine.dart';
+import 'managers/ground_control/recognition_cards.dart';
 import 'managers/voice_timers/shared_timers_manager.dart';
 import 'managers/voice_timers/voice_timer_manager.dart';
 import 'managers/wake_word/wake_word_manager.dart';
@@ -130,6 +133,7 @@ class AppContainer {
     // Before motion: its init runs the legacy motion-camera migration the
     // motion manager's gate reads.
     deviceCamera = DeviceCameraManager(bus, commands, log, settings);
+    flashlight = FlashlightManager(bus, commands, log, settings);
     motion = MotionManager(bus, commands, log, settings);
     // It watches the motion sensor entity through homeAssistant.
     motionEntity = MotionEntityManager(
@@ -331,7 +335,11 @@ class AppContainer {
     );
     voiceRequests = VoiceRequestsManager(bus, commands, log, settings);
     groundControl = GroundControlManager(bus, commands, log, settings);
+    recognitionCards = RecognitionCards(bus, commands, log, settings);
     voiceRequests.speaking = () => groundControl.speaking;
+    // The calendar finds the people at the kiosk's calendars from what
+    // Ground Control keeps for them, as voice finds "my calendar".
+    calendar.personThings = (id) => thingsOf(id, groundControl.people);
     // It follows what the managers above are doing, through the bus and
     // the media players' own states.
     leds = LedManager(
@@ -395,6 +403,7 @@ class AppContainer {
   late final ScreensaverManager screensaver;
   late final ImmichManager immich;
   late final DeviceCameraManager deviceCamera;
+  late final FlashlightManager flashlight;
   late final MotionManager motion;
   late final MotionEntityManager motionEntity;
   late final ProximityManager proximity;
@@ -438,6 +447,7 @@ class AppContainer {
   late final MusicLibraryManager musicLibrary;
   late final VoiceRequestsManager voiceRequests;
   late final GroundControlManager groundControl;
+  late final RecognitionCards recognitionCards;
   late final LedManager leds;
   late final PageStateManager pageState;
 
@@ -468,6 +478,9 @@ class AppContainer {
     screensaver,
     immich,
     deviceCamera,
+    // Before btProxy, whose first catalog lists the Flashlight switch only
+    // where there is one, and before the remote admin reads its hidden rows.
+    flashlight,
     motion,
     // After screensaver, which takes its motion.
     motionEntity,
@@ -549,6 +562,7 @@ class AppContainer {
     // After intercom and alarms: it runs their commands.
     voiceRequests,
     groundControl,
+    recognitionCards,
     // Last: it reads the state every manager above keeps.
     pageState,
   ];
@@ -604,6 +618,7 @@ class AppContainer {
     await EchoImageSettings(settings, bus, log).init();
     await device.init();
     jsApi = JsApiManager(bus, commands, log, device.appVersion)
+      ..faceRecognitionOrigins = (() => browser.faceRecognitionOrigins)
       ..haSockets = PageHaSockets(
         baseUrl: () => homeAssistant.baseUrl,
         token: () => settings.get(haToken),

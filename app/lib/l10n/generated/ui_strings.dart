@@ -1305,6 +1305,12 @@ abstract class UiStrings {
   /// **'Editing'**
   String get calendarEditingSection;
 
+  /// Heading of the next event today of the person Face Recognition names at the kiosk, in the Schedule view. {name} is the person's name.
+  ///
+  /// In en, this message translates to:
+  /// **'Up next for {name}'**
+  String calendarUpNextFor(String name);
+
   /// Page title.
   ///
   /// In en, this message translates to:
@@ -2354,6 +2360,126 @@ abstract class UiStrings {
   /// In en, this message translates to:
   /// **'text'**
   String get esphomeTypeText;
+
+  /// Shown full screen on the kiosk while a person stands in front of its camera to enroll their face for Face Recognition. Keep Ground Control unchanged. Speak to the person in front of the kiosk.
+  ///
+  /// In en, this message translates to:
+  /// **'Enrolling {name}'**
+  String faceEnrollTitle(String name);
+
+  /// Shown full screen on the kiosk while a person stands in front of its camera to enroll their face for Face Recognition. Keep Ground Control unchanged. Speak to the person in front of the kiosk.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {step} of {total}'**
+  String faceEnrollStepOf(String step, String total);
+
+  /// Shown full screen on the kiosk while a person stands in front of its camera to enroll their face for Face Recognition. Keep Ground Control unchanged. Speak to the person in front of the kiosk.
+  ///
+  /// In en, this message translates to:
+  /// **'Look at the screen'**
+  String get faceEnrollStepLook;
+
+  /// Shown full screen on the kiosk while a person stands in front of its camera to enroll their face for Face Recognition. Keep Ground Control unchanged. Speak to the person in front of the kiosk.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn your head a little to one side'**
+  String get faceEnrollStepSideA;
+
+  /// Shown full screen on the kiosk while a person stands in front of its camera to enroll their face for Face Recognition. Keep Ground Control unchanged. Speak to the person in front of the kiosk.
+  ///
+  /// In en, this message translates to:
+  /// **'Now a little to the other side'**
+  String get faceEnrollStepSideB;
+
+  /// Shown full screen on the kiosk while a person stands in front of its camera to enroll their face for Face Recognition. Keep Ground Control unchanged. Speak to the person in front of the kiosk.
+  ///
+  /// In en, this message translates to:
+  /// **'Take a step back'**
+  String get faceEnrollStepFar;
+
+  /// Shown full screen on the kiosk while a person stands in front of its camera to enroll their face for Face Recognition. Keep Ground Control unchanged. Speak to the person in front of the kiosk.
+  ///
+  /// In en, this message translates to:
+  /// **'No face in view'**
+  String get faceEnrollHintNoFace;
+
+  /// Shown full screen on the kiosk while a person stands in front of its camera to enroll their face for Face Recognition. Keep Ground Control unchanged. Speak to the person in front of the kiosk.
+  ///
+  /// In en, this message translates to:
+  /// **'Only one person should be in view'**
+  String get faceEnrollHintSeveral;
+
+  /// Shown full screen on the kiosk while a person stands in front of its camera to enroll their face for Face Recognition. Keep Ground Control unchanged. Speak to the person in front of the kiosk.
+  ///
+  /// In en, this message translates to:
+  /// **'Come a little closer'**
+  String get faceEnrollHintCloser;
+
+  /// Shown full screen on the kiosk while a person stands in front of its camera to enroll their face for Face Recognition. Keep Ground Control unchanged. Speak to the person in front of the kiosk.
+  ///
+  /// In en, this message translates to:
+  /// **'Step back a little more'**
+  String get faceEnrollHintFarther;
+
+  /// Shown full screen on the kiosk while a person stands in front of its camera to enroll their face for Face Recognition. Keep Ground Control unchanged. Speak to the person in front of the kiosk.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn a little more'**
+  String get faceEnrollHintTurnMore;
+
+  /// Shown full screen on the kiosk while a person stands in front of its camera to enroll their face for Face Recognition. Keep Ground Control unchanged. Speak to the person in front of the kiosk.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn back a little'**
+  String get faceEnrollHintTurnLess;
+
+  /// Shown full screen on the kiosk while a person stands in front of its camera to enroll their face for Face Recognition. Keep Ground Control unchanged. Speak to the person in front of the kiosk.
+  ///
+  /// In en, this message translates to:
+  /// **'Now to the other side'**
+  String get faceEnrollHintOtherSide;
+
+  /// Shown full screen on the kiosk while a person stands in front of its camera to enroll their face for Face Recognition. Keep Ground Control unchanged. Speak to the person in front of the kiosk.
+  ///
+  /// In en, this message translates to:
+  /// **'Too dark to see your face'**
+  String get faceEnrollHintDark;
+
+  /// Shown full screen on the kiosk while a person stands in front of its camera to enroll their face for Face Recognition. Keep Ground Control unchanged. Speak to the person in front of the kiosk.
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s a different face'**
+  String get faceEnrollHintOtherFace;
+
+  /// Shown full screen on the kiosk while a person stands in front of its camera to enroll their face for Face Recognition. Keep Ground Control unchanged. Speak to the person in front of the kiosk.
+  ///
+  /// In en, this message translates to:
+  /// **'Face enrolled for {name}'**
+  String faceEnrollSaved(String name);
+
+  /// Shown full screen on the kiosk while a person stands in front of its camera to enroll their face for Face Recognition. Keep Ground Control unchanged. Speak to the person in front of the kiosk. Shown when the capture stopped after the first step.
+  ///
+  /// In en, this message translates to:
+  /// **'Part of the face was enrolled. Enroll again to finish.'**
+  String get faceEnrollSavedPartly;
+
+  /// Shown full screen on the kiosk while a person stands in front of its camera to enroll their face for Face Recognition. Keep Ground Control unchanged. Speak to the person in front of the kiosk.
+  ///
+  /// In en, this message translates to:
+  /// **'The face wasn\'t seen long enough. Nothing was saved.'**
+  String get faceEnrollTooShort;
+
+  /// Shown full screen on the kiosk while a person stands in front of its camera to enroll their face for Face Recognition. Keep Ground Control unchanged. Speak to the person in front of the kiosk.
+  ///
+  /// In en, this message translates to:
+  /// **'Face Recognition needs Ground Control with Vision Match and Face Recognition on.'**
+  String get faceEnrollUnavailable;
+
+  /// Shown full screen on the kiosk while a person stands in front of its camera to enroll their face for Face Recognition. Keep Ground Control unchanged. Speak to the person in front of the kiosk.
+  ///
+  /// In en, this message translates to:
+  /// **'The connection to Ground Control was lost. Nothing was saved.'**
+  String get faceEnrollLost;
 
   /// Translate the visible message. Keep placeholders and any technical names unchanged.
   ///
@@ -3531,6 +3657,12 @@ abstract class UiStrings {
   /// In en, this message translates to:
   /// **'Gemini API key'**
   String get fleetGeminiApiKey;
+
+  /// Visible label, help or status in this section.
+  ///
+  /// In en, this message translates to:
+  /// **'Vercel AI Gateway API key'**
+  String get fleetVercelApiKey;
 
   /// Visible label, help or status in this section.
   ///
@@ -9731,6 +9863,18 @@ abstract class UiStrings {
   /// **'the calendars hidden with their chips'**
   String get fleetTheCalendarsHiddenWithTheirChips;
 
+  /// Setting label: the calendar puts the person Face Recognition names at the kiosk first.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus on who is at the kiosk'**
+  String get settingCalendarFaceFocusTitle;
+
+  /// Setting description. The chip is the person's round button at the top of the calendar. Day is the name of the calendar's Day view.
+  ///
+  /// In en, this message translates to:
+  /// **'Rings the chip of the person at the kiosk, puts their lane first in Day and picks their calendar for new events.'**
+  String get settingCalendarFaceFocusDescription;
+
   /// Setting label.
   ///
   /// In en, this message translates to:
@@ -9826,6 +9970,24 @@ abstract class UiStrings {
   /// In en, this message translates to:
   /// **'The only camera this device has.'**
   String get cameraOnlyCamera;
+
+  /// Section heading.
+  ///
+  /// In en, this message translates to:
+  /// **'Flashlight'**
+  String get cameraFlashlightHeading;
+
+  /// Setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on flashlight'**
+  String get settingCameraFlashlightTitle;
+
+  /// Help below this setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the camera flash as a steady light.'**
+  String get settingCameraFlashlightDescription;
 
   /// Setting label.
   ///
@@ -15102,16 +15264,64 @@ abstract class UiStrings {
   /// **'{seconds} s'**
   String gestureHoldSeconds(String seconds);
 
+  /// Group heading for the settings that use Vision Match on Ground Control. Ground Control and Vision Match are names: keep them unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Ground Control Vision Match'**
+  String get gestureGroundControlVisionMatch;
+
+  /// Setting label: whose raised fingers run Show fingers gestures.
+  ///
+  /// In en, this message translates to:
+  /// **'Finger gestures for'**
+  String get settingGesturesFaceWhoTitle;
+
+  /// Setting help. Use the same name for the Show fingers gesture as elsewhere in the Gestures page.
+  ///
+  /// In en, this message translates to:
+  /// **'With Chosen people, Show fingers gestures run only while one of the people picked below is recognized at the kiosk.'**
+  String get settingGesturesFaceWhoDescription;
+
+  /// Option of Finger gestures for: anyone can run them.
+  ///
+  /// In en, this message translates to:
+  /// **'Anyone'**
+  String get gesturesFaceWhoOptionAnyone;
+
+  /// Option of Finger gestures for: only the people picked under People.
+  ///
+  /// In en, this message translates to:
+  /// **'Chosen people'**
+  String get gesturesFaceWhoOptionPeople;
+
+  /// Setting label: the people who can run finger gestures.
+  ///
+  /// In en, this message translates to:
+  /// **'People'**
+  String get settingGesturesFacePeopleTitle;
+
+  /// Setting help.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose who can run finger gestures. If nobody is chosen, anyone recognized can.'**
+  String get settingGesturesFacePeopleDescription;
+
   /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged.
   ///
   /// In en, this message translates to:
   /// **'Enable Ground Control'**
   String get settingGroundControlEnabledTitle;
 
+  /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to Kiosk Satellite Ground Control, which runs Voice Match and Vision Match on a capable machine.'**
+  String get settingGroundControlEnabledDescriptionVisionMatch;
+
   /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged.
   ///
   /// In en, this message translates to:
-  /// **'Connect to Phoenix Portal Ground Control, which runs Voice Match on a capable machine.'**
+  /// **'Connect to Kiosk Satellite Ground Control, which runs Voice Match on a capable machine.'**
   String get settingGroundControlEnabledDescription;
 
   /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged.
@@ -15174,6 +15384,18 @@ abstract class UiStrings {
   /// **'Ground Control app'**
   String get groundControlApp;
 
+  /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. The label of a value: the CPU architecture of the machine Ground Control runs on, such as amd64 or aarch64.
+  ///
+  /// In en, this message translates to:
+  /// **'Architecture'**
+  String get groundControlArchitecture;
+
+  /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. The label of a value: what Ground Control runs its models on, CPU or CUDA.
+  ///
+  /// In en, this message translates to:
+  /// **'Runs on'**
+  String get groundControlRunsOn;
+
   /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged.
   ///
   /// In en, this message translates to:
@@ -15186,29 +15408,281 @@ abstract class UiStrings {
   /// **'Voice Match'**
   String get settingGroundControlVoiceMatchTitle;
 
-  /// Translate the visible label or help. Keep Recognition, Trimming, Isolation, Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged.
-  ///
-  /// In en, this message translates to:
-  /// **'Recognition, Trimming and Isolation.'**
-  String get settingGroundControlVoiceMatchFeaturesDescription;
-
   /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.
   ///
   /// In en, this message translates to:
   /// **'Vision Match'**
-  String get groundControlVisionMatch;
+  String get settingVisionMatchEnabledTitle;
 
-  /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged.
+  /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.
   ///
   /// In en, this message translates to:
-  /// **'Facial recognition using this device\'s camera.'**
-  String get groundControlVisionMatchDescription;
+  /// **'Enable Vision Match'**
+  String get settingVisionMatchEnableTitle;
 
-  /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Shown in place of a value: the feature isn't available yet.
+  /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.
   ///
   /// In en, this message translates to:
-  /// **'Coming soon'**
-  String get groundControlComingSoon;
+  /// **'Enable Face Detection'**
+  String get settingVisionMatchFaceDetectionTitle;
+
+  /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Hand Gestures'**
+  String get settingVisionMatchHandGesturesTitle;
+
+  /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.
+  ///
+  /// In en, this message translates to:
+  /// **'Face recognition, detection, hand gestures and presence detection'**
+  String get visionMatchFeaturesHint;
+
+  /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.
+  ///
+  /// In en, this message translates to:
+  /// **'Face Detection, Hand Gestures and Face Recognition. Needs Ground Control.'**
+  String get settingVisionMatchEnabledDescriptionGroundControl;
+
+  /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.
+  ///
+  /// In en, this message translates to:
+  /// **'Run face detection on Ground Control. Disable to run on-device.'**
+  String get settingVisionMatchFaceDetectionDescriptionGroundControl;
+
+  /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.
+  ///
+  /// In en, this message translates to:
+  /// **'Run palm and fingers gestures detection on Ground Control. Disable to run on-device.'**
+  String get settingVisionMatchHandGesturesDescriptionGroundControl;
+
+  /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Face Recognition'**
+  String get settingVisionMatchFaceRecognitionTitle;
+
+  /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is. Face is the name of a sensor in Home Assistant.
+  ///
+  /// In en, this message translates to:
+  /// **'Recognize who is looking at the kiosk and show it in the Face sensor. Needs Face Detection on Ground Control.'**
+  String get settingVisionMatchFaceRecognitionDescriptionGroundControl;
+
+  /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.
+  ///
+  /// In en, this message translates to:
+  /// **'Face Recognition'**
+  String get groundControlFaceRecognition;
+
+  /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.
+  ///
+  /// In en, this message translates to:
+  /// **'Enroll a face'**
+  String get faceEnrollRowTitle;
+
+  /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a person, then follow the steps on the screen. It takes about half a minute.'**
+  String get faceEnrollRowDescription;
+
+  /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.
+  ///
+  /// In en, this message translates to:
+  /// **'Whose face?'**
+  String get faceEnrollPickTitle;
+
+  /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.
+  ///
+  /// In en, this message translates to:
+  /// **'New person'**
+  String get faceEnrollNewPerson;
+
+  /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.
+  ///
+  /// In en, this message translates to:
+  /// **'Face enrolled'**
+  String get faceEnrollEnrolled;
+
+  /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get faceEnrollNameLabel;
+
+  /// Translate the visible label or help. Keep Ground Control, Voice Match, Voice Satellite, Phoenix Portal and Home Assistant unchanged. Vision Match is the feature's name, so it stays as it is.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get faceEnrollStart;
+
+  /// Setting label. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm voices with faces'**
+  String get settingVisionMatchFaceConfirmsVoiceTitle;
+
+  /// Setting help. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept a close voice match when the same person\'s face is recognized at the kiosk. Only the person with the closest voiceprint can be matched this way.'**
+  String get settingVisionMatchFaceConfirmsVoiceDescription;
+
+  /// Section heading: settings on other pages that work with Face Recognition, each a link to it. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Used in other settings'**
+  String get groundControlUsedElsewhere;
+
+  /// Where the Faces that count setting is, as a path of page names. Use the translated names of these pages.
+  ///
+  /// In en, this message translates to:
+  /// **'Screensaver > Face Detection > Ground Control Vision Match'**
+  String get settingVisionMatchLinkFaceWhoDescription;
+
+  /// The value of a switch on another page.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get groundControlValueOn;
+
+  /// The value of a switch on another page.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get groundControlValueOff;
+
+  /// Faces that count set to Chosen people, with the people chosen.
+  ///
+  /// In en, this message translates to:
+  /// **'{option}: {names}'**
+  String groundControlValuePeople(String option, String names);
+
+  /// Read by screen readers for the GC tag after the title of a setting that works with Ground Control. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'A Ground Control setting. Learn more'**
+  String get groundControlTagHint;
+
+  /// Title of the dialog a tap on the GC tag opens. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'A Ground Control setting'**
+  String get groundControlTagTitle;
+
+  /// Dialog text for a setting that needs Face Recognition. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'This setting needs Kiosk Satellite Ground Control. Ground Control is a separate app that runs on a computer in your home. The setting uses Face Recognition and only shows while Face Recognition is on in Settings > Ground Control > Vision Match.'**
+  String get groundControlTagVision;
+
+  /// Dialog text for a setting that needs Voice Match. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'This setting needs Kiosk Satellite Ground Control. Ground Control is a separate app that runs on a computer in your home. The setting uses Voice Match and only shows while Voice Match is on in Settings > Ground Control > Voice Match.'**
+  String get groundControlTagVoice;
+
+  /// Where the setting is, as a path of page names. Use the translated name of the Kiosk Mode page. Ground Control and Vision Match are names: keep them unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Kiosk Mode > Ground Control Vision Match'**
+  String get settingVisionMatchLinkKioskPinDescription;
+
+  /// Where the setting is, as a path of page names. Use the translated name of the Lockdown Mode page. Ground Control and Vision Match are names: keep them unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Lockdown Mode > Ground Control Vision Match'**
+  String get settingVisionMatchLinkLockdownDescription;
+
+  /// Section heading: the cards on the kiosk screen that show who Face Recognition named and what it let through. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Recognition cards'**
+  String get groundControlRecognitionCards;
+
+  /// Setting label. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Show arrivals'**
+  String get settingVisionMatchShowArrivalsTitle;
+
+  /// Setting help. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Show a card with the person\'s picture and name when someone is recognized at the kiosk. It shows again for the same person after they have been away for a minute.'**
+  String get settingVisionMatchShowArrivalsDescription;
+
+  /// Setting label. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Show face actions'**
+  String get settingVisionMatchShowActionsTitle;
+
+  /// Setting help. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Show a small card each time something on the kiosk changes because a face was recognized.'**
+  String get settingVisionMatchShowActionsGeneralDescription;
+
+  /// Setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'Card position'**
+  String get settingVisionMatchCardPositionTitle;
+
+  /// Setting help.
+  ///
+  /// In en, this message translates to:
+  /// **'The corner of the screen where both cards show. While the camera preview shows, they show next to it.'**
+  String get settingVisionMatchCardPositionDescription;
+
+  /// Next to the person's picture on the small card on the kiosk screen: the kiosk PIN was not asked because a chosen person was recognized. Keep it to two or three words.
+  ///
+  /// In en, this message translates to:
+  /// **'PIN skipped'**
+  String get recognitionCardPinSkipped;
+
+  /// Next to the person's picture on the small card on the kiosk screen: Lockdown Mode was turned off because a chosen person was recognized. Keep it to two or three words.
+  ///
+  /// In en, this message translates to:
+  /// **'Lockdown Mode off'**
+  String get recognitionCardLockdownOff;
+
+  /// Next to the person's picture on the small card on the kiosk screen: a voice close to the person's voiceprint was accepted because their face was recognized. Keep it to two or three words.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice confirmed'**
+  String get recognitionCardVoiceConfirmed;
+
+  /// Next to the person's picture on the small card on the kiosk screen: the calendar put the person's calendar forward because their face was recognized (Settings > Calendar > Focus on who is at the kiosk). Keep it to two or three words.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar focused'**
+  String get recognitionCardCalendarFocused;
+
+  /// Setting label: binary sensors in Home Assistant for someone in front of the kiosk and someone looking at it. Keep Ground Control, Vision Match, Face Recognition, Phoenix Portal and Home Assistant unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Presence sensors'**
+  String get settingVisionMatchPresenceSensorsTitle;
+
+  /// Setting help. Presence and Looking at the kiosk are the names of the sensors in Home Assistant: keep them in English. Keep Ground Control, Vision Match, Face Recognition, Phoenix Portal and Home Assistant unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Add the Presence and Looking at the kiosk sensors to Home Assistant. The camera stays on and faces are checked whenever something moves, even with the screen off.'**
+  String get settingVisionMatchPresenceSensorsDescription;
+
+  /// Where the setting is, as a path of page names. Use the translated name of the Gestures page. Ground Control and Vision Match are names: keep them unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Gestures > Ground Control Vision Match'**
+  String get settingVisionMatchLinkGestureWhoDescription;
+
+  /// Where the setting is, as a path of page names. Use the translated name of the Calendar page. Ground Control and Vision Match are names: keep them unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar > Ground Control Vision Match'**
+  String get settingVisionMatchLinkCalendarFocusDescription;
 
   /// Name of the settings page and of the dashboard picker entry that lists a person's own HTML pages hosted in Home Assistant.
   ///
@@ -17040,6 +17514,48 @@ abstract class UiStrings {
   /// **'Disabled (remote admin only)'**
   String get kioskGestureNone;
 
+  /// Group heading for the settings that use Face Recognition on Ground Control. Ground Control and Vision Match are names: keep them unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Ground Control Vision Match'**
+  String get kioskGroundControlVisionMatch;
+
+  /// Setting label: who can open the menu without the kiosk PIN.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip the PIN for'**
+  String get settingKioskFaceSkipPinTitle;
+
+  /// Setting help.
+  ///
+  /// In en, this message translates to:
+  /// **'With Chosen people, the menu opens after the exit gesture without the PIN while one of the people picked below is recognized at the kiosk.'**
+  String get settingKioskFaceSkipPinDescription;
+
+  /// Option of Skip the PIN for: the PIN is always asked.
+  ///
+  /// In en, this message translates to:
+  /// **'Nobody'**
+  String get kioskFaceSkipPinNobody;
+
+  /// Option of Skip the PIN for: the people picked under People.
+  ///
+  /// In en, this message translates to:
+  /// **'Chosen people'**
+  String get kioskFaceSkipPinPeople;
+
+  /// Setting label: the people who can skip the PIN.
+  ///
+  /// In en, this message translates to:
+  /// **'People'**
+  String get settingKioskFacePeopleTitle;
+
+  /// Setting help.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose who can skip the PIN. If nobody is chosen, anyone recognized can.'**
+  String get settingKioskFacePeopleDescription;
+
   /// Label or guidance in this section.
   ///
   /// In en, this message translates to:
@@ -17537,6 +18053,36 @@ abstract class UiStrings {
   /// In en, this message translates to:
   /// **'Remote-only touch shield. Set it up from the Remote Admin UI; its grants live under Required system permissions.'**
   String get lockdownSearch;
+
+  /// Setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'Disable Lockdown Mode for'**
+  String get settingLockdownFaceDisableTitle;
+
+  /// Setting help.
+  ///
+  /// In en, this message translates to:
+  /// **'With Chosen people, Lockdown Mode is turned off when one of the people picked below is recognized at the kiosk. Leave this on Nobody if you lock the screen to clean it.'**
+  String get settingLockdownFaceDisableDescription;
+
+  /// Setting help.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose who Lockdown Mode is turned off for. If nobody is chosen, it is turned off for anyone recognized.'**
+  String get settingLockdownFacePeopleDescription;
+
+  /// Setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn Lockdown Mode back on'**
+  String get settingLockdownFaceRelockTitle;
+
+  /// Setting help.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn Lockdown Mode back on 10 seconds after none of the chosen people are in view.'**
+  String get settingLockdownFaceRelockDescription;
 
   /// Granted overlay permission status.
   ///
@@ -19476,7 +20022,7 @@ abstract class UiStrings {
   /// **'Hold Mode'**
   String get compassHoldMode;
 
-  /// Phoenix Portal Ground Control, the companion app that runs Voice Match on a capable machine. A product name: keep Ground Control unchanged.
+  /// Kiosk Satellite Ground Control, the companion app that runs Voice Match on a capable machine. A product name: keep Ground Control unchanged.
   ///
   /// In en, this message translates to:
   /// **'Ground Control'**
@@ -21798,6 +22344,66 @@ abstract class UiStrings {
   /// **'Not available on x86 devices.'**
   String get screensaverDetectionX86Unsupported;
 
+  /// Setting label. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Detect faces'**
+  String get settingScreensaverFaceWhoTitle;
+
+  /// Setting help. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'With Chosen people, only the people picked below dismiss or postpone the screensaver.'**
+  String get settingScreensaverFaceWhoDescription;
+
+  /// Option of Faces that count: any face looking at the kiosk.
+  ///
+  /// In en, this message translates to:
+  /// **'Anyone'**
+  String get screensaverFaceWhoOptionAnyone;
+
+  /// Option of Faces that count: only the people picked below.
+  ///
+  /// In en, this message translates to:
+  /// **'Chosen people'**
+  String get screensaverFaceWhoOptionPeople;
+
+  /// Setting label: the people whose face counts.
+  ///
+  /// In en, this message translates to:
+  /// **'People'**
+  String get settingScreensaverFacePeopleTitle;
+
+  /// Setting help. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose who can dismiss or postpone the screensaver by looking at the kiosk. If nobody is chosen, anyone recognized can.'**
+  String get settingScreensaverFacePeopleDescription;
+
+  /// Shown in the People box when nobody is chosen.
+  ///
+  /// In en, this message translates to:
+  /// **'Anyone recognized'**
+  String get screensaverFacePeopleNone;
+
+  /// Group heading for the settings that use Vision Match on Ground Control. Ground Control and Vision Match are names: keep them unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Ground Control Vision Match'**
+  String get screensaverGroundControlVisionMatch;
+
+  /// Setting label, a switch shown on Chosen people: nothing but the face of one of the chosen people dismisses the screensaver at the kiosk. "It" is the screensaver.
+  ///
+  /// In en, this message translates to:
+  /// **'Only chosen people dismiss it'**
+  String get settingScreensaverFaceLockTitle;
+
+  /// Setting help. Buttons are the device's own keys. Keep Phoenix Portal and Home Assistant unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Touch, buttons, motion, sensors and gestures from anyone else no longer dismiss the screensaver. Phoenix Portal and Home Assistant still can.'**
+  String get settingScreensaverFaceLockDescription;
+
   /// Setting label.
   ///
   /// In en, this message translates to:
@@ -21851,6 +22457,12 @@ abstract class UiStrings {
   /// In en, this message translates to:
   /// **'Camera Preview'**
   String get screensaverDetectionPreviewSection;
+
+  /// Under the person's name in the card next to the camera preview, when Face Recognition names them.
+  ///
+  /// In en, this message translates to:
+  /// **'Recognized'**
+  String get facePreviewRecognized;
 
   /// Setting label.
   ///
@@ -22979,6 +23591,30 @@ abstract class UiStrings {
   /// In en, this message translates to:
   /// **'Off keeps the whole photo between black bars. Smart enlarges photos shaped close to the screen, framing the rest over a blurred backdrop. Always enlarges every photo, cutting off what does not fit.'**
   String get settingScreensaverImmichFillDescription;
+
+  /// Setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'Crop around faces'**
+  String get settingScreensaverImmichCropFacesTitle;
+
+  /// Help below the setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos cropped to fill the screen keep the faces Immich found in view. Needs the face.read permission.'**
+  String get settingScreensaverImmichCropFacesDescription;
+
+  /// Setting label.
+  ///
+  /// In en, this message translates to:
+  /// **'Crop videos'**
+  String get settingScreensaverImmichCropVideosTitle;
+
+  /// Help below the setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Videos are cropped to fill the screen like photos. Turn off to show every video whole.'**
+  String get settingScreensaverImmichCropVideosDescription;
 
   /// Setting label.
   ///
@@ -27003,6 +27639,12 @@ abstract class UiStrings {
   /// Translate the visible label or help. Keep Voice Satellite, Phoenix Portal, Home Assistant, ESPHome, HACS and model names unchanged.
   ///
   /// In en, this message translates to:
+  /// **'More effort answers harder questions better. Only for openai/gpt-realtime-2 models.'**
+  String get settingVoiceRealtimeVercelReasoningDescription;
+
+  /// Translate the visible label or help. Keep Voice Satellite, Phoenix Portal, Home Assistant, ESPHome, HACS and model names unchanged.
+  ///
+  /// In en, this message translates to:
   /// **'Google Search'**
   String get settingVoiceRealtimeGeminiSearchTitle;
 
@@ -27654,6 +28296,18 @@ abstract class UiStrings {
   /// **'Keep the screensaver from starting while the Timers view shows a running timer.'**
   String get settingTimersPauseScreensaverDescription;
 
+  /// Slider label, in percent: the size of the timer names, the buttons and the smaller timer cards in the full screen Timers view. The large time of the first timer fills the room that is left.
+  ///
+  /// In en, this message translates to:
+  /// **'Timers view scale'**
+  String get settingTimersViewScaleTitle;
+
+  /// Description of that slider.
+  ///
+  /// In en, this message translates to:
+  /// **'The size of the timer names and buttons in the Timers view.'**
+  String get settingTimersViewScaleDescription;
+
   /// Setting label: how long a finished timer rings before its sound stops. Its options are lengths of time or Never.
   ///
   /// In en, this message translates to:
@@ -27677,12 +28331,6 @@ abstract class UiStrings {
   /// In en, this message translates to:
   /// **'Clears a finished timer as if Dismiss was tapped.'**
   String get settingTimersDismissAfterDescription;
-
-  /// Translate the visible label or help. Keep Voice Match, Voice Satellite, Phoenix Portal, Home Assistant and ESPHome unchanged.
-  ///
-  /// In en, this message translates to:
-  /// **'Ground Control Voice Match'**
-  String get voiceMatchGroundControlPage;
 
   /// Translate the visible label or help. Keep Voice Match, Voice Satellite, Phoenix Portal, Home Assistant and ESPHome unchanged.
   ///

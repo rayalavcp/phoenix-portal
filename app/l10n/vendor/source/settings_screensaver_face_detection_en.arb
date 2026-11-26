@@ -181,5 +181,135 @@
         "Screensaver > Face Detection"
       ]
     }
+  },
+  "settingScreensaverFaceWhoTitle": "Detect faces",
+  "@settingScreensaverFaceWhoTitle": {
+    "context": "Settings > Screensaver > Face Detection > Ground Control Vision Match",
+    "description": "Setting label. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.",
+    "x-locations": {
+      "device": [
+        "Settings > Screensaver > Face Detection > Ground Control Vision Match"
+      ],
+      "remoteAdmin": [
+        "Screensaver > Face Detection > Ground Control Vision Match"
+      ]
+    }
+  },
+  "settingScreensaverFaceWhoDescription": "With Chosen people, only the people picked below dismiss or postpone the screensaver.",
+  "@settingScreensaverFaceWhoDescription": {
+    "context": "Settings > Screensaver > Face Detection > Ground Control Vision Match",
+    "description": "Setting help. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.",
+    "x-locations": {
+      "device": [
+        "Settings > Screensaver > Face Detection > Ground Control Vision Match"
+      ],
+      "remoteAdmin": [
+        "Screensaver > Face Detection > Ground Control Vision Match"
+      ]
+    }
+  },
+  "screensaverFaceWhoOptionAnyone": "Anyone",
+  "@screensaverFaceWhoOptionAnyone": {
+    "context": "Settings > Screensaver > Face Detection > Ground Control Vision Match",
+    "description": "Option of Faces that count: any face looking at the kiosk.",
+    "x-locations": {
+      "device": [
+        "Settings > Screensaver > Face Detection > Ground Control Vision Match"
+      ],
+      "remoteAdmin": [
+        "Screensaver > Face Detection > Ground Control Vision Match"
+      ]
+    }
+  },
+  "screensaverFaceWhoOptionPeople": "Chosen people",
+  "@screensaverFaceWhoOptionPeople": {
+    "context": "Settings > Screensaver > Face Detection > Ground Control Vision Match",
+    "description": "Option of Faces that count: only the people picked below.",
+    "x-locations": {
+      "device": [
+        "Settings > Screensaver > Face Detection > Ground Control Vision Match"
+      ],
+      "remoteAdmin": [
+        "Screensaver > Face Detection > Ground Control Vision Match"
+      ]
+    }
+  },
+  "settingScreensaverFacePeopleTitle": "People",
+  "@settingScreensaverFacePeopleTitle": {
+    "context": "Settings > Screensaver > Face Detection > Ground Control Vision Match",
+    "description": "Setting label: the people whose face counts.",
+    "x-locations": {
+      "device": [
+        "Settings > Screensaver > Face Detection > Ground Control Vision Match"
+      ],
+      "remoteAdmin": [
+        "Screensaver > Face Detection > Ground Control Vision Match"
+      ]
+    }
+  },
+  "settingScreensaverFacePeopleDescription": "Choose who can dismiss or postpone the screensaver by looking at the kiosk. If nobody is chosen, anyone recognized can.",
+  "@settingScreensaverFacePeopleDescription": {
+    "context": "Settings > Screensaver > Face Detection > Ground Control Vision Match",
+    "description": "Setting help. Keep Ground Control, Face Recognition, Vision Match, Voice Match, Phoenix Portal and Home Assistant unchanged.",
+    "x-locations": {
+      "device": [
+        "Settings > Screensaver > Face Detection > Ground Control Vision Match"
+      ],
+      "remoteAdmin": [
+        "Screensaver > Face Detection > Ground Control Vision Match"
+      ]
+    }
+  },
+  "screensaverFacePeopleNone": "Anyone recognized",
+  "@screensaverFacePeopleNone": {
+    "context": "Settings > Screensaver > Face Detection > Ground Control Vision Match",
+    "description": "Shown in the People box when nobody is chosen.",
+    "x-locations": {
+      "device": [
+        "Settings > Screensaver > Face Detection > Ground Control Vision Match"
+      ],
+      "remoteAdmin": [
+        "Screensaver > Face Detection > Ground Control Vision Match"
+      ]
+    }
+  },
+  "screensaverGroundControlVisionMatch": "Ground Control Vision Match",
+  "@screensaverGroundControlVisionMatch": {
+    "context": "Settings > Screensaver > Face Detection",
+    "description": "Group heading for the settings that use Vision Match on Ground Control. Ground Control and Vision Match are names: keep them unchanged.",
+    "x-locations": {
+      "device": [
+        "Settings > Screensaver > Face Detection"
+      ],
+      "remoteAdmin": [
+        "Screensaver > Face Detection"
+      ]
+    }
+  },
+  "settingScreensaverFaceLockTitle": "Only chosen people dismiss it",
+  "@settingScreensaverFaceLockTitle": {
+    "context": "Settings > Screensaver > Face Detection > Ground Control Vision Match",
+    "description": "Setting label, a switch shown on Chosen people: nothing but the face of one of the chosen people dismisses the screensaver at the kiosk. \"It\" is the screensaver.",
+    "x-locations": {
+      "device": [
+        "Settings > Screensaver > Face Detection > Ground Control Vision Match"
+      ],
+      "remoteAdmin": [
+        "Screensaver > Face Detection > Ground Control Vision Match"
+      ]
+    }
+  },
+  "settingScreensaverFaceLockDescription": "Touch, buttons, motion, sensors and gestures from anyone else no longer dismiss the screensaver. Phoenix Portal and Home Assistant still can.",
+  "@settingScreensaverFaceLockDescription": {
+    "context": "Settings > Screensaver > Face Detection > Ground Control Vision Match",
+    "description": "Setting help. Buttons are the device's own keys. Keep Phoenix Portal and Home Assistant unchanged.",
+    "x-locations": {
+      "device": [
+        "Settings > Screensaver > Face Detection > Ground Control Vision Match"
+      ],
+      "remoteAdmin": [
+        "Screensaver > Face Detection > Ground Control Vision Match"
+      ]
+    }
   }
 }

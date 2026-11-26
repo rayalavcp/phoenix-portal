@@ -93,8 +93,13 @@ void main() {
     expect(cn.scriptCode ?? cn.countryCode, isNotNull);
   });
 
-  testWidgets('Other languages fall back to English as before', (tester) async {
+  // Phoenix Portal does not ship Italian (or Polish): English instead.
+  testWidgets('An Italian device falls back to English', (tester) async {
     expect(await resolve(tester, const Locale('it', 'IT')), const Locale('en'));
+  });
+
+  testWidgets('Other languages fall back to English as before', (tester) async {
+    expect(await resolve(tester, const Locale('pt', 'BR')), const Locale('en'));
     expect(await resolve(tester, const Locale('sv')), const Locale('en'));
   });
 

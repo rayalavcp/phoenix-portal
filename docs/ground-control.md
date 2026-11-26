@@ -2,33 +2,39 @@
 
 Navigate to **Settings > Ground Control**, under the **Phoenix Portal** heading.
 
-[Phoenix Portal Ground Control](https://github.com/jxlarrea/kiosk-satellite-ground-control) runs the work that is too heavy for a kiosk on a capable machine, as a Home Assistant app or a Docker container on a CPU or an NVIDIA GPU. Its first component is [Voice Match](voice-match.md), with Recognition, Trimming and Isolation: who is talking to the kiosk, and only their voice in the command.
+[Kiosk Satellite Ground Control](https://github.com/jxlarrea/kiosk-satellite-ground-control) is a companion service for Kiosk Satellite. It runs on a computer or server in your home and handles the voice and vision processing that kiosks don't have the computing power for. Install it as a Home Assistant app or run it in Docker on a CPU or an NVIDIA GPU.
+
+Ground Control currently has two components. [Voice Match](voice-match.md) does speaker voice recognition, trimming and isolation. [Vision Match](vision-match.md) does Face Detection, Hand Gestures and Face Recognition with the device's camera.
 
 Ground Control is off by default.
 
 ## Setup
 
-1. Install Phoenix Portal Ground Control as a Home Assistant app, or run its Docker container.
+1. Install Kiosk Satellite Ground Control as a Home Assistant app, or run its Docker container.
 2. Turn on **Enable Ground Control**. Kiosks on the same network find it on their own. For Ground Control on another network, enter its address, such as `192.168.1.10:10900`.
 3. The kiosk signs in with the Home Assistant token it already has. The first time, the status row shows **Waiting for approval**: open the Ground Control app, go to the Kiosks page and approve the kiosk. The status row then shows **Connected** and the people enrolled.
 4. Tap **Open** on the **Ground Control app** row to add people and enroll them. As a Home Assistant app, it opens the app's page in Home Assistant. A Docker container opens its own web page.
-5. Turn on the features you want, such as **Enable Voice Match** under **Settings > Voice Satellite > Ground Control Voice Match**.
+5. Turn on the features you want. **Enable Voice Match** is under **Settings > Ground Control > Voice Match** and **Enable Vision Match** is under **Settings > Ground Control > Vision Match**.
 
 ## Settings
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| Enable Ground Control | off | Connects the kiosk to Phoenix Portal Ground Control. |
+| Enable Ground Control | off | Connects the kiosk to Kiosk Satellite Ground Control. |
 | Address | empty | Empty finds Ground Control on the network. Enter `host:port` for Ground Control on another network. |
 
 ## Features
 
-Each feature Ground Control runs has a row under **Features**, after Connection.
+Each feature Ground Control runs has its own page on the Ground Control page below Connection.
 
-| Feature | Where its settings are |
+| Feature | What it does |
 | --- | --- |
-| Voice Match | Its row opens **Settings > Voice Satellite > Ground Control Voice Match**. See [Voice Match](voice-match.md). |
-| Vision Match | Coming soon. Facial recognition using the device's camera. |
+| Voice Match | Recognition, Trimming and Isolation. See [Voice Match](voice-match.md). |
+| Vision Match | Face Detection, Hand Gestures and Face Recognition. See [Vision Match](vision-match.md). |
+
+## Settings That Work With Ground Control
+
+Some settings outside Settings > Ground Control only work with Ground Control. One example is **Detect faces** under **Settings > Screensaver > Face Detection > Ground Control Vision Match**. These settings have a **GC** tag after their title with Vision Match's face icon or Voice Match's voice icon. They appear only while that feature is on. Tap the tag to see what it means. The Vision Match page lists them with their values under **Used in other settings**. Tap one to go to that setting.
 
 ## Status
 
@@ -43,4 +49,14 @@ Each feature Ground Control runs has a row under **Features**, after Connection.
 | Declined | The kiosk was declined, or its access removed, in the Ground Control app. Approve it on the Kiosks page. |
 | Not accepted | Ground Control only accepts Phoenix Portal releases. A build made from the source code without the release key can't connect. |
 
-The Kiosks page of the Ground Control app also shows which Voice Match features each kiosk has on, from **Settings > Voice Satellite > Ground Control Voice Match**.
+While the kiosk is connected, three more rows describe the Ground Control it is connected to:
+
+| Row | What it shows |
+| --- | --- |
+| Version | The Ground Control version. |
+| Architecture | The CPU architecture of the machine Ground Control runs on: `amd64` or `aarch64`. |
+| Runs on | **CUDA** when the speaker model runs on an NVIDIA GPU, **CPU** otherwise. |
+
+**Architecture** and **Runs on** need Ground Control 2026.11.10 or newer.
+
+The Kiosks page of the Ground Control app also shows which Voice Match and Vision Match features each kiosk has turned on under **Settings > Ground Control**.

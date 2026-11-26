@@ -169,6 +169,10 @@ class EspEntitySurface {
   /// catalog.
   bool _ledIdleListed = false;
 
+  /// Whether this device has a camera flashlight, so the Flashlight switch
+  /// is in this run's catalog.
+  bool _flashlightListed = false;
+
   /// Coalesces the burst of wake-word state changes one voice turn makes
   /// into a single read of the page's engine state.
   Timer? _vsNudge;
@@ -178,6 +182,27 @@ class EspEntitySurface {
   /// second-to-second jitter in "now minus uptime" is not a restart).
   final Map<String, DateTime?> _lastAnchor = {};
   String _speaker = '';
+  String _face = '';
+  String _faces = '';
+
+  /// Who Face Recognition sees looking at the kiosk, from Ground Control.
+  bool get _faceSensor =>
+      _settings.get(defs.groundControlEnabled) &&
+      _settings.get(defs.cameraEnabled) &&
+      _settings.get(defs.visionMatchEnabled) &&
+      _settings.get(defs.visionMatchFaceDetection) &&
+      _settings.get(defs.visionMatchFaceRecognition);
+
+  /// Someone in front of the kiosk and someone looking at it, from Ground
+  /// Control's face looks (Vision Match > Presence sensors).
+  bool get _presenceSensors =>
+      _settings.get(defs.groundControlEnabled) &&
+      _settings.get(defs.cameraEnabled) &&
+      _settings.get(defs.visionMatchEnabled) &&
+      _settings.get(defs.visionMatchFaceDetection) &&
+      _settings.get(defs.visionMatchPresenceSensors);
+  bool _present = false;
+  bool _looking = false;
 
   bool get _speakerSensor =>
       _voiceNative &&
@@ -290,6 +315,8 @@ class EspEntitySurface {
           'mdi:video-wireless-outline',
           defs.cameraRtspEnabled,
         ),
+        // Listed only where the device has a flash (issue #1574).
+        'flashlight': ('Flashlight', 'mdi:flashlight', defs.cameraFlashlight),
         'screensaver_motion': (
           'Screensaver motion detection',
           'mdi:motion-sensor',
@@ -630,6 +657,12 @@ class EspEntitySurface {
         reboot.ok &&
         reboot.data is Map &&
         (reboot.data as Map)['supported'] == true;
+    // The Flashlight switch exists where the device has a flash.
+    final flash = await commands.execute('getFlashlightSupport', const {});
+    _flashlightListed =
+        flash.ok &&
+        flash.data is Map &&
+        (flash.data as Map)['supported'] == true;
     // The LED Control idle entities exist where the LED Control page works:
     // on a device with lights, which is the only place the LED manager
     // registers ledStatus, and with Enable LED Control on.
@@ -739,7 +772,7 @@ class EspEntitySurface {
           'name': 'Voice Satellite',
           'icon': 'mdi:account-voice',
         },
-        // Who is talking, from Phoenix Portal Ground Control: empty when
+        // Who is talking, from Kiosk Satellite Ground Control: empty when
         // nobody is identified. LLM agents read it with GetLiveContext.
         if (_speakerSensor)
           {
@@ -801,6 +834,7 @@ class EspEntitySurface {
       button('bring_to_front', 'Bring to front', 'mdi:flip-to-front'),
       button('alarm_stop', 'Stop alarm', 'mdi:alarm-off'),
       button('alarm_snooze', 'Snooze alarm', 'mdi:alarm-snooze'),
+      button('alarm_skip', 'Skip next alarm', 'mdi:skip-next-outline'),
       if (_settings.get(defs.launcherEnabled))
         button('open_launcher', 'Open app launcher', 'mdi:apps'),
       // Only with a Music Assistant server address configured, exactly like
@@ -978,6 +1012,43 @@ class EspEntitySurface {
           'name': 'Motion',
           'deviceClass': 'motion',
         },
+      // Who is looking at the kiosk, from Ground Control's Face
+      // Recognition: empty when nobody known is in view.
+      if (_faceSensor)
+        {
+          'type': 'text_sensor',
+          'objectId': 'face',
+          'name': 'Face',
+          'icon': 'mdi:face-recognition',
+        },
+      // Everyone Face Recognition names in view, the person at the kiosk
+      // first, comma separated: ESPHome text sensors have no attributes.
+      if (_faceSensor)
+        {
+          'type': 'text_sensor',
+          'objectId': 'people_in_view',
+          'name': 'People in view',
+          'icon': 'mdi:account-group',
+        },
+      // Someone in front of the kiosk, from Ground Control's face looks: a
+      // face turned away counts, and a raised hand. Occupancy, like the
+      // Portal's Person sensor.
+      if (_presenceSensors)
+        {
+          'type': 'binary_sensor',
+          'objectId': 'presence',
+          'name': 'Presence',
+          'deviceClass': 'occupancy',
+        },
+      // Someone looking at the screen: a face turned 30 degrees or less
+      // from the camera.
+      if (_presenceSensors)
+        {
+          'type': 'binary_sensor',
+          'objectId': 'looking',
+          'name': 'Looking at the kiosk',
+          'icon': 'mdi:eye',
+        },
       // Someone in view of the device's own person sensor (discussion
       // #353): occupancy, since it reports people at any angle, not a
       // face turned to the screen.
@@ -1118,6 +1189,7 @@ class EspEntitySurface {
                     e.key != 'screensaver_motion' &&
                     e.key != 'screensaver_face')) &&
             (proximityPresent || e.key != 'screensaver_proximity') &&
+            (e.key != 'flashlight' || _flashlightListed) &&
             (e.key != 'now_playing_alongside_screensaver' ||
                 nowPlayingListed) &&
             (e.key != 'vs_mute_timers' || _timersNative) &&
@@ -2244,6 +2316,26 @@ class EspEntitySurface {
       }),
     );
     _subs.add(
+      bus.on<FaceInViewChanged>().listen((e) {
+        _face = e.name;
+        _faces = e.people.map((p) => p.name).join(', ');
+        if (_faceSensor) {
+          _send('face', e.name);
+          _send('people_in_view', _faces);
+        }
+      }),
+    );
+    _subs.add(
+      bus.on<VisionPresenceChanged>().listen((e) {
+        _present = e.present;
+        _looking = e.looking;
+        if (_presenceSensors) {
+          _send('presence', e.present);
+          _send('looking', e.looking);
+        }
+      }),
+    );
+    _subs.add(
       bus.on<VoiceTimersChanged>().listen((e) {
         if (_voiceNative) unawaited(_sendTimers(e.timers));
       }),
@@ -2487,6 +2579,8 @@ class EspEntitySurface {
         await commands.execute('alarmStop', const {'source': 'esphome'});
       case 'alarm_snooze':
         await commands.execute('alarmSnooze', const {'source': 'esphome'});
+      case 'alarm_skip':
+        await commands.execute('alarmSkip', const {'source': 'esphome'});
       case 'load_start_url':
         await commands.execute('loadStartUrl', const {});
       case 'close_overlays':
@@ -2957,6 +3051,14 @@ class EspEntitySurface {
       if (match != null) await _send('dashboard_view', match);
     }
     await _sendMotionState();
+    if (_faceSensor) {
+      await _send('face', _face);
+      await _send('people_in_view', _faces);
+    }
+    if (_presenceSensors) {
+      await _send('presence', _present);
+      await _send('looking', _looking);
+    }
   }
 
   /// The kiosk's own Bluetooth links, and the proxy's connection budget

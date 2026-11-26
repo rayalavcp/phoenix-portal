@@ -814,6 +814,41 @@ void main() {
       expect(executed.single.$1, 'stopScreensaver');
     });
 
+    test('over a screensaver only chosen people dismiss, only fingers for '
+        'the chosen people run', () async {
+      await build(
+        '[{"id":"clap","trigger":{"type":"claps","claps":2},'
+        '"action":{"type":"screensaver_stop"}},'
+        '{"id":"five","trigger":{"type":"fingers","fingers":5},'
+        '"action":{"type":"screensaver_stop"}}]',
+      );
+      for (final entry in {
+        defs.groundControlEnabled: true,
+        defs.cameraEnabled: true,
+        defs.visionMatchEnabled: true,
+        defs.screensaverDismissOnFace: true,
+        defs.screensaverFaceLock: true,
+      }.entries) {
+        await settings.set(entry.key, entry.value);
+      }
+      await settings.set(defs.screensaverFaceWho, 'people');
+      bus.publish(const ScreensaverStateChanged(active: true));
+      await Future<void>.delayed(Duration.zero);
+      await fire('clap');
+      // Fingers open to anyone are skipped too.
+      await fire('five');
+      expect(executed, isEmpty);
+      await settings.set(defs.gesturesFaceWho, 'people');
+      await fire('five');
+      await fire('clap');
+      expect([for (final e in executed) e.$1], ['stopScreensaver']);
+      // With the screensaver gone, every gesture runs again.
+      bus.publish(const ScreensaverStateChanged(active: false));
+      await Future<void>.delayed(Duration.zero);
+      await fire('clap');
+      expect(executed, hasLength(2));
+    });
+
     test('app_launcher opens the launcher overlay (issue #318)', () async {
       await build(
         '[{"id":"g1","trigger":{"type":"corner_taps","corner":"br",'
@@ -869,6 +904,65 @@ void main() {
       expect(executed, hasLength(3));
       await show(1, 2);
       expect(executed, hasLength(4));
+    });
+
+    test('Finger gestures for on Chosen people runs a finger gesture only '
+        'while a chosen person is recognized', () async {
+      await build(
+        '[{"id":"two","trigger":{"type":"fingers","fingers":2},'
+        '"action":{"type":"screensaver"}}]',
+      );
+      for (final (def, value) in <(defs.SettingDef<bool>, bool)>[
+        (defs.cameraEnabled, true),
+        (defs.groundControlEnabled, true),
+        (defs.visionMatchEnabled, true),
+        (defs.visionMatchFaceDetection, true),
+        (defs.visionMatchFaceRecognition, true),
+      ]) {
+        await settings.set(def, value);
+      }
+      await settings.set(defs.handGestureHoldSeconds, 0);
+      await settings.set(defs.gesturesFaceWho, 'people');
+      await settings.set(
+        defs.gesturesFacePeople,
+        '[{"id":"ana","name":"Ana"}]',
+      );
+      Future<void> show(int hands, int? fingers) async {
+        bus.publish(PalmDetected(hands: hands, fingers: fingers));
+        await Future<void>.delayed(Duration.zero);
+        await Future<void>.delayed(Duration.zero);
+      }
+
+      Future<void> see(List<({String id, String name})> people) async {
+        bus.publish(
+          FaceInViewChanged(
+            id: people.isEmpty ? null : people.first.id,
+            name: people.isEmpty ? '' : people.first.name,
+            people: people,
+          ),
+        );
+        await Future<void>.delayed(Duration.zero);
+      }
+
+      // Nobody recognized: skipped.
+      await show(1, 2);
+      expect(executed, isEmpty);
+      await show(0, null);
+      // Someone not chosen: skipped.
+      await see([(id: 'leo', name: 'Leo')]);
+      await show(1, 2);
+      expect(executed, isEmpty);
+      await show(0, null);
+      // A chosen person in view, at the kiosk or not: it runs.
+      await see([(id: 'leo', name: 'Leo'), (id: 'ana', name: 'Ana')]);
+      await show(1, 2);
+      expect(executed.map((e) => e.$1), ['startScreensaver']);
+      await show(0, null);
+      // Anyone: it runs with nobody recognized.
+      await see([]);
+      await settings.set(defs.gesturesFaceWho, 'anyone');
+      await show(1, 2);
+      expect(executed, hasLength(2));
     });
 
     test(

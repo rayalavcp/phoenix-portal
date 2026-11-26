@@ -100,6 +100,14 @@ class GesturesManager extends Manager {
   StreamSubscription<SettingChanged>? _settingsSub;
   StreamSubscription<WakeWordStateChanged>? _wakeStateSub;
   StreamSubscription<ScreenStateChanged>? _screenSub;
+  StreamSubscription<FaceInViewChanged>? _facesSub;
+  StreamSubscription<ScreensaverStateChanged>? _screensaverSub;
+
+  /// A screensaver is up, for Only chosen people dismiss it.
+  bool _screensaverUp = false;
+
+  /// Everyone Face Recognition names in view, for Finger gestures for.
+  Set<String> _inView = const {};
 
   /// Finger mappings that fired for the count being shown.
   final _palmFired = <String>{};
@@ -144,6 +152,9 @@ class GesturesManager extends Manager {
     _sub = bus.on<GestureDetected>().listen(_onGesture);
     _palmSub = bus.on<PalmDetected>().listen(_onPalms);
     _pluginSub = bus.on<PluginTriggerFired>().listen(_onPluginTrigger);
+    _screensaverSub = bus.on<ScreensaverStateChanged>().listen(
+      (e) => _screensaverUp = e.active,
+    );
 
     commands.register(
       Command(
@@ -193,6 +204,10 @@ class GesturesManager extends Manager {
       if (!e.on) _resetHand();
     });
 
+    _facesSub = bus.on<FaceInViewChanged>().listen((e) {
+      _inView = {for (final p in e.people) p.id, ?e.id};
+    });
+
     await _syncClapper();
   }
 
@@ -201,7 +216,9 @@ class GesturesManager extends Manager {
     _micRetry?.cancel();
     await _settingsSub?.cancel();
     await _wakeStateSub?.cancel();
+    await _screensaverSub?.cancel();
     await _screenSub?.cancel();
+    await _facesSub?.cancel();
     _resetHand();
     await _micSub?.cancel();
     await _palmSub?.cancel();
@@ -244,11 +261,45 @@ class GesturesManager extends Manager {
       final wanted = (m.trigger['fingers'] as num?)?.toInt() ?? 5;
       if (ready && _handHold.count == wanted) {
         if (_palmFired.add(m.id)) {
+          if (!_fingersAllowed) {
+            log.info(
+              name,
+              'a hand showing $wanted finger(s) skipped: none of the people '
+              'chosen under Finger gestures for is recognized at the kiosk',
+            );
+            continue;
+          }
           log.info(name, 'detected a hand showing $wanted finger(s)');
           bus.publish(GestureDetected(id: m.id));
         }
       }
     }
+  }
+
+  /// Screensaver > Face Detection > Only chosen people dismiss it: while
+  /// that screensaver is up, a gesture could end it or open something over
+  /// it, so only finger gestures limited to the chosen people under Finger
+  /// gestures for run. Claps, touch gestures and anyone's fingers do not.
+  bool _gestureGetsPastLock(GestureMapping mapping) {
+    if (!_screensaverUp ||
+        !_settings.visible(defs.screensaverFaceLock) ||
+        !_settings.get(defs.screensaverFaceLock)) {
+      return true;
+    }
+    return mapping.triggerType == 'fingers' &&
+        _settings.visible(defs.gesturesFaceWho) &&
+        _settings.get(defs.gesturesFaceWho) == 'people';
+  }
+
+  /// Gestures > Ground Control Vision Match > Finger gestures for: on
+  /// Chosen people, a Show fingers gesture runs only while one of them is
+  /// recognized at the kiosk.
+  bool get _fingersAllowed {
+    if (!_settings.visible(defs.gesturesFaceWho) ||
+        _settings.get(defs.gesturesFaceWho) != 'people') {
+      return true;
+    }
+    return defs.chosenInView(_inView, _settings.get(defs.gesturesFacePeople));
   }
 
   /// Whether clap detection should be listening right now.
@@ -365,6 +416,14 @@ class GesturesManager extends Manager {
       // A stale trigger: the mapping changed under an armed Activity and
       // the fresh apply has not landed yet.
       log.warn(name, 'gesture ${e.id} has no mapping');
+      return;
+    }
+    if (!_gestureGetsPastLock(mapping)) {
+      log.info(
+        name,
+        'gesture ${describeGestureTrigger(mapping.trigger)} skipped: only '
+        'the chosen people dismiss the screensaver',
+      );
       return;
     }
     log.info(

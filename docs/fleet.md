@@ -51,6 +51,7 @@ A profile consists of:
 | OpenAI API key | Off | Kiosk keeps its own. | Key syncs across fleet, and each follower validates it on its own. |
 | xAI API key | Off | Kiosk keeps its own. | Key syncs across fleet, and each follower validates it on its own. |
 | Gemini API key | Off | Kiosk keeps its own. | Key syncs across fleet, and each follower validates it on its own. |
+| Vercel AI Gateway API key | Off | Kiosk keeps its own. | Key syncs across fleet, and each follower validates it on its own. |
 | MCP server token | Off | Kiosk keeps its own. | Token syncs across fleet. |
 | Plugin secrets | Off | Kiosk keeps its own secret plugin settings. | Secret plugin settings sync with their plugins. |
 | Include the dashboard | Off | Kiosk keeps its local start page and dashboard. | Start page and dashboard sync. |
@@ -150,6 +151,7 @@ Certain settings remain unique to each kiosk regardless of the profile configura
 | Shared timers | `voice.timers_share_with` |
 | Calendar | `calendar.hidden` |
 | Hold mode and Lockdown Mode | `ha.hold_mode`, `lockdown.enabled` |
+| Flashlight | `camera.flashlight` |
 | Hardware picks | `camera.device`, `camera.scan_screen_light`, `camera.rtsp.tls`, `camera.rtsp.resolution`, `camera.rtsp.analysis`, `motion.camera`, `audio.mic_device`, `audio.speaker_device`, `audio.mic_channel`, `audio.mic_capture_mode`, `audio.software_echo_cancellation`, `audio.echo_cancellation_method`, `audio.mic_noise_suppression`, `audio.mic_gain_db`, `audio.mic_capture_format`, `audio.equalizer_enabled`, `audio.equalizer_bass`, `audio.equalizer_low_mid`, `audio.equalizer_mid`, `audio.equalizer_high_mid`, `audio.equalizer_treble`, `audio.equalizer_preamp`, `render.disable_impeller`, `render.legacy_webview`, `render.hybrid_plugin_overlays`, `ui.scale`, `screen.ambient_display` |
 | Followed player | `sendspin.player`, `sendspin.player_source`, `sendspin.player_name`, `sendspin.handoff`, `sendspin.speaker_pill_players`, `sendspin.kept_for` |
 | Weather preview | `screensaver.weather_preview`, `screensaver.weather_preview_condition`, `screensaver.weather_preview_period` |
@@ -161,7 +163,7 @@ Certain settings remain unique to each kiosk regardless of the profile configura
 | Stop word fine-tune | `voice.stop_word_fine_tune` |
 | Realtime talk over sensitivity | `voice.realtime_talk_over_sensitivity` |
 | Wake words this kiosk listens for | `voice.wake_words`, `voice.pending_selects` |
-| Local state | `voice.runtime`, `voice.timer_position`, `voice.dock_position`, `voice.realtime_openai_validated`, `voice.realtime_xai_validated`, `voice.realtime_gemini_validated`, `screensaver.saved_brightness`, `screensaver.immich_validated`, `sendspin.player_active`, `sendspin.player_pos`, `sendspin.sonos_hosts` |
+| Local state | `voice.runtime`, `voice.timer_position`, `voice.dock_position`, `voice.realtime_openai_validated`, `voice.realtime_xai_validated`, `voice.realtime_gemini_validated`, `voice.realtime_vercel_validated`, `screensaver.saved_brightness`, `screensaver.immich_validated`, `sendspin.player_active`, `sendspin.player_pos`, `sendspin.sonos_hosts` |
 
 Plugins sync only through a profile's **Plugins** row (see [Plugins](#plugins)). Plugin entity exclusions stay local even when ordinary ESPHome exclusions are synced, and the **Enable Plugins** master switch stays on each kiosk.
 
@@ -174,6 +176,8 @@ The Alarms category carries the alarm defaults (the volume, the tone, snooze, Si
 The Calendar category carries the [calendars](calendar.md) with their names, colors and people, and the Display and Kiosk settings. The calendars hidden with their chips stay on each kiosk.
 
 The Timers category carries the [timer settings](timers.md#timer-settings): Enable timers, the pills, what a finished timer does, Share timers and Show shared timers. The kiosks picked in Share with and the timer sound stay on each kiosk. These settings used to sync with Voice Satellite, so add Timers to a profile that should keep pushing them.
+
+The Ground Control category carries **Enable Ground Control** and the address. The [Voice Match](voice-match.md) settings travel with Voice Satellite, and Voice Match needs Ground Control on, so sync both. Each follower still signs in to [Ground Control](ground-control.md) on its own, so approve it on the Kiosks page of the Ground Control app.
 
 The Navigation category carries the navigation style, the [Compass](navigation.md) layout and its options. A camera view in the layout only shows on a follower that has it, so sync Camera Streams too if the layout holds one.
 

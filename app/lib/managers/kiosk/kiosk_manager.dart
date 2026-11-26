@@ -167,6 +167,95 @@ class KioskManager extends Manager with WidgetsBindingObserver {
   bool get pinRequired => _settings.get(defs.kioskPin).isNotEmpty;
   bool pinMatches(String pin) => pin == _settings.get(defs.kioskPin);
 
+  // ── Ground Control Vision Match ──
+
+  /// Everyone Face Recognition names at the kiosk, by Ground Control person
+  /// id, and their names.
+  Map<String, String> _facesInView = const {};
+  StreamSubscription<FaceInViewChanged>? _facesSubscription;
+
+  /// Whether a chosen person was in view when Disable Lockdown Mode for
+  /// last looked, so a lock from Home Assistant holds until someone chosen
+  /// arrives again.
+  bool _chosenWasHere = false;
+  Timer? _faceRelockTimer;
+
+  /// Whether the exit gesture skips the kiosk PIN now: Skip the PIN for
+  /// (Kiosk Mode) or Disable Lockdown Mode for (Lockdown Mode) on Chosen
+  /// people, and one of them recognized at the kiosk. Says so in the log
+  /// and to Ground Control's vision session when it does.
+  bool faceSkipsPin({required bool lockdown}) {
+    final rule = lockdown ? defs.lockdownFaceDisable : defs.kioskFaceSkipPin;
+    final people = lockdown ? defs.lockdownFacePeople : defs.kioskFacePeople;
+    if (!_settings.visible(rule) || _settings.get(rule) != 'people') {
+      return false;
+    }
+    final who = _chosenHere(people);
+    if (who == null) return false;
+    log.info(
+      name,
+      '${lockdown ? 'lockdown' : 'kiosk'} PIN skipped: ${who.name} is at the '
+      'kiosk',
+    );
+    bus.publish(FacePinSkipped(lockdown: lockdown, name: who.name, id: who.id));
+    return true;
+  }
+
+  /// A chosen person in view under [people], or null.
+  ({String id, String name})? _chosenHere(defs.SettingDef<String> people) {
+    final json = _settings.get(people);
+    if (!defs.chosenInView(_facesInView.keys.toSet(), json)) return null;
+    final chosen = {for (final p in defs.decodeVoiceMatchPeople(json)) p.id};
+    final id = _facesInView.keys.firstWhere(
+      (id) => chosen.isEmpty || chosen.contains(id),
+    );
+    return (id: id, name: _facesInView[id] ?? '');
+  }
+
+  /// Disable Lockdown Mode for: Lockdown Mode off when a chosen person
+  /// arrives. With Turn Lockdown Mode back on, on again
+  /// [defs.lockdownFaceRelockAfter] after none is in view.
+  void _followFaces() {
+    final on =
+        _settings.visible(defs.lockdownFaceDisable) &&
+        _settings.get(defs.lockdownFaceDisable) == 'people';
+    final relock =
+        on &&
+        _settings.visible(defs.lockdownFaceRelock) &&
+        _settings.get(defs.lockdownFaceRelock);
+    if (!relock) {
+      _faceRelockTimer?.cancel();
+      _faceRelockTimer = null;
+    }
+    if (!on) {
+      _chosenWasHere = false;
+      return;
+    }
+    final who = _chosenHere(defs.lockdownFacePeople);
+    if (who != null) {
+      _faceRelockTimer?.cancel();
+      _faceRelockTimer = null;
+      if (!_chosenWasHere && lockdownActive) {
+        log.info(name, 'lockdown off: ${who.name} is at the kiosk');
+        bus.publish(
+          FaceLockdownChanged(locked: false, name: who.name, id: who.id),
+        );
+        unawaited(_settings.set(defs.lockdownEnabled, false));
+      }
+    } else if (relock && !lockdownActive && _faceRelockTimer == null) {
+      _faceRelockTimer = Timer(defs.lockdownFaceRelockAfter, () {
+        _faceRelockTimer = null;
+        if (lockdownActive || _chosenHere(defs.lockdownFacePeople) != null) {
+          return;
+        }
+        log.info(name, 'lockdown on: nobody chosen is at the kiosk');
+        bus.publish(const FaceLockdownChanged(locked: true));
+        unawaited(_settings.set(defs.lockdownEnabled, true));
+      });
+    }
+    _chosenWasHere = who != null;
+  }
+
   /// Whether the System UI guard (the accessibility service that closes
   /// the notification shade and recents while protections hold) is enabled
   /// in Android's Accessibility settings.
@@ -756,7 +845,20 @@ class KioskManager extends Manager with WidgetsBindingObserver {
       _armReclaim();
     });
 
+    _facesSubscription = bus.on<FaceInViewChanged>().listen((e) {
+      _facesInView = {
+        for (final p in e.people) p.id: p.name,
+        if (e.id != null) e.id!: e.name,
+      };
+      _followFaces();
+    });
     _settingsSubscription = bus.on<SettingChanged>().listen((event) {
+      if (event.key == defs.lockdownEnabled.key ||
+          event.key.startsWith('lockdown.face_') ||
+          event.key.startsWith('vision_match.') ||
+          event.key == defs.groundControlEnabled.key) {
+        _followFaces();
+      }
       if (event.key == defs.uiLanguage.key && pushFlags) {
         unawaited(_invoke<void>('lockShieldText', {'text': _lockShieldText}));
       }
@@ -998,6 +1100,8 @@ class KioskManager extends Manager with WidgetsBindingObserver {
 
   @override
   Future<void> dispose() async {
+    _faceRelockTimer?.cancel();
+    await _facesSubscription?.cancel();
     await _settingsSubscription?.cancel();
     if (Platform.isAndroid) WidgetsBinding.instance.removeObserver(this);
     _reclaimTimer?.cancel();
@@ -1006,6 +1110,23 @@ class KioskManager extends Manager with WidgetsBindingObserver {
     _installPauseTimer = null;
     _autoUnlockTimer?.cancel();
     _autoUnlockTimer = null;
+  }
+
+  bool _stalePinAsked = false;
+
+  /// Log, once, that the app ended a pin it found as it started. The pin
+  /// belonged to a process that had closed: an update or a restart with
+  /// the kiosk pinned leaves one, and unpinning with it in place restarts
+  /// the Activity without end (issue #1565). Asked on the first apply an
+  /// Activity answers, as the channel needs one.
+  Future<void> _noteStalePin() async {
+    if (_stalePinAsked) return;
+    final ended = await _invoke<bool>('endedStalePin');
+    if (ended == null) return;
+    _stalePinAsked = true;
+    if (ended) {
+      log.warn(name, 'ended a pin left over from before the app restarted');
+    }
   }
 
   /// Whether the flag bundle actually goes to the platform. Keyed off the
@@ -1024,6 +1145,7 @@ class KioskManager extends Manager with WidgetsBindingObserver {
     // re-arm over Android's install screen. resumeKioskAfterInstall clears
     // the flag before its own apply, so re-arming goes through unharmed.
     force = force && !_installPause;
+    await _noteStalePin();
     // Lockdown arms the whole kiosk bundle without touching the persisted
     // kiosk settings: on exit the device returns to exactly the protections
     // the owner configured, kiosk mode on or off.

@@ -217,6 +217,40 @@ class ScreensaverManager extends Manager with WidgetsBindingObserver {
   Timer? _scheduleTimer;
   bool _active = false;
   bool _paused = false;
+
+  /// Screensaver > Face Detection > Ground Control Vision Match > Only
+  /// chosen people dismiss it, while a screensaver shows: it takes no
+  /// touches and only a chosen face, Kiosk Satellite's own features and
+  /// Home Assistant end it. The kiosk screen absorbs the screensaver's
+  /// touches while this holds.
+  final faceLocked = ValueNotifier<bool>(false);
+
+  /// The setting is on and shows: Chosen people under Detect faces, with
+  /// Face Recognition on. Not whether Ground Control answers: the lock
+  /// holds while it can't, so only Kiosk Satellite and Home Assistant can
+  /// end the screensaver then.
+  bool get _faceLockOn =>
+      _settings.visible(defs.screensaverFaceLock) &&
+      _settings.get(defs.screensaverFaceLock);
+
+  void _syncFaceLock() => faceLocked.value = _active && _faceLockOn;
+
+  /// What the lock ignores: someone at the kiosk by hand or by sensor.
+  /// A chosen face comes in as 'face' ([_onFace] lets only them through),
+  /// and the postpone command ('remote') and a cast ('dlna') are the
+  /// kiosk's own.
+  static const _faceLockIgnores = {
+    'touch',
+    'pane_touch',
+    'touch_page',
+    'tap',
+    'screensaver_touch',
+    'key',
+    'close',
+    'motion',
+    'person',
+    'proximity',
+  };
   final _interactions = ActiveInteractions();
 
   /// "Turn screen off after": armed when a session starts (and re-armed on
@@ -399,9 +433,11 @@ class ScreensaverManager extends Manager with WidgetsBindingObserver {
   bool _voiceTurn = false;
   bool _restoreNowPlaying = false;
 
-  /// A launch on play that a voice turn or page interaction refused. Music
-  /// asked for by voice starts mid-turn, so the launch waits for the turn
-  /// to end instead of being dropped (issue #718).
+  /// A launch on play that a voice turn, the voice overlay or a page
+  /// interaction refused. Music asked for by voice starts mid-turn, so the
+  /// launch waits for the turn to end instead of being dropped (issue
+  /// #718). With Keep the answer on screen, the overlay outlasts the turn
+  /// and the launch waits for the overlay too (discussion #1566).
   bool _launchOnPlayPending = false;
 
   /// The session exists only to show Now Playing: playback launched it or
@@ -415,6 +451,11 @@ class ScreensaverManager extends Manager with WidgetsBindingObserver {
   /// other view, so holds that only keep the screensaver from starting by
   /// itself do not apply to it, nor does Hold Mode.
   bool _openedByHand = false;
+
+  /// Whether someone opened the session on screen for Now Playing. False
+  /// for one the idle clock or a track starting brought up, where Now
+  /// Playing only stands in for the screensaver.
+  bool get openedByHand => _active && _openedByHand;
   bool _restoreForNowPlaying = false;
   Future<void>? _interactionStop;
   bool _cameraViewActive = false;
@@ -672,6 +713,9 @@ class ScreensaverManager extends Manager with WidgetsBindingObserver {
         unawaited(_applyVisuals());
       } else {
         _resetIdleTimer();
+        // The answer kept on screen outlasted the turn: Now Playing held
+        // back for it opens now.
+        if (!_paused) unawaited(_restoreAfterInteraction());
       }
     });
     bus.on<CameraViewStateChanged>().listen((event) {
@@ -810,15 +854,16 @@ class ScreensaverManager extends Manager with WidgetsBindingObserver {
       // Launch on play (sendspin.fullscreen_on_play): playback starting
       // is the cue for the music display, not the idle clock. start()
       // keeps every refusal it has for a timed start (hold mode, a
-      // voice turn, another app in front, lockdown). A voice turn or page
-      // interaction only defers it: the launch runs once they end.
+      // voice turn, another app in front, lockdown). A voice turn, the
+      // voice overlay or a page interaction only defers it: the launch
+      // runs once they end.
       if (startedPlaying &&
           !_alarmOnTop &&
           allowsNowPlaying &&
           _settings.get(defs.sendspinFullscreen) &&
           _settings.get(defs.sendspinFullscreenOnPlay)) {
         log.info(name, 'Now Playing launched by playback');
-        _launchOnPlayPending = _paused || _voiceTurn;
+        _launchOnPlayPending = _paused || _voiceTurn || _assistOverlay;
         unawaited(start(forNowPlaying: true));
       }
     });
@@ -833,48 +878,14 @@ class ScreensaverManager extends Manager with WidgetsBindingObserver {
       if (!_settings.get(defs.motionUseEntity)) return;
       _onMotion(held: e.held);
     });
-    bus.on<FaceDetected>().listen((_) {
-      // Same lockdown rule as motion.
-      if (_settings.get(defs.lockdownEnabled)) return;
-      if (!_active) {
-        // Between screensavers a face can only postpone the next one,
-        // under Postpone on motion's rules: the postpone switch extends
-        // Dismiss on face and never acts on its own, and Dismiss on
-        // motion keeps precedence over both face legs.
-        if (_settings.get(defs.screensaverPostponeOnFace) &&
-            _settings.get(defs.screensaverDismissOnFace) &&
-            !_settings.get(defs.screensaverDismissOnMotion)) {
-          _resetIdleTimer();
-        }
-        return;
-      }
-      if (!_screenDark &&
-          _settings.get(defs.screensaverDismissOnFaceScreenOffOnly)) {
-        return;
-      }
-      // Dismiss on motion (or its schedule override) takes precedence:
-      // the native side does not look for faces while motion is on, and
-      // this double-gate keeps a stale tick from acting either way.
-      if (_motionPolicy ?? _settings.get(defs.screensaverDismissOnMotion)) {
-        return;
-      }
-      if (!(_facePolicy ?? _settings.get(defs.screensaverDismissOnFace))) {
-        return;
-      }
-      // Now Playing keeps its own policy; a face counts like motion there.
-      final showingNowPlaying = activeView.value != null && _nowPlayingTakeover;
-      if (showingNowPlaying &&
-          !nowPlayingShared &&
-          !_settings.get(defs.sendspinFullscreenMotion)) {
-        return;
-      }
-      // A wake to the screensaver dismisses nothing, so no camera preview.
-      if (_wakeToScreensaver('face')) return;
-      // Before the stop, so the camera preview's hold (MotionManager) is
-      // armed by the time the session's end reaches it.
-      bus.publish(const FaceDismissedScreensaver());
-      notifyActivity('face');
+    bus.on<FaceInViewChanged>().listen((e) {
+      final counted = _faceCounts;
+      _facesInView = {for (final p in e.people) p.id, ?e.id};
+      // The name a sighting was waiting for: act on it now. The next
+      // sighting is up to a second away.
+      if (!counted && _faceCounts && _faceUnnamed != null) _onFace();
     });
+    bus.on<FaceDetected>().listen((_) => _onFace());
     bus.on<PersonDetected>().listen((e) {
       // The device's own person sensor (discussion #353), under
       // Proximity's rules: lockdown holds, the postpone switch extends
@@ -951,6 +962,8 @@ class ScreensaverManager extends Manager with WidgetsBindingObserver {
       if (_wakeToScreensaver('proximity')) return;
       notifyActivity('proximity');
     });
+    // The lock follows its setting and every setting it hangs on.
+    bus.on<SettingChanged>().listen((_) => _syncFaceLock());
     bus.on<SettingChanged>().listen((e) {
       if (e.key == defs.screensaverClockNight.key ||
           e.key == defs.screensaverClockNightLux.key ||
@@ -1421,6 +1434,12 @@ class ScreensaverManager extends Manager with WidgetsBindingObserver {
         const {'motion', 'face', 'person', 'proximity'}.contains(source)) {
       return;
     }
+    // Only chosen people dismiss it: waking a black screen back to the
+    // screensaver (above) is all a touch does.
+    if (_active && _faceLockOn && _faceLockIgnores.contains(source)) {
+      log.debug(name, 'only the chosen people dismiss it: $source ignored');
+      return;
+    }
     // Overlay controls consume their touch without dismissing the view.
     // Off the screensaver the touch is still activity.
     if (_touchOnControl &&
@@ -1596,6 +1615,95 @@ class ScreensaverManager extends Manager with WidgetsBindingObserver {
     _setIdleDue(clock().add(wait));
   }
 
+  /// Everyone Face Recognition names in view, for Detect faces.
+  Set<String> _facesInView = const {};
+
+  /// A sighting that did not count because Face Recognition had not named
+  /// the face yet, for as long as the name can still act on it. Sightings
+  /// come a second apart while someone keeps looking at the kiosk, so one
+  /// this old is a face that has left.
+  Timer? _faceUnnamed;
+  static const _faceUnnamedFor = Duration(milliseconds: 1500);
+
+  /// Someone is looking at the kiosk: dismiss the screensaver or postpone
+  /// the next one, under the Face Detection settings.
+  void _onFace() {
+    // Same lockdown rule as motion.
+    if (_settings.get(defs.lockdownEnabled)) return;
+    // Ground Control Vision Match > Detect faces: only someone recognized,
+    // or one of the chosen people. A face not named yet waits for its
+    // name (see the FaceInViewChanged listener) or for the next sighting.
+    if (!_faceCounts) {
+      _faceUnnamed?.cancel();
+      _faceUnnamed = Timer(_faceUnnamedFor, () => _faceUnnamed = null);
+      return;
+    }
+    _faceUnnamed?.cancel();
+    _faceUnnamed = null;
+    if (!_active) {
+      // Between screensavers a face can only postpone the next one,
+      // under Postpone on motion's rules: the postpone switch extends
+      // Dismiss on face and never acts on its own, and Dismiss on
+      // motion keeps precedence over both face legs.
+      if (_settings.get(defs.screensaverPostponeOnFace) &&
+          _settings.get(defs.screensaverDismissOnFace) &&
+          !_settings.get(defs.screensaverDismissOnMotion)) {
+        _resetIdleTimer();
+        bus.publish(const FacePostponedScreensaver());
+      }
+      return;
+    }
+    if (!_screenDark &&
+        _settings.get(defs.screensaverDismissOnFaceScreenOffOnly)) {
+      return;
+    }
+    // Dismiss on motion (or its schedule override) takes precedence:
+    // the native side does not look for faces while motion is on, and
+    // this double-gate keeps a stale tick from acting either way. Not when
+    // only the chosen people dismiss it: motion does nothing then, and the
+    // faces are looked for.
+    if (!_faceLockOn &&
+        (_motionPolicy ?? _settings.get(defs.screensaverDismissOnMotion))) {
+      return;
+    }
+    if (!(_facePolicy ?? _settings.get(defs.screensaverDismissOnFace))) {
+      return;
+    }
+    // Now Playing keeps its own policy; a face counts like motion there.
+    final showingNowPlaying = activeView.value != null && _nowPlayingTakeover;
+    if (showingNowPlaying &&
+        !nowPlayingShared &&
+        !_settings.get(defs.sendspinFullscreenMotion)) {
+      return;
+    }
+    // A wake to the screensaver dismisses nothing, so no camera preview.
+    if (_wakeToScreensaver('face')) return;
+    // Before the stop, so the camera preview's hold (MotionManager) is
+    // armed by the time the session's end reaches it.
+    bus.publish(const FaceDismissedScreensaver());
+    notifyActivity('face');
+  }
+
+  /// Whether a face in view dismisses or postpones the screensaver under
+  /// Detect faces. Anyone when Face Recognition is off, since the
+  /// setting is then hidden.
+  bool get _faceCounts {
+    if (!_settings.visible(defs.screensaverFaceWho)) return true;
+    switch (_settings.get(defs.screensaverFaceWho)) {
+      // Recognized people, before the option went: the same as Chosen
+      // people with nobody chosen.
+      case 'recognized':
+        return _facesInView.isNotEmpty;
+      case 'people':
+        return defs.chosenInView(
+          _facesInView,
+          _settings.get(defs.screensaverFacePeople),
+        );
+      default:
+        return true;
+    }
+  }
+
   void _stopForInteraction() {
     if (!_active) return;
     final restore = activeView.value != null && _nowPlayingTakeover;
@@ -1611,7 +1719,8 @@ class ScreensaverManager extends Manager with WidgetsBindingObserver {
     // Let it finish before bringing the player back over the page.
     await _interactionStop;
     if (!_restoreNowPlaying && !_launchOnPlayPending) return;
-    if (_paused || _voiceTurn) return;
+    // The overlay listener calls this again once the overlay goes.
+    if (_paused || _voiceTurn || _assistOverlay) return;
     final launchOnPlay =
         _sendspinPlaying && _settings.get(defs.sendspinFullscreenOnPlay);
     final launch = _restoreNowPlaying || launchOnPlay;
@@ -2018,6 +2127,7 @@ class ScreensaverManager extends Manager with WidgetsBindingObserver {
       return;
     }
     _active = true;
+    _syncFaceLock();
     _startedForNowPlaying = forNowPlaying;
     _openedByHand = byHand;
     _panelDark = false;
@@ -2639,6 +2749,7 @@ class ScreensaverManager extends Manager with WidgetsBindingObserver {
     final fadeView = activeView.value;
     final fades = !_screenDark && fadesView(fadeView);
     _active = false;
+    _syncFaceLock();
     _endDimHold();
     _dropShots();
     // Read while the screensaver is still all there is on screen.
@@ -2780,11 +2891,13 @@ class ScreensaverManager extends Manager with WidgetsBindingObserver {
     if (Platform.isAndroid) WidgetsBinding.instance.removeObserver(this);
     _pauseProbe?.cancel();
     _idleTimer?.cancel();
+    _faceUnnamed?.cancel();
     _scheduleTimer?.cancel();
     _screenOffTimer?.cancel();
     _nightTimer?.cancel();
     _endTouchLift();
     activeView.dispose();
+    faceLocked.dispose();
     pageReserve.dispose();
     clockNight.dispose();
     pluginTint.dispose();

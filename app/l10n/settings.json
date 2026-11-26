@@ -715,6 +715,14 @@
     "title": "settingScreensaverImmichFillTitle",
     "description": "settingScreensaverImmichFillDescription"
   },
+  "screensaver.immich_crop_faces": {
+    "title": "settingScreensaverImmichCropFacesTitle",
+    "description": "settingScreensaverImmichCropFacesDescription"
+  },
+  "screensaver.immich_crop_videos": {
+    "title": "settingScreensaverImmichCropVideosTitle",
+    "description": "settingScreensaverImmichCropVideosDescription"
+  },
   "screensaver.immich_pair_portrait": {
     "title": "settingScreensaverImmichPairPortraitTitle",
     "description": "settingScreensaverImmichPairPortraitDescription"
@@ -2299,6 +2307,26 @@
     "title": "settingVoiceRealtimeGeminiProactiveTitle",
     "description": "settingVoiceRealtimeGeminiProactiveDescription"
   },
+  "voice.realtime_vercel_api_key": {
+    "title": "settingVoiceRealtimeApiKeyTitle",
+    "description": "settingVoiceRealtimeApiKeyDescription"
+  },
+  "voice.realtime_vercel_endpoint": {
+    "title": "settingVoiceRealtimeEndpointTitle",
+    "description": "settingVoiceRealtimeEndpointDescription"
+  },
+  "voice.realtime_vercel_model": {
+    "title": "settingVoiceRealtimeModelTitle",
+    "description": "settingVoiceRealtimeModelDescription"
+  },
+  "voice.realtime_vercel_voice": {
+    "title": "settingVoiceRealtimeVoiceTitle",
+    "description": "settingVoiceRealtimeVoiceDescription"
+  },
+  "voice.realtime_vercel_reasoning": {
+    "title": "settingVoiceRealtimeReasoningTitle",
+    "description": "settingVoiceRealtimeVercelReasoningDescription"
+  },
   "screensaver.media_metadata": {
     "title": "settingScreensaverMediaMetadataTitle",
     "description": "settingScreensaverMediaMetadataDescription"
@@ -2795,6 +2823,10 @@
     "title": "settingTimersPauseScreensaverTitle",
     "description": "settingTimersPauseScreensaverDescription"
   },
+  "timers.view_scale": {
+    "title": "settingTimersViewScaleTitle",
+    "description": "settingTimersViewScaleDescription"
+  },
   "voice_match.enabled": {
     "title": "settingVoiceMatchEnabledTitle",
     "description": "settingVoiceMatchEnabledDescriptionCommand"
@@ -2833,15 +2865,123 @@
   },
   "ground_control.enabled": {
     "title": "settingGroundControlEnabledTitle",
-    "description": "settingGroundControlEnabledDescription"
+    "description": "settingGroundControlEnabledDescriptionVisionMatch"
   },
   "ground_control.address": {
     "title": "settingGroundControlAddressTitle",
     "description": "settingGroundControlAddressDescription"
   },
-  "ground_control.voice_match": {
-    "title": "settingGroundControlVoiceMatchTitle",
-    "description": "settingGroundControlVoiceMatchFeaturesDescription"
+  "camera.flashlight": {
+    "title": "settingCameraFlashlightTitle",
+    "description": "settingCameraFlashlightDescription"
+  },
+  "vision_match.enabled": {
+    "title": "settingVisionMatchEnableTitle",
+    "description": "settingVisionMatchEnabledDescriptionGroundControl"
+  },
+  "vision_match.face_detection": {
+    "title": "settingVisionMatchFaceDetectionTitle",
+    "description": "settingVisionMatchFaceDetectionDescriptionGroundControl"
+  },
+  "vision_match.hand_gestures": {
+    "title": "settingVisionMatchHandGesturesTitle",
+    "description": "settingVisionMatchHandGesturesDescriptionGroundControl"
+  },
+  "vision_match.face_recognition": {
+    "title": "settingVisionMatchFaceRecognitionTitle",
+    "description": "settingVisionMatchFaceRecognitionDescriptionGroundControl"
+  },
+  "screensaver.face_who": {
+    "title": "settingScreensaverFaceWhoTitle",
+    "description": "settingScreensaverFaceWhoDescription"
+  },
+  "screensaver.face_people": {
+    "title": "settingScreensaverFacePeopleTitle",
+    "description": "settingScreensaverFacePeopleDescription"
+  },
+  "vision_match.face_confirms_voice": {
+    "title": "settingVisionMatchFaceConfirmsVoiceTitle",
+    "description": "settingVisionMatchFaceConfirmsVoiceDescription"
+  },
+  "vision_match.show_arrivals": {
+    "title": "settingVisionMatchShowArrivalsTitle",
+    "description": "settingVisionMatchShowArrivalsDescription"
+  },
+  "vision_match.show_actions": {
+    "title": "settingVisionMatchShowActionsTitle",
+    "description": "settingVisionMatchShowActionsGeneralDescription"
+  },
+  "vision_match.card_position": {
+    "title": "settingVisionMatchCardPositionTitle",
+    "description": "settingVisionMatchCardPositionDescription"
+  },
+  "vision_match.link_face_who": {
+    "title": "settingScreensaverFaceWhoTitle",
+    "description": "settingVisionMatchLinkFaceWhoDescription"
+  },
+  "screensaver.face_lock": {
+    "title": "settingScreensaverFaceLockTitle",
+    "description": "settingScreensaverFaceLockDescription"
+  },
+  "vision_match.link_screensaver_lock": {
+    "title": "settingScreensaverFaceLockTitle",
+    "description": "settingVisionMatchLinkFaceWhoDescription"
+  },
+  "kiosk.face_skip_pin": {
+    "title": "settingKioskFaceSkipPinTitle",
+    "description": "settingKioskFaceSkipPinDescription"
+  },
+  "kiosk.face_people": {
+    "title": "settingKioskFacePeopleTitle",
+    "description": "settingKioskFacePeopleDescription"
+  },
+  "lockdown.face_disable": {
+    "title": "settingLockdownFaceDisableTitle",
+    "description": "settingLockdownFaceDisableDescription"
+  },
+  "lockdown.face_people": {
+    "title": "settingKioskFacePeopleTitle",
+    "description": "settingLockdownFacePeopleDescription"
+  },
+  "lockdown.face_relock": {
+    "title": "settingLockdownFaceRelockTitle",
+    "description": "settingLockdownFaceRelockDescription"
+  },
+  "vision_match.link_kiosk_pin": {
+    "title": "settingKioskFaceSkipPinTitle",
+    "description": "settingVisionMatchLinkKioskPinDescription"
+  },
+  "vision_match.link_lockdown_disable": {
+    "title": "settingLockdownFaceDisableTitle",
+    "description": "settingVisionMatchLinkLockdownDescription"
+  },
+  "vision_match.link_lockdown_relock": {
+    "title": "settingLockdownFaceRelockTitle",
+    "description": "settingVisionMatchLinkLockdownDescription"
+  },
+  "vision_match.presence_sensors": {
+    "title": "settingVisionMatchPresenceSensorsTitle",
+    "description": "settingVisionMatchPresenceSensorsDescription"
+  },
+  "vision_match.link_gesture_who": {
+    "title": "settingGesturesFaceWhoTitle",
+    "description": "settingVisionMatchLinkGestureWhoDescription"
+  },
+  "gestures.face_who": {
+    "title": "settingGesturesFaceWhoTitle",
+    "description": "settingGesturesFaceWhoDescription"
+  },
+  "gestures.face_people": {
+    "title": "settingGesturesFacePeopleTitle",
+    "description": "settingGesturesFacePeopleDescription"
+  },
+  "calendar.face_focus": {
+    "title": "settingCalendarFaceFocusTitle",
+    "description": "settingCalendarFaceFocusDescription"
+  },
+  "vision_match.link_calendar_focus": {
+    "title": "settingCalendarFaceFocusTitle",
+    "description": "settingVisionMatchLinkCalendarFocusDescription"
   },
   "phoenix.profile": {
     "title": "settingPhoenixProfileTitle",

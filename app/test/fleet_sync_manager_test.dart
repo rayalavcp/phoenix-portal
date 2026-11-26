@@ -971,7 +971,7 @@ void main() {
             'categories': [],
             'credentials': ['ha.token', 'bogus'],
           })!.describe(),
-          'Categories: 0 of 21. Credentials: 1 of 9. Excluded: 48.',
+          'Categories: 0 of 22. Credentials: 1 of 10. Excluded: 48.',
         );
         expect(
           withCreds['browser.start_url'],
@@ -2396,6 +2396,43 @@ void main() {
     for (final def in mids) {
       expect(def.hidden, isTrue);
       expect(defs.fleetDefaultExcluded, isNot(contains(def.key)));
+    }
+  });
+
+  test('Voice Match and Vision Match travel with Ground Control', () {
+    const gcOnly = SyncProfile(categories: {'Ground Control'});
+    expect(FleetSyncManager.syncs(defs.groundControlEnabled, gcOnly), isTrue);
+    expect(FleetSyncManager.syncs(defs.groundControlAddress, gcOnly), isTrue);
+    expect(FleetSyncManager.syncs(defs.voiceMatchEnabled, gcOnly), isTrue);
+    expect(FleetSyncManager.syncs(defs.voiceMatchPeople, gcOnly), isTrue);
+    expect(FleetSyncManager.syncs(defs.visionMatchEnabled, gcOnly), isTrue);
+    const voiceOnly = SyncProfile(categories: {'Voice Satellite'});
+    expect(FleetSyncManager.syncs(defs.voiceMatchEnabled, voiceOnly), isFalse);
+    expect(
+      FleetSyncManager.syncs(defs.groundControlEnabled, voiceOnly),
+      isFalse,
+    );
+    // Voice Match needs Ground Control, so a new profile syncs both.
+    expect(
+      defs.fleetDefaultCategories,
+      containsAll(['Ground Control', 'Voice Satellite']),
+    );
+  });
+
+  test('every settings category is a fleet category or stays local', () {
+    // Fleet describes this kiosk's place in the fleet. LED Control is not
+    // offered yet.
+    // Phoenix Portal's own Kids Portal and Home Screen settings are each
+    // Portal's own too (a child's name, PIN and bedtime, its weather city).
+    const local = {'Fleet', 'LED Control', 'Kids Portal', 'Home Screen'};
+    final offered = {for (final c in defs.fleetSyncCategories) c.$1};
+    for (final def in defs.allSettings) {
+      final category = defs.fleetCategoryOf(def);
+      expect(
+        offered.contains(category) || local.contains(category),
+        isTrue,
+        reason: '${def.key} is in $category',
+      );
     }
   });
 

@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../../core/command_registry.dart';
 import '../../core/event_bus.dart';
 import '../../core/events.dart';
+import '../alarms/alarm_manager.dart';
 import '../browser/dashboard_state.dart';
 import '../home_assistant/plugin_entities.dart';
 import '../home_assistant/plugin_ha_socket.dart';
@@ -127,6 +128,7 @@ class PluginHostApi {
   final _sessions = <String, _HostSession>{};
   bool _disposed = false;
   String? _intercomSent;
+  String? _alarmSent;
   String? _voiceTextSent;
   String _overlaySent = 'hidden';
   double _voiceLevelSent = 0;
@@ -169,6 +171,7 @@ class PluginHostApi {
     'getDashboards',
     'getSendspinPlayer',
     'getLauncherApps',
+    'getAlarmState',
   ];
   static const controlNames = [
     'startScreensaver',
@@ -197,6 +200,10 @@ class PluginHostApi {
     'hideCalendar',
     'openAlarms',
     'hideAlarms',
+    'snoozeAlarm',
+    'stopAlarm',
+    'skipNextAlarm',
+    'sayAlarm',
     'openKioskLink',
     'loadUrl',
     'loadDashboard',
@@ -219,6 +226,12 @@ class PluginHostApi {
 
   /// The longest command or answer a plugin gets, in characters.
   static const maxVoiceText = 16000;
+
+  /// Who Face Recognition sees at the kiosk, for sessions that also
+  /// declare the face.recognition capability: a plugin that learns who is
+  /// at the kiosk says so in its manifest.
+  static const faceCommandNames = ['getFaceRecognition'];
+  static const faceEventNames = ['face.recognition', 'face.arrival'];
 
   /// Which screensaver shows, for sessions that declare the
   /// screensaver.mode capability. A plugin holds a mode in place of the
@@ -339,6 +352,15 @@ class PluginHostApi {
                     DateTime.tryParse(date) != null));
       case 'openAlarms':
         return keys({'alarm'}) && (params.isEmpty || params['alarm'] == 'next');
+      case 'sayAlarm':
+        // An optional percent, like setVolume's, can only make the speech
+        // quieter than the alarm volume (issue #1585).
+        return keys({'text', 'percent'}) &&
+            text('text') &&
+            (params['text'] as String).trim().length <=
+                AlarmManager.sayMaxLength &&
+            (!params.containsKey('percent') ||
+                _sayPercent(params['percent']) != null);
       case 'openKioskLink':
         // Any ks:// link a dashboard can use (issue #1213). The command
         // refuses the few a plugin may not run.
@@ -398,7 +420,90 @@ class PluginHostApi {
     'navigation.view',
     'browser.state',
     'sendspin.player',
+    'alarm.state',
   ];
+
+  /// The controls that run an alarm command. They answer with the reason
+  /// one did not happen, such as no alarm ringing.
+  static const _alarmControls = {
+    'snoozeAlarm': 'alarmSnooze',
+    'stopAlarm': 'alarmStop',
+    'skipNextAlarm': 'alarmSkip',
+    'sayAlarm': 'alarmSay',
+  };
+
+  /// sayAlarm's percent, 5 to 100 as text like setVolume's, or null.
+  static num? _sayPercent(Object? percent) {
+    final value = percent is String ? num.tryParse(percent.trim()) : null;
+    return value != null && value >= AlarmManager.sayMinPercent && value <= 100
+        ? value
+        : null;
+  }
+
+  /// What plugins see of the alarms (issue #1585): the phase, the ringing
+  /// alarm's name, its ring time, the end of a snooze and the next ring.
+  /// The list itself stays private.
+  static Map<String, Object?> alarmState(Map status) {
+    final labels = status['labels'];
+    final next = status['next'];
+    String? time(Object? value) => value is String ? value : null;
+    return {
+      'phase':
+          const [
+            'idle',
+            'sunrise',
+            'ringing',
+            'snoozed',
+          ].contains(status['phase'])
+          ? status['phase']
+          : 'idle',
+      'label': labels is List
+          ? labels.whereType<String>().firstWhere(
+              (l) => l.trim().isNotEmpty,
+              orElse: () => '',
+            )
+          : '',
+      'at': time(status['at']),
+      'snoozedUntil': time(status['snoozedUntil']),
+      'next': next is Map ? time(next['at']) : null,
+    };
+  }
+
+  /// What plugins see of Face Recognition (the faceRecognitionState
+  /// command's answer): only these fields, as plain values, with at most
+  /// [maxFacesInView] people in view. Null for anything else.
+  static Map<String, Object?>? faceRecognition(Object? state) {
+    if (state is! Map) return null;
+    String text(Object? value) => value is String ? value : '';
+    String? color(Object? value) =>
+        value is String && RegExp(r'^#[0-9a-fA-F]{6}$').hasMatch(value)
+        ? value
+        : null;
+    bool? flag(Object? value) => value is bool ? value : null;
+    final people = state['people'];
+    return {
+      'enabled': state['enabled'] == true,
+      'name': text(state['name']),
+      'person': text(state['person']),
+      'color': color(state['color']),
+      'people': [
+        if (people is List)
+          for (final p in people.whereType<Map>().take(maxFacesInView))
+            {
+              'name': text(p['name']),
+              'person': text(p['person']),
+              'color': color(p['color']),
+            },
+      ],
+      'present': flag(state['present']),
+      'looking': flag(state['looking']),
+    };
+  }
+
+  /// Ground Control names up to three faces at once. A few more leave room
+  /// without letting the list grow unbounded.
+  static const maxFacesInView = 8;
+
   static const _fields = {
     'getLightLevel': ['present', 'lux', 'live'],
     'getNoiseLevel': ['available', 'dbfs', 'held', 'updated'],
@@ -508,6 +613,7 @@ class PluginHostApi {
       canHa: capabilities.contains('ha'),
       canMa: capabilities.contains('ma'),
       canVoiceText: capabilities.contains('voice.text'),
+      canFaces: capabilities.contains('face.recognition'),
       canScreensaverMode: capabilities.contains('screensaver.mode'),
       canScreensaver: capabilities.contains('screensaver'),
     );
@@ -555,6 +661,7 @@ class PluginHostApi {
         (!eventNames.contains(name) &&
             !(session.canNoise && noiseEventNames.contains(name)) &&
             !(session.canVoiceText && voiceTextEventNames.contains(name)) &&
+            !(session.canFaces && faceEventNames.contains(name)) &&
             entityEventId(name) == null)) {
       return;
     }
@@ -608,6 +715,9 @@ class PluginHostApi {
             !(session.canRead &&
                 session.canVoiceText &&
                 voiceTextCommandNames.contains(name)) &&
+            !(session.canRead &&
+                session.canFaces &&
+                faceCommandNames.contains(name)) &&
             !(session.canScreensaverMode &&
                 screensaverModeCommandNames.contains(name)) &&
             !(session.canScreensaver &&
@@ -647,6 +757,7 @@ class PluginHostApi {
           if (session.canHa && ha != null) 'ha',
           if (session.canMa && ma != null) 'ma',
           if (session.canRead && session.canVoiceText) 'voice.text',
+          if (session.canRead && session.canFaces) 'face.recognition',
           if (session.canScreensaverMode && screensaverModes != null)
             'screensaver.mode',
         ],
@@ -655,6 +766,7 @@ class PluginHostApi {
           if (session.canRead) ...commandNames.skip(1),
           if (session.canRead && session.canNoise) ...noiseCommandNames,
           if (session.canRead && session.canVoiceText) ...voiceTextCommandNames,
+          if (session.canRead && session.canFaces) ...faceCommandNames,
           if (session.canScreensaverMode && screensaverModes != null)
             ...screensaverModeCommandNames,
           if (session.canScreensaver && screensaver?.setTint != null)
@@ -665,6 +777,7 @@ class PluginHostApi {
           if (session.canRead) ...eventNames,
           if (session.canRead && session.canNoise) ...noiseEventNames,
           if (session.canRead && session.canVoiceText) ...voiceTextEventNames,
+          if (session.canRead && session.canFaces) ...faceEventNames,
         ],
       }).toJson();
     }
@@ -727,6 +840,28 @@ class PluginHostApi {
       modes.release(session.owner);
       return const CommandResult.ok().toJson();
     }
+    if (name == 'getFaceRecognition') {
+      try {
+        final result = await commands
+            .execute('faceRecognitionState', const {})
+            .timeout(const Duration(seconds: 8));
+        if (_session(args) != session) {
+          return const CommandResult.fail(
+            'Plugin session is no longer active',
+          ).toJson();
+        }
+        final state = result.ok ? faceRecognition(result.data) : null;
+        return state == null
+            ? const CommandResult.fail(
+                'KS could not complete this command. The feature may be unavailable.',
+              ).toJson()
+            : CommandResult.ok(state).toJson();
+      } catch (_) {
+        return const CommandResult.fail(
+          'KS command failed or timed out',
+        ).toJson();
+      }
+    }
     if (name == 'getVoiceText') {
       final text = _voiceText();
       return text == null
@@ -770,12 +905,15 @@ class PluginHostApi {
               'getVoiceState' => 'voiceStatus',
               'getIntercomState' => 'intercomSensors',
               'getSendspinPlayer' => 'sendspinPlayer',
+              'getAlarmState' => 'alarmsStatus',
               'launchApp' => 'pluginLaunchApp',
               'openKioskLink' => 'pluginOpenKioskLink',
-              _ => name,
+              _ => _alarmControls[name] ?? name,
             },
             name == 'screenOff'
                 ? {'prompt': false}
+                : _alarmControls.containsKey(name)
+                ? {...params, 'source': 'plugin:${session.id}'}
                 : Map<String, Object?>.from(params),
           )
           .timeout(const Duration(seconds: 8));
@@ -785,6 +923,10 @@ class PluginHostApi {
         ).toJson();
       }
       if (!result.ok) {
+        // The alarm commands' reasons are fixed words, safe to pass on.
+        if (_alarmControls.containsKey(name) && result.error != null) {
+          return CommandResult.fail(result.error).toJson();
+        }
         return const CommandResult.fail(
           'KS could not complete this command. The feature may be unavailable.',
         ).toJson();
@@ -829,6 +971,14 @@ class PluginHostApi {
           ).toJson();
         }
         return CommandResult.ok(projected).toJson();
+      }
+      if (name == 'getAlarmState') {
+        if (data is! Map) {
+          return const CommandResult.fail(
+            'KS returned an unexpected read response',
+          ).toJson();
+        }
+        return CommandResult.ok(alarmState(data)).toJson();
       }
       final fields = _fields[name];
       if (fields != null) {
@@ -1173,6 +1323,7 @@ class PluginHostApi {
     ),
     VoiceSatelliteStateChanged e => ('voice.state', {'state': e.state}),
     IntercomStateChanged e => ('intercom.state', intercomSensors(e.status)),
+    AlarmStateChanged e => ('alarm.state', alarmState(e.status)),
     WakeWordStateChanged e => (
       'wakeword.state',
       {'active': e.active, 'listening': e.listening, 'muted': e.muted},
@@ -1442,6 +1593,44 @@ class PluginHostApi {
       _onVoiceSkin();
       return;
     }
+    if (event is FaceRecognitionChanged) {
+      final state = faceRecognition(event.state);
+      if (state == null) return;
+      for (final session in _sessions.values) {
+        if (!session.canFaces ||
+            !session.subscriptions.contains('face.recognition')) {
+          continue;
+        }
+        session.pending['face.recognition'] = {
+          ...state,
+          'time': DateTime.now().toUtc().toIso8601String(),
+        };
+        _schedule(session);
+      }
+      return;
+    }
+    // Each arrival and leave counts, so none is merged into the next.
+    if (event is FaceArrivalReported) {
+      for (final session in _sessions.values) {
+        if (!session.canFaces ||
+            !session.subscriptions.contains('face.arrival')) {
+          continue;
+        }
+        if (session.ordered.length >= _HostSession.maxOrdered) {
+          session.orderedDropped['face.arrival'] =
+              (session.orderedDropped['face.arrival'] ?? 0) + 1;
+        } else {
+          session.ordered.add(
+            MapEntry('face.arrival', {
+              ...event.toJson(),
+              'time': DateTime.now().toUtc().toIso8601String(),
+            }),
+          );
+        }
+        _schedule(session);
+      }
+      return;
+    }
     if (event is PluginHaStateChanged) {
       final name = 'ha.entity.${event.entityId}';
       for (final session in _sessions.values) {
@@ -1470,6 +1659,12 @@ class PluginHostApi {
       final value = jsonEncode(projected.$2);
       if (value == _intercomSent) return;
       _intercomSent = value;
+    }
+    // The alarms' status also changes with every edit to the list.
+    if (projected.$1 == 'alarm.state') {
+      final value = jsonEncode(projected.$2);
+      if (value == _alarmSent) return;
+      _alarmSent = value;
     }
     for (final session in _sessions.values) {
       if (!session.subscriptions.contains(projected.$1)) continue;
@@ -1573,6 +1768,7 @@ class _HostSession {
     this.canHa = false,
     this.canMa = false,
     this.canVoiceText = false,
+    this.canFaces = false,
     this.canScreensaverMode = false,
     this.canScreensaver = false,
   });
@@ -1587,6 +1783,9 @@ class _HostSession {
   final bool canHa;
   final bool canMa;
   final bool canVoiceText;
+
+  /// face.recognition: who Face Recognition sees at the kiosk.
+  final bool canFaces;
   final bool canScreensaverMode;
 
   /// The plugin publishes screensavers, so it may tint the widgets over

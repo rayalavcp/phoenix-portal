@@ -59,6 +59,117 @@ void main() {
     await server.close(force: true);
   });
 
+  test('a session says how it started: the wake word, what heard it and '
+      'who answers', () async {
+    final (server, starts) = await _service();
+    final got = StreamIterator(starts);
+    VoiceMatchTurn open({
+      String? wakeWord,
+      bool seamless = false,
+      String? assistant,
+      String? language,
+      String? interaction,
+    }) => VoiceMatchTurn.open(
+      baseUrl: 'http://127.0.0.1:${server.port}',
+      token: 't',
+      deviceId: 'k1',
+      deviceName: 'Kitchen',
+      policy: 'anyone',
+      onEvent: (_) {},
+      follow: true,
+      wakeWord: wakeWord,
+      wakeWordEngine: 'microWakeWord',
+      wakeWordModel: 'alexa',
+      seamless: seamless,
+      assistant: assistant,
+      language: language,
+      interaction: interaction,
+    );
+
+    final woken = open(
+      wakeWord: 'Alexa',
+      seamless: true,
+      assistant: 'assist',
+      language: 'fr',
+      interaction: 'wake_word',
+    );
+    expect(await got.moveNext(), isTrue);
+    expect(got.current['interaction'], 'wake_word');
+    expect(got.current['wake_word'], 'Alexa');
+    expect(got.current['wake_word_engine'], 'microWakeWord');
+    expect(got.current['wake_word_model'], 'alexa');
+    expect(got.current['seamless'], isTrue);
+    expect(got.current['assistant'], 'assist');
+    expect(got.current['language'], 'fr');
+    woken.end();
+
+    // No wake word was said (a follow-up or a turn Home Assistant
+    // started): nothing about one and nothing to leave out.
+    final asked = open(assistant: 'realtime', interaction: 'question');
+    expect(await got.moveNext(), isTrue);
+    // A reply to something Home Assistant asked: Ground Control takes a
+    // short answer for it.
+    expect(got.current['interaction'], 'question');
+    expect(got.current.containsKey('wake_word'), isFalse);
+    expect(got.current.containsKey('wake_word_engine'), isFalse);
+    expect(got.current.containsKey('wake_word_model'), isFalse);
+    expect(got.current.containsKey('language'), isFalse);
+    expect(got.current['seamless'], isFalse);
+    expect(got.current['assistant'], 'realtime');
+    asked.end();
+    await server.close(force: true);
+  });
+
+  test('the kind of question goes to the service once it has answered the '
+      'start', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    final got = <Map<String, Object?>>[];
+    final ends = StreamController<void>();
+    server.listen((req) async {
+      final ws = await WebSocketTransformer.upgrade(req);
+      ws.listen((m) {
+        if (m is! String) return;
+        final msg = jsonDecode(m) as Map<String, Object?>;
+        got.add(msg);
+        if (msg['type'] == 'start') {
+          ws.add(jsonEncode({'type': 'ready', 'session': 's1'}));
+        }
+        if (msg['type'] == 'end') ends.add(null);
+      });
+    });
+    VoiceMatchTurn open() => VoiceMatchTurn.open(
+      baseUrl: 'http://127.0.0.1:${server.port}',
+      token: 't',
+      deviceId: 'k1',
+      deviceName: 'Kitchen',
+      policy: 'anyone',
+      onEvent: (_) {},
+      follow: true,
+      interaction: 'question',
+    );
+    final seen = StreamIterator(ends.stream);
+
+    // Known before the service answered: kept, and sent right after.
+    final early = open()..interaction('start_conversation');
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    early.end();
+    expect(await seen.moveNext(), isTrue);
+    expect([for (final m in got) m['type']], ['start', 'interaction', 'end']);
+    expect(got[0]['interaction'], 'question');
+    expect(got[1]['interaction'], 'start_conversation');
+
+    // Known later, as for an ask_question: sent when it is.
+    got.clear();
+    final late = open();
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    late.interaction('ask_question');
+    late.end();
+    expect(await seen.moveNext(), isTrue);
+    expect([for (final m in got) m['type']], ['start', 'interaction', 'end']);
+    expect(got[1]['interaction'], 'ask_question');
+    await server.close(force: true);
+  });
+
   test('a follow session says whether this kiosk wants Isolation', () async {
     final (server, starts) = await _service();
     final got = StreamIterator(starts);

@@ -1365,7 +1365,11 @@ class SendspinManager extends Manager {
     // (issue #544).
     bus.on<VolumeKeyPressed>().listen((e) => _onVolumeKey(e.direction));
     bus.on<VoiceInteractionChanged>().listen((e) {
-      if (e.reason == 'media') return;
+      // The settings screen holds the screensaver, not the music.
+      if (e.reason == 'media' ||
+          e.reason == VoiceInteractionChanged.settingsReason) {
+        return;
+      }
       if (e.active) {
         _voiceReasons.add(e.reason);
       } else {
@@ -1572,6 +1576,10 @@ class SendspinManager extends Manager {
         'sendspin.player_active',
         'sendspin.kept_for',
         'sendspin.local_player_name',
+        // Who the player is lent to. The pick the lend changes restarts
+        // the client on its own when it has to; saving the lend must not,
+        // or an alarm's music on this device lands while it reconnects.
+        'sendspin.handoff',
       ];
       final relevant =
           e.key.startsWith('sendspin.') &&

@@ -584,6 +584,7 @@ class AnalyticsManager extends Manager {
           'vs_turns_openai',
           'vs_turns_xai',
           'vs_turns_gemini',
+          'vs_turns_vercel',
         ])
           k: counts[k] ?? 0,
       if (arbitration)
@@ -607,6 +608,7 @@ class AnalyticsManager extends Manager {
         'timers_show_before_end': s.get(defs.timersShowBeforeEnd).toInt(),
         'timers_pause_screensaver': s.get(defs.timersPauseScreensaver),
       },
+      'timers_view_scale': s.get(defs.timersViewScale).toInt(),
       // Seconds, 0 for Never.
       'timers_silence_after': int.tryParse(s.get(defs.timersSilenceAfter)) ?? 0,
       'timers_dismiss_after': int.tryParse(s.get(defs.timersDismissAfter)) ?? 0,
@@ -693,6 +695,14 @@ class AnalyticsManager extends Manager {
             s.get(defs.voiceRealtimeGeminiVoice),
           ),
         },
+        if (realtime.contains('vercel')) ...{
+          'vs_realtime_vercel_model': pick(
+            s.get(defs.voiceRealtimeVercelModel),
+          ),
+          'vs_realtime_vercel_voice': pick(
+            s.get(defs.voiceRealtimeVercelVoice),
+          ),
+        },
         'vs_wake_arbitration': arbitration,
         if (arbitration)
           'vs_wake_arbitration_window_ms': s
@@ -706,6 +716,116 @@ class AnalyticsManager extends Manager {
     // Alarms: how many the kiosk holds and of what kind, as counts. The
     // times, labels and tone files stay on the kiosk.
     final alarms = decodeAlarms(s.get(defs.alarmsList));
+
+    // Ground Control: the switches, how it was found and what it runs, as
+    // the last connection told it. People are a count, never their names,
+    // and the address itself stays on the kiosk. Voice Match keys carry
+    // their full name, so Vision Match can sit beside them.
+    final groundControl = <String, Object?>{
+      'gc_enabled': s.get(defs.groundControlEnabled),
+    };
+    if (s.get(defs.groundControlEnabled)) {
+      groundControl['gc_address'] =
+          s.get(defs.groundControlAddress).trim().isEmpty ? 'mdns' : 'manual';
+      try {
+        final r = await commands.execute('groundControlStatus', const {});
+        final data = r.data;
+        final version = data is Map ? '${data['version'] ?? ''}' : '';
+        // Empty until the first connection that got this far.
+        if (data is Map && version.isNotEmpty) {
+          final model = '${data['model'] ?? ''}';
+          groundControl['gc_version'] = version;
+          groundControl['gc_ha_app'] = data['haApp'] == true;
+          // How it is installed: the HA app, standalone Docker or Python,
+          // the architecture, the CUDA image's version (empty for the CPU
+          // image) and whether the speaker model runs on the GPU. Left
+          // out by a Ground Control that doesn't say.
+          final install = data['install'];
+          if (install is Map && install['install'] is String) {
+            String clip(Object? v) {
+              final t = '${v ?? ''}';
+              return t.length > 32 ? t.substring(0, 32) : t;
+            }
+
+            groundControl['gc_install'] = clip(install['install']);
+            groundControl['gc_arch'] = clip(install['arch']);
+            groundControl['gc_cuda'] = clip(install['cuda']);
+            groundControl['gc_on_gpu'] = install['onGpu'] == true;
+          }
+          final people = data['people'];
+          groundControl['gc_people'] = people is List ? people.length : 0;
+          // Voice Match's speaker model, picked in Ground Control's own
+          // settings: accurate or light.
+          groundControl['voice_match_model'] = model.length > 64
+              ? model.substring(0, 64)
+              : model;
+        }
+      } catch (_) {}
+      final voiceMatch =
+          s.get(defs.voiceEnabled) && s.get(defs.voiceMatchEnabled);
+      groundControl['voice_match_enabled'] = voiceMatch;
+      if (voiceMatch) {
+        final chosen = s.get(defs.voiceMatchPolicy) == 'people';
+        final picked = defs
+            .decodeVoiceMatchPeople(s.get(defs.voiceMatchPeople))
+            .isNotEmpty;
+        groundControl['voice_match_policy'] = !chosen
+            ? 'anyone'
+            : (picked ? 'people' : 'enrolled');
+      }
+      // Vision Match: the switch, each feature it runs on Ground Control
+      // and, with Face Recognition on, the settings that act on faces. A
+      // feature under a switch that is off is left out. Who was chosen
+      // stays on the kiosk.
+      final visionMatch = s.get(defs.visionMatchEnabled);
+      groundControl['vision_match_enabled'] = visionMatch;
+      if (visionMatch) {
+        final faces = s.get(defs.visionMatchFaceDetection);
+        groundControl['vision_match_face_detection'] = faces;
+        groundControl['vision_match_hand_gestures'] = s.get(
+          defs.visionMatchHandGestures,
+        );
+        if (faces) {
+          groundControl['vision_match_presence_sensors'] = s.get(
+            defs.visionMatchPresenceSensors,
+          );
+          final recognition = s.get(defs.visionMatchFaceRecognition);
+          groundControl['vision_match_face_recognition'] = recognition;
+          if (recognition) {
+            groundControl['vision_match_confirm_voices'] =
+                voiceMatch && s.get(defs.visionMatchFaceConfirmsVoice);
+            groundControl['vision_match_show_arrivals'] = s.get(
+              defs.visionMatchShowArrivals,
+            );
+            groundControl['vision_match_show_actions'] = s.get(
+              defs.visionMatchShowActions,
+            );
+            // anyone or people for Detect faces and Finger gestures for,
+            // nobody or people for Skip the PIN for and Disable Lockdown
+            // Mode for.
+            groundControl['vision_match_screensaver_faces'] = s.get(
+              defs.screensaverFaceWho,
+            );
+            groundControl['vision_match_skip_pin'] = s.get(
+              defs.kioskFaceSkipPin,
+            );
+            final lockdownOff = s.get(defs.lockdownFaceDisable);
+            groundControl['vision_match_lockdown_off'] = lockdownOff;
+            groundControl['vision_match_lockdown_relock'] =
+                lockdownOff == 'people' && s.get(defs.lockdownFaceRelock);
+            groundControl['vision_match_finger_gestures'] = s.get(
+              defs.gesturesFaceWho,
+            );
+            groundControl['vision_match_calendar_focus'] = s.get(
+              defs.calendarFaceFocus,
+            );
+            groundControl['vision_match_screensaver_lock'] =
+                s.visible(defs.screensaverFaceLock) &&
+                s.get(defs.screensaverFaceLock);
+          }
+        }
+      }
+    }
 
     // Who installs updates: Android itself for a device owner, the ADB
     // update helper, Shizuku, or the on-screen confirmation. Shizuku's own
@@ -760,6 +880,7 @@ class AnalyticsManager extends Manager {
       'vs_skin': vs.skin,
       ...nativeVoice,
       ...timers,
+      ...groundControl,
       // The kiosk's own echo canceller, for everything that listens: the
       // switch, and the engine it actually ran with and why, which can
       // differ from the method picked (Automatic's verdict, or GTCRN
@@ -788,7 +909,8 @@ class AnalyticsManager extends Manager {
       'alarms_tone': s.get(defs.alarmsTone).trim().isEmpty
           ? 'built_in'
           : 'custom',
-      'alarms_snooze_minutes': s.get(defs.alarmsSnoozeMinutes),
+      // A string like before the slider, so earlier reports group with it.
+      'alarms_snooze_minutes': '${s.get(defs.alarmsSnoozeMinutes).round()}',
       'alarms_silence_after_minutes': s.get(defs.alarmsSilenceAfterMinutes),
       'alarms_sunrise_minutes': s.get(defs.alarmsSunriseMinutes),
       'alarms_skip_minutes': s.get(defs.alarmsSkipMinutes),

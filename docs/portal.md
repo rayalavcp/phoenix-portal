@@ -128,7 +128,7 @@ Turn on **Enable person sensor** under **Settings > Camera > Person Sensor** to 
 Reading the Portal's presence logs requires the `READ_LOGS` permission. Android strictly requires this permission to be granted via ADB to a process launched after the grant is applied:
 
 ```
-adb shell pm grant com.phoenix.portal android.permission.RECORD_AUDIO
+adb shell pm grant com.phoenix.portal android.permission.READ_LOGS
 adb shell am force-stop com.phoenix.portal
 adb shell monkey -p com.phoenix.portal -c android.intent.category.LAUNCHER 1
 ```

@@ -1247,6 +1247,33 @@ void main() {
     expect(ids, isNot(contains('motion'))); // rides the camera
   });
 
+  test('the Presence sensors are listed with their switch and follow '
+      'Ground Control\'s looks', () async {
+    var ids = [for (final d in await surface.build()) '${d['objectId']}'];
+    expect(ids, isNot(contains('presence')));
+    expect(ids, isNot(contains('looking')));
+    for (final def in [
+      defs.groundControlEnabled,
+      defs.visionMatchEnabled,
+      defs.visionMatchPresenceSensors,
+    ]) {
+      await settings.set(def, true);
+    }
+    final catalog = await surface.build();
+    ids = [for (final d in catalog) '${d['objectId']}'];
+    expect(ids, containsAll(['presence', 'looking']));
+    final presence = catalog.firstWhere((d) => d['objectId'] == 'presence');
+    expect(presence['type'], 'binary_sensor');
+    expect(presence['deviceClass'], 'occupancy');
+    await attach();
+    expect(pushed, contains(('presence', false)));
+    expect(pushed, contains(('looking', false)));
+    pushed.clear();
+    bus.publish(const VisionPresenceChanged(present: true, looking: true));
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    expect(pushed, containsAll([('presence', true), ('looking', true)]));
+  });
+
   test(
     'switching the camera off keeps its entities and blanks motion',
     () async {
@@ -1503,6 +1530,57 @@ void main() {
     executed.clear();
     await surface.handleCommand('restart_device', null);
     expect(executed.map((e) => e.$1).toList(), ['rebootDevice']);
+  });
+
+  test('the alarm buttons run the alarm commands', () async {
+    final ran = <(String, Map<String, Object?>)>[];
+    for (final name in ['alarmStop', 'alarmSnooze', 'alarmSkip']) {
+      commands.register(
+        Command(
+          name: name,
+          description: 'stub',
+          handler: (p) async {
+            ran.add((name, Map<String, Object?>.from(p)));
+            return const CommandResult.ok();
+          },
+        ),
+      );
+    }
+    final catalog = await surface.build();
+    final skip = catalog.firstWhere((d) => d['objectId'] == 'alarm_skip');
+    expect(skip['type'], 'button');
+    expect(skip['name'], 'Skip next alarm');
+
+    await surface.handleCommand('alarm_stop', null);
+    await surface.handleCommand('alarm_snooze', null);
+    await surface.handleCommand('alarm_skip', null);
+    expect(ran.map((e) => e.$1), ['alarmStop', 'alarmSnooze', 'alarmSkip']);
+    for (final (_, params) in ran) {
+      expect(params, {'source': 'esphome'});
+    }
+  });
+
+  test('the Flashlight switch is listed only with a flash', () async {
+    var ids = [for (final d in await surface.build()) '${d['objectId']}'];
+    expect(ids, isNot(contains('flashlight')));
+
+    commands.register(
+      Command(
+        name: 'getFlashlightSupport',
+        description: 'stub',
+        handler: (_) async => CommandResult.ok({'supported': true}),
+      ),
+    );
+    final catalog = await surface.build();
+    final entity = catalog.firstWhere((d) => d['objectId'] == 'flashlight');
+    expect(entity['type'], 'switch');
+    expect(entity['name'], 'Flashlight');
+    expect(entity['category'], 1);
+
+    await surface.handleCommand('flashlight', true);
+    expect(settings.get(defs.cameraFlashlight), true);
+    await surface.handleCommand('flashlight', false);
+    expect(settings.get(defs.cameraFlashlight), false);
   });
 
   group('the LED Control Idle entities', () {

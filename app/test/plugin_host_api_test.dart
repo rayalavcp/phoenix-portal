@@ -131,17 +131,29 @@ void main() {
         'launchApp': {'package': 'com.example.music'},
         'openKioskLink': {'url': 'ks://alarms'},
         'openAlarms': {'alarm': 'next'},
+        'sayAlarm': {'text': 'Snooze 2, 10 minutes'},
+      };
+      const alarms = {
+        'snoozeAlarm': 'alarmSnooze',
+        'stopAlarm': 'alarmStop',
+        'skipNextAlarm': 'alarmSkip',
+        'sayAlarm': 'alarmSay',
       };
       String target(String name) => switch (name) {
         'launchApp' => 'pluginLaunchApp',
         'openKioskLink' => 'pluginOpenKioskLink',
-        _ => name,
+        _ => alarms[name] ?? name,
       };
       for (final name in PluginHostApi.controlNames) {
         register(target(name), (p) async {
           expect(
             p,
-            name == 'screenOff' ? {'prompt': false} : arguments[name] ?? {},
+            name == 'screenOff'
+                ? {'prompt': false}
+                : {
+                    ...?arguments[name],
+                    if (alarms.containsKey(name)) 'source': 'plugin:example',
+                  },
           );
           return const CommandResult.ok({'secret': 'hidden'});
         });
@@ -230,6 +242,22 @@ void main() {
           {'alarm': 'first'},
           {'alarm': true},
           {'alarm': 'next', 'view': 'list'},
+        ],
+        'snoozeAlarm': [
+          {'minutes': '5'},
+        ],
+        'sayAlarm': [
+          {},
+          {'text': ''},
+          {'text': '   '},
+          {'text': true},
+          {'text': 'x' * 251},
+          {'text': 'Snoozed', 'volume': '50'},
+          {'text': 'Snoozed', 'percent': 20},
+          {'text': 'Snoozed', 'percent': '4'},
+          {'text': 'Snoozed', 'percent': '101'},
+          {'text': 'Snoozed', 'percent': 'loud'},
+          {'text': 'Snoozed', 'pitch': 1},
         ],
         'openKioskLink': [
           {},
@@ -2006,6 +2034,102 @@ void main() {
     });
   });
 
+  group('Alarms (issue #1585)', () {
+    final status = {
+      'phase': 'ringing',
+      'ids': ['a1'],
+      'labels': ['', 'Work'],
+      'at': '2026-11-24T12:00:00.000Z',
+      'snoozedUntil': null,
+      'takeover': 'clock',
+      'next': {'id': 'a1', 'at': '2026-11-25T12:00:00.000Z'},
+      'alarms': [
+        {'id': 'a1', 'time': '07:00', 'label': 'Work'},
+      ],
+      'visible': false,
+    };
+
+    test('getAlarmState reads the phase and times, not the list', () async {
+      register('alarmsStatus', (_) async => CommandResult.ok(status));
+      final result = await read('getAlarmState');
+      expect(result['ok'], true);
+      expect(result['data'], {
+        'phase': 'ringing',
+        'label': 'Work',
+        'at': '2026-11-24T12:00:00.000Z',
+        'snoozedUntil': null,
+        'next': '2026-11-25T12:00:00.000Z',
+      });
+    });
+
+    test('alarm.state follows the phase, once per change', () async {
+      subscribe('alarm.state');
+      bus.publish(AlarmStateChanged(status));
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      expect(sent.single['event'], 'alarm.state');
+      expect((sent.single['payload'] as Map)['phase'], 'ringing');
+      sent.clear();
+      // An edit to the list alone changes nothing a plugin sees.
+      bus.publish(AlarmStateChanged({...status, 'alarms': const []}));
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      expect(sent, isEmpty);
+      bus.publish(
+        AlarmStateChanged({
+          ...status,
+          'phase': 'snoozed',
+          'snoozedUntil': '2026-11-24T12:10:00.000Z',
+        }),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      final payload = Map.of(sent.single['payload'] as Map)..remove('time');
+      expect(payload, {
+        'phase': 'snoozed',
+        'label': 'Work',
+        'at': '2026-11-24T12:00:00.000Z',
+        'snoozedUntil': '2026-11-24T12:10:00.000Z',
+        'next': '2026-11-25T12:00:00.000Z',
+      });
+    });
+
+    test('sayAlarm passes a quieter percent through', () async {
+      api.open({
+        ...session,
+        'capabilities': ['host.control'],
+      });
+      Map<String, Object?>? got;
+      register('alarmSay', (p) async {
+        got = Map.of(p);
+        return const CommandResult.ok();
+      });
+      final result = await read(
+        'sayAlarm',
+        params: {'text': 'Snooze 2', 'percent': '20'},
+      );
+      expect(result['ok'], true);
+      expect(got, {
+        'text': 'Snooze 2',
+        'percent': '20',
+        'source': 'plugin:example',
+      });
+    });
+
+    test('alarm controls say why nothing happened', () async {
+      api.open({
+        ...session,
+        'capabilities': ['host.control'],
+      });
+      register(
+        'alarmSnooze',
+        (_) async => const CommandResult.fail('no alarm is ringing'),
+      );
+      final result = await read('snoozeAlarm');
+      expect(result, {'ok': false, 'error': 'no alarm is ringing'});
+      // Reads stay out of reach without host.read.
+      register('alarmsStatus', (_) async => CommandResult.ok(status));
+      expect((await read('getAlarmState'))['ok'], false);
+    });
+  });
+
   test('native and Flutter event contracts match', () {
     final source = File(
       'android/app/src/main/kotlin/me/jxl/kiosk_satellite/plugins/PluginHostPolicy.kt',
@@ -2017,6 +2141,134 @@ void main() {
       ...PluginHostApi.eventNames,
       ...PluginHostApi.noiseEventNames,
       ...PluginHostApi.voiceTextEventNames,
+      ...PluginHostApi.faceEventNames,
+    });
+  });
+
+  group('Face Recognition', () {
+    const ana = {
+      'enabled': true,
+      'name': 'Ana',
+      'person': 'person.ana',
+      'color': '#3366ff',
+      'people': [
+        {'name': 'Ana', 'person': 'person.ana', 'color': '#3366ff'},
+        {'name': 'Leo', 'person': '', 'color': null},
+      ],
+      'present': true,
+      'looking': true,
+    };
+
+    Future<void> settle([int ms = 150]) =>
+        Future<void>.delayed(Duration(milliseconds: ms));
+
+    setUp(() {
+      register(
+        'faceRecognitionState',
+        (_) async => const CommandResult.ok(ana),
+      );
+    });
+
+    test('who is at the kiosk needs its own capability', () async {
+      final plain = (await read('getHostApi'))['data'] as Map;
+      expect(plain['commands'], isNot(contains('getFaceRecognition')));
+      expect(plain['events'], isNot(contains('face.recognition')));
+      expect((await read('getFaceRecognition'))['ok'], false);
+      subscribe('face.recognition');
+      subscribe('face.arrival');
+      bus.publish(const FaceRecognitionChanged(ana));
+      bus.publish(
+        const FaceArrivalReported(
+          type: 'arrived',
+          name: 'Ana',
+          person: 'person.ana',
+        ),
+      );
+      await settle();
+      expect(sent, isEmpty);
+
+      api.open({
+        ...session,
+        'capabilities': ['host.read', 'face.recognition'],
+      });
+      final catalog = (await read('getHostApi'))['data'] as Map;
+      expect(catalog['capabilities'], ['host.read', 'face.recognition']);
+      expect(catalog['commands'], contains('getFaceRecognition'));
+      expect(
+        catalog['events'],
+        containsAll(['face.recognition', 'face.arrival']),
+      );
+      expect((await read('getFaceRecognition'))['data'], ana);
+
+      // Without host.read the capability opens nothing.
+      api.open({
+        ...session,
+        'capabilities': ['host.control', 'face.recognition'],
+      });
+      expect((await read('getFaceRecognition'))['ok'], false);
+    });
+
+    test('changes and arrivals reach a subscribed plugin, each arrival on '
+        'its own', () async {
+      api.open({
+        ...session,
+        'capabilities': ['host.read', 'face.recognition'],
+      });
+      subscribe('face.recognition');
+      subscribe('face.arrival');
+      bus.publish(const FaceRecognitionChanged(ana));
+      bus.publish(
+        const FaceArrivalReported(
+          type: 'arrived',
+          name: 'Ana',
+          person: 'person.ana',
+        ),
+      );
+      bus.publish(
+        const FaceArrivalReported(type: 'left', name: 'Leo', person: ''),
+      );
+      await settle();
+      final state = sent.firstWhere((e) => e['event'] == 'face.recognition');
+      expect((state['payload'] as Map)['name'], 'Ana');
+      expect((state['payload'] as Map)['people'], hasLength(2));
+      final arrivals = [
+        for (final e in sent)
+          if (e['event'] == 'face.arrival') e['payload'] as Map,
+      ];
+      expect(arrivals.map((a) => a['event']), ['arrived', 'left']);
+      expect(arrivals.first['person'], 'person.ana');
+    });
+
+    test('only the documented fields go out', () {
+      final state = PluginHostApi.faceRecognition({
+        ...ana,
+        'id': 'gc-secret-id',
+        'score': 0.9,
+        'color': 'red',
+        'people': [
+          for (var i = 0; i < 20; i++)
+            {'name': 'P$i', 'person': 'person.p$i', 'id': 'x$i'},
+        ],
+        'present': 'yes',
+      })!;
+      expect(state.keys, [
+        'enabled',
+        'name',
+        'person',
+        'color',
+        'people',
+        'present',
+        'looking',
+      ]);
+      expect(state['color'], isNull);
+      expect(state['present'], isNull);
+      expect(state['people'], hasLength(PluginHostApi.maxFacesInView));
+      expect((state['people'] as List).first, {
+        'name': 'P0',
+        'person': 'person.p0',
+        'color': null,
+      });
+      expect(PluginHostApi.faceRecognition('nope'), isNull);
     });
   });
 }

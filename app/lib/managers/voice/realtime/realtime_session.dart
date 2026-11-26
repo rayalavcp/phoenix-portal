@@ -1271,10 +1271,16 @@ class RealtimeSession {
     final match = port.begin(
       (e) => unawaited(_onMatch(gen, e)),
       follow: true,
+      // Home Assistant opened the conversation: the user's first words are
+      // a reply to its line.
+      asked: _opening.isNotEmpty,
       onAudio: (pcm) => _onMatchAudio(gen, pcm),
       onLost: () => _onMatchLost(gen),
     );
     if (match == null) return;
+    // A realtime conversation Home Assistant opens is always a
+    // start_conversation.
+    if (_opening.isNotEmpty) match.interaction('start_conversation');
     _match = match;
     _following = true;
     _matchReady = Timer(matchReadyWait, () {
@@ -1311,9 +1317,7 @@ class RealtimeSession {
     switch (e['type']) {
       case 'speaker':
         final name = e['name'];
-        onTrace?.call(
-          'voice match: ${name ?? 'unknown voice'} (${e['score']})',
-        );
+        onTrace?.call(voiceMatchSpeakerLine(e));
         onSpeaker?.call(e);
         if (name is String && name.isNotEmpty) {
           _speakerName = name;
@@ -1369,6 +1373,16 @@ class RealtimeSession {
   }
 
   // ── ending ──────────────────────────────────────────────────────────────
+
+  /// Whether the answer playing now has only just started, so the stop
+  /// word is not taken yet: the echo of its first second is the loudest
+  /// and was taken for the stop word ([VoiceSession.stopWordHold]).
+  bool get stopWordHeld {
+    final from = _answerFrom;
+    return _playing &&
+        from != null &&
+        _now().difference(from) < VoiceSession.stopWordHold;
+  }
 
   /// The stop word: stop the answer and keep listening.
   Future<void> stopAnswer() async {

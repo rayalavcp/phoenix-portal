@@ -178,9 +178,13 @@ class _MatchTurn implements VoiceMatchTurnPort {
   final void Function()? onLost;
   int fed = 0;
   bool ended = false;
+  String? kind;
 
   @override
   bool ready = true;
+
+  @override
+  void interaction(String kind) => this.kind = kind;
 
   @override
   void feed(Uint8List pcm) => fed++;
@@ -195,16 +199,22 @@ class _MatchTurn implements VoiceMatchTurnPort {
 class _Match implements VoiceMatchPort {
   final turns = <_MatchTurn>[];
   bool follow = false;
+  bool seamless = false;
+  bool asked = false;
 
   @override
   VoiceMatchTurnPort? begin(
     void Function(Map<String, Object?> event) onEvent, {
     bool follow = false,
     bool followup = false,
+    bool seamless = false,
+    bool asked = false,
     void Function(Uint8List pcm)? onAudio,
     void Function()? onLost,
   }) {
     this.follow = follow;
+    this.seamless = seamless;
+    this.asked = asked;
     final t = _MatchTurn(onEvent, onAudio, onLost);
     turns.add(t);
     return t;
@@ -1093,7 +1103,7 @@ void main() {
       },
     );
 
-    test('manual turns: no speech detection, the session commits and asks for the answer', () async {
+    test('manual turns: no speech detection, the session commits and asks OpenAI for the answer', () async {
       for (final provider in [RealtimeProvider.openai, RealtimeProvider.xai]) {
         final backend = make(RealtimeConfig(provider: provider, apiKey: 'k'));
         await backend.start(const RealtimeStart(manualTurns: true));
@@ -1106,7 +1116,15 @@ void main() {
         await pumpEventQueue();
         socket.sent.clear();
         backend.endTurn();
-        expect(socket.types, ['input_audio_buffer.commit', 'response.create']);
+        // xAI answers the commit itself: a reply asked for too came out as
+        // the same answer twice.
+        expect(
+          socket.types,
+          provider == RealtimeProvider.openai
+              ? ['input_audio_buffer.commit', 'response.create']
+              : ['input_audio_buffer.commit'],
+          reason: '$provider',
+        );
 
         // Ground Control gone: the server's speech detection comes back.
         socket.sent.clear();
@@ -1124,6 +1142,31 @@ void main() {
         expect(socket.sent, isEmpty);
         await backend.close();
       }
+    });
+
+    test('what xAI marks as already spoken never shows', () async {
+      final backend = make(
+        const RealtimeConfig(provider: RealtimeProvider.xai, apiKey: 'k'),
+      );
+      await backend.start(const RealtimeStart());
+      socket.server({'type': 'session.updated'});
+      socket.server({'type': 'response.created'});
+      socket.server({
+        'type': 'response.output_audio_transcript.delta',
+        'delta': "It's 4:45 PM. <response_segment_0_already_spoken>It's",
+      });
+      socket.server({
+        'type': 'response.output_audio_transcript.done',
+        'transcript':
+            "It's 4:45 PM. <response_segment_0_already_spoken>It's 4:45 "
+            'PM.</response_segment_0_already_spoken>',
+      });
+      await pumpEventQueue();
+      final texts = events.whereType<RealtimeAnswerText>().toList();
+      expect(texts.first.text, "It's 4:45 PM. ");
+      expect(texts.last.text, "It's 4:45 PM.");
+      expect(texts.last.complete, isTrue);
+      await backend.close();
     });
 
     test('the speaker goes in as a system item, without an answer', () async {
@@ -1704,11 +1747,19 @@ void main() {
 
     String audio(List<int> samples) => base64Encode(_pcm(samples));
 
-    test('the end of a turn is the end of the audio stream, its speech detection stays on', () async {
+    test('the end of a turn is silence and the end of the audio stream, its speech detection stays on', () async {
       final backend = await ready();
       socket.sent.clear();
       backend.endTurn();
-      expect(socket.sent.single, {
+      // Silence first: Ground Control sends a turn's speech at once, and
+      // the end of the stream right after it left the turn open.
+      expect(socket.sent, hasLength(2));
+      final input = socket.sent.first['realtimeInput'] as Map;
+      final silence = base64Decode('${(input['audio'] as Map)['data']}');
+      const ms = GeminiLiveBackend.turnSilenceMs;
+      expect(silence, hasLength(GeminiLiveBackend.inputRate * 2 * ms ~/ 1000));
+      expect(silence.every((b) => b == 0), isTrue);
+      expect(socket.sent.last, {
         'realtimeInput': {'audioStreamEnd': true},
       });
       socket.sent.clear();
@@ -2100,6 +2151,68 @@ void main() {
       });
     });
 
+    test(
+      'Gemini\'s voice activity is the user talking, long before the transcript (#1543)',
+      () {
+        fakeAsync((async) {
+          final backend = make(
+            const RealtimeConfig(provider: RealtimeProvider.gemini),
+          );
+          unawaited(backend.start(const RealtimeStart()));
+          async.flushMicrotasks();
+          socket.server({'setupComplete': <String, Object?>{}});
+          async.flushMicrotasks();
+          events.clear();
+          socket.server({
+            'voiceActivity': {'type': 'ACTIVITY_START', 'audioOffset': '8.2s'},
+          });
+          async.flushMicrotasks();
+          expect(events.single, isA<RealtimeSpeechStarted>());
+          // A transcript going quiet means nothing while Gemini hears speech.
+          socket.server({
+            'serverContent': {
+              'inputTranscription': {'text': 'When will'},
+            },
+          });
+          async.elapse(GeminiLiveBackend.speechQuiet * 2);
+          expect(events.whereType<RealtimeSpeechStopped>(), isEmpty);
+          socket.server({
+            'voiceActivity': {'type': 'ACTIVITY_END', 'audioOffset': '11.5s'},
+          });
+          async.flushMicrotasks();
+          expect(events.whereType<RealtimeSpeechStopped>(), isEmpty);
+          async.elapse(GeminiLiveBackend.speechQuiet);
+          expect(events.last, isA<RealtimeSpeechStopped>());
+          expect(events.whereType<RealtimeSpeechStarted>(), hasLength(1));
+
+          // A start with no end counts as over in the end.
+          events.clear();
+          socket.server({
+            'voiceActivity': {'type': 'ACTIVITY_START'},
+          });
+          async.elapse(GeminiLiveBackend.activityLimit);
+          expect(events.first, isA<RealtimeSpeechStarted>());
+          expect(events.last, isA<RealtimeSpeechStopped>());
+
+          // A start while an answer is open is Gemini's to handle.
+          socket.server({
+            'serverContent': {
+              'outputTranscription': {'text': 'It will'},
+            },
+          });
+          async.flushMicrotasks();
+          events.clear();
+          socket.server({
+            'voiceActivity': {'type': 'ACTIVITY_START'},
+          });
+          async.flushMicrotasks();
+          expect(events.whereType<RealtimeSpeechStarted>(), isEmpty);
+          unawaited(backend.close());
+          async.flushMicrotasks();
+        });
+      },
+    );
+
     test('tools run with the call\'s arguments and answer by id', () async {
       final backend = await ready();
       events.clear();
@@ -2273,6 +2386,11 @@ void main() {
         final h = _Harness(time, match: _Match());
         final turn = connect(h);
         expect(h.match!.follow, isTrue);
+        // Talk right after the wake word doesn't apply to a realtime
+        // conversation: its audio never starts inside the wake word.
+        expect(h.match!.seamless, isFalse);
+        // The wake word started it, not a line from Home Assistant.
+        expect(h.match!.asked, isFalse);
         expect(h.backend.started?.manualTurns, isTrue);
         h.mic.speak();
         h.mic.speak();
@@ -2619,6 +2737,69 @@ void main() {
         time.flushMicrotasks();
         expect(opened, 2);
         expect(h.backend.spoken, isEmpty);
+        h.session.cancel();
+        time.flushMicrotasks();
+      });
+    });
+
+    test('the stop word is not taken a second and a half into each answer', () {
+      fakeAsync((time) {
+        final h = _Harness(time);
+        h.wakeAndConnect();
+        expect(h.session.stopWordHeld, isFalse);
+        h.answer('a1', seconds: 4);
+        // It listens from the answer's first sound and is not taken.
+        expect(h.stopArmed.last, isTrue);
+        expect(h.session.stopWordHeld, isTrue);
+        time.elapse(const Duration(milliseconds: 1400));
+        expect(h.session.stopWordHeld, isTrue);
+        time.elapse(const Duration(milliseconds: 200));
+        expect(h.session.stopWordHeld, isFalse);
+        // The answer ends and the user takes a turn.
+        h.player.frames = 24000 * 4;
+        time.elapse(const Duration(seconds: 3));
+        expect(h.session.stopWordHeld, isFalse);
+        // The next answer of the same conversation is held again.
+        h.answer('a2', seconds: 4);
+        expect(h.session.stopWordHeld, isTrue);
+        time.elapse(const Duration(milliseconds: 1400));
+        expect(h.session.stopWordHeld, isTrue);
+        time.elapse(const Duration(milliseconds: 200));
+        expect(h.session.stopWordHeld, isFalse);
+        h.session.cancel();
+        time.flushMicrotasks();
+        expect(h.session.stopWordHeld, isFalse);
+      });
+    });
+
+    test('an opening said by the model is held the same way', () {
+      fakeAsync((time) {
+        final h = _Harness(time);
+        unawaited(h.session.wake('', opening: 'Close the garage?'));
+        time.flushMicrotasks();
+        time.elapse(const Duration(milliseconds: 600));
+        h.backend.emit(const RealtimeReady());
+        time.flushMicrotasks();
+        expect(h.session.stopWordHeld, isFalse);
+        h.answer('o1', seconds: 4);
+        expect(h.session.stopWordHeld, isTrue);
+        time.elapse(const Duration(milliseconds: 1600));
+        expect(h.session.stopWordHeld, isFalse);
+        h.session.cancel();
+        time.flushMicrotasks();
+      });
+    });
+
+    test('an answer the user talked over holds nothing', () {
+      fakeAsync((time) {
+        final h = _Harness(time);
+        h.wakeAndConnect();
+        h.answer('a1', seconds: 4);
+        time.elapse(const Duration(milliseconds: 500));
+        h.player.frames = 12000;
+        h.backend.emit(const RealtimeSpeechStarted());
+        time.flushMicrotasks();
+        expect(h.session.stopWordHeld, isFalse);
         h.session.cancel();
         time.flushMicrotasks();
       });

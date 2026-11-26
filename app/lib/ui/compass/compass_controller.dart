@@ -203,6 +203,8 @@ class CompassController {
     for (final l in _watched) {
       l.addListener(_onOverlayChanged);
     }
+    c.voiceTimers.timers.addListener(_onTimersChanged);
+    c.voiceTimers.alerts.addListener(_onTimersChanged);
     menuVisible.addListener(() {
       if (!menuVisible.value) menuUnlocked.value = false;
       // Opaque and full screen, like the Music Library: the page under it
@@ -274,6 +276,8 @@ class CompassController {
     for (final l in _watched) {
       l.removeListener(_onOverlayChanged);
     }
+    c.voiceTimers.timers.removeListener(_onTimersChanged);
+    c.voiceTimers.alerts.removeListener(_onTimersChanged);
     _clearShots();
     current.dispose();
     planeCovered.dispose();
@@ -335,44 +339,56 @@ class CompassController {
   /// is the one the layout says, with nothing else drawn over it. A camera
   /// view opened by the doorbell, a ringing alarm, a call, a link page or
   /// the screensaver all keep the swipe out until they are gone.
-  bool get swipeReady {
-    if (!enabled || stage.value != null) return false;
-    if (c.voice.covers.value) return false;
+  bool get swipeReady => swipeBlocker == null;
+
+  /// What keeps a swipe from starting now, for the log, or null when one
+  /// may start ([swipeReady]).
+  String? get swipeBlocker {
+    if (!enabled) return 'Compass is off';
+    if (stage.value != null) return 'a swipe is in motion';
+    if (c.voice.covers.value) return 'the voice overlay is up';
     // Now Playing runs as a screensaver session. As a Compass view it is
     // the one on screen, not a screensaver to wake from.
     final nowPlaying = currentView.kind == 'now_playing' && _nowPlayingUp;
-    if (c.screensaver.isActive && !nowPlaying) return false;
-    if (c.kiosk.lockdownActive) return false;
-    if (c.browser.overlayUrl.value != null) return false;
+    if (c.screensaver.isActive && !nowPlaying) return 'the screensaver is up';
+    if (c.kiosk.lockdownActive) return 'Lockdown Mode is on';
+    if (c.browser.overlayUrl.value != null) return 'a link page is open';
     // A plugin's window draws over the dashboard, in its layer. On another
     // view it waits underneath, hidden, and must not hold the swipe up.
     if (c.plugins.windows.value.isNotEmpty && currentView.isDashboard) {
-      return false;
+      return 'a plugin window is open';
     }
-    if (c.dlna.media.value != null) return false;
+    if (c.dlna.media.value != null) return 'DLNA media is playing';
     final phase = c.alarms.status.value.phase;
     if (phase == AlarmPhase.ringing || phase == AlarmPhase.sunrise) {
-      return false;
+      return 'an alarm is ringing';
     }
     if (c.intercom.screenShown && !c.intercom.rosterVisible.value) {
-      return false;
+      return 'an intercom call is up';
     }
     // Now Playing draws over every other view. One left open under it,
     // such as the library a track was started from, is not in the way,
     // and it is where the kiosk lands when Now Playing closes.
-    if (nowPlaying) return true;
+    if (nowPlaying) return null;
     final view = currentView;
-    bool only(bool up, String kind) => !up || view.kind == kind;
     final camera = c.camera.activeViewId.value;
-    return only(c.musicLibrary.visible.value, 'music_library') &&
-        only(c.calendar.visible.value, 'calendar') &&
-        only(c.alarms.visible.value, 'alarms') &&
-        only(c.voiceTimers.visible.value, 'timers') &&
-        only(_nowPlayingUp, 'now_playing') &&
-        only(c.launcher.visible.value, 'app_launcher') &&
-        only(c.intercom.rosterVisible.value, 'intercom') &&
-        only(menuVisible.value, 'menu') &&
-        (camera == null || (view.kind == 'camera' && view.id == camera));
+    final up = <String, bool>{
+      'music_library': c.musicLibrary.visible.value,
+      'calendar': c.calendar.visible.value,
+      'alarms': c.alarms.visible.value,
+      'timers': c.voiceTimers.visible.value,
+      'now_playing': _nowPlayingUp,
+      'app_launcher': c.launcher.visible.value,
+      'intercom': c.intercom.rosterVisible.value,
+      'menu': menuVisible.value,
+    };
+    for (final MapEntry(:key, :value) in up.entries) {
+      if (value && view.kind != key) return 'the $key view is open';
+    }
+    if (camera != null && (view.kind != 'camera' || view.id != camera)) {
+      return 'camera view $camera is open';
+    }
+    return null;
   }
 
   // ── Moving ──────────────────────────────────────────────────────────
@@ -662,14 +678,14 @@ class CompassController {
   }
 
   /// The page moved on its own, through a navigation card, Home Assistant
-  /// or the dashboard select, to a dashboard view the layout holds in
-  /// another place: that place is the one on screen now. A path the layout
-  /// does not hold changes nothing, the kiosk is still on the view it
-  /// swiped to.
+  /// or the dashboard select, to a dashboard view or a Custom Page the
+  /// layout holds in another place: that place is the one on screen now. A
+  /// path the layout does not hold changes nothing, the kiosk is still on
+  /// the view it swiped to.
   void _onPageMoved(String url) {
     if (!enabled || _switching || stage.value != null) return;
     if (!currentView.isDashboard) return;
-    final path = _routeOfUrl(url);
+    final path = compassRouteOfUrl(url, c.homeAssistant.customPages);
     if (path == null) return;
     final here = _routeOf(currentView);
     // The view in hand, or a bare dashboard opening on its first view.
@@ -684,36 +700,8 @@ class CompassController {
     }
   }
 
-  /// The route in Home Assistant a dashboard view shows, or null for one
-  /// that is a document of its own (a Custom Page) or has no path.
-  String? _routeOf(CompassView view) {
-    final target = view.path.isEmpty ? homePath : view.path;
-    if (target.isEmpty || isCustomPagePath(target)) return null;
-    return _plain(viewRoute(target));
-  }
-
-  /// The same for a URL the page is on, whatever origin serves it.
-  String? _routeOfUrl(String url) {
-    final uri = Uri.tryParse(url);
-    if (uri == null) return null;
-    final path = _plain(uri.path);
-    return path.isEmpty || isCustomPagePath(path) ? null : path;
-  }
-
-  static String _plain(String path) {
-    var out = path;
-    while (out.startsWith('/')) {
-      out = out.substring(1);
-    }
-    while (out.endsWith('/')) {
-      out = out.substring(0, out.length - 1);
-    }
-    try {
-      return Uri.decodeComponent(out);
-    } catch (_) {
-      return out;
-    }
-  }
+  String? _routeOf(CompassView view) =>
+      compassRouteOfPath(view.path.isEmpty ? homePath : view.path);
 
   /// Someone else opened or closed a page: a gesture, Home Assistant, the
   /// page's own close button. Opening a view the layout holds makes it the
@@ -791,6 +779,10 @@ class CompassController {
       current.value = picked;
       menuVisible.value = false;
       if (candidate.kind != 'now_playing') unawaited(_closeAllBut(candidate));
+      // Nobody touched the screen to get here: a timer opened its view, or
+      // Home Assistant opened one. The countdown starts with the view, or
+      // the view stayed until the next touch (issue #1575).
+      _armReturn();
       return;
     }
     if (view.isDashboard || _isUp(view)) return;
@@ -849,9 +841,13 @@ class CompassController {
         _returnOnWake = true;
         return;
       }
+      if (_nowPlayingForScreensaver) return;
       // A ringing alarm or a call keeps its screen; the next touch arms
       // the timer again.
       if (!swipeReady) return;
+      // So does a finished timer on the Timers view. The countdown starts
+      // over once it is dismissed.
+      if (_timerRinging) return;
       // Another app is in front, opened from the Menu, say. Most views
       // bring the kiosk forward as they open, so going to the center
       // would pull it back over that app (issue #1453). The App
@@ -859,9 +855,46 @@ class CompassController {
       // the countdown starts over then.
       if (await behindAnotherApp()) return;
       if (!_returnDue || _underScreensaver || !swipeReady) return;
+      if (_nowPlayingForScreensaver) return;
       unawaited(goCenter());
     });
   }
+
+  /// The timers on the Timers view at the last look.
+  String _timersSeen = '';
+
+  /// A timer that starts, ends or is dismissed on the Timers view counts
+  /// as activity there, by voice or from another kiosk as much as by hand.
+  /// The countdown runs from the last change, or a voice timer cancelled a
+  /// minute after it started took the kiosk to the center at once. Only a
+  /// change of which timers show counts: the lists are sent again on every
+  /// shared heartbeat.
+  void _onTimersChanged() {
+    final t = c.voiceTimers;
+    final seen = [
+      for (final timer in t.timers.value) timer.id,
+      '|',
+      for (final timer in t.alerts.value) timer.id,
+    ].join(',');
+    if (seen == _timersSeen) return;
+    _timersSeen = seen;
+    if (enabled && currentView.kind == 'timers') _armReturn();
+  }
+
+  /// A finished timer rings on the Timers view in hand.
+  bool get _timerRinging =>
+      currentView.kind == 'timers' &&
+      c.voiceTimers.alerts.value.isNotEmpty &&
+      !c.voiceTimers.alertHidden.value;
+
+  /// Now Playing came up in the screensaver's place, on the idle clock or
+  /// as a track started, and nobody opened it. It is the view in hand all
+  /// the same, since the layout holds it, but going to the center would
+  /// close it and the idle clock would bring it back, over and over for
+  /// as long as the music plays (issue #1557). The timer leaves it up, as
+  /// it leaves the screensaver, and the next touch arms it again.
+  bool get _nowPlayingForScreensaver =>
+      _nowPlayingUp && !c.screensaver.openedByHand;
 
   /// The return timer still has somewhere to go.
   bool get _returnDue =>
@@ -1176,4 +1209,44 @@ String compassViewLabel(
       return strings.drawerIntercom;
   }
   return view.kind;
+}
+
+/// The route a Compass dashboard view stands for, compared with
+/// [compassRouteOfUrl] to tell which place the page is on: the route in
+/// Home Assistant for a dashboard view, the whole navigation path for a
+/// Custom Page, since its query and fragment pick the page. Null for no
+/// path.
+String? compassRouteOfPath(String navPath) {
+  if (navPath.isEmpty) return null;
+  if (isCustomPagePath(navPath)) return navPath;
+  return _plainRoute(viewRoute(navPath));
+}
+
+/// The same for a URL the page is on. A dashboard view goes by its path,
+/// whatever origin serves it (the secure context proxy's, say). A page on
+/// another server goes by its navigation path among the Custom [pages].
+String? compassRouteOfUrl(String url, List<CustomPage> pages) {
+  final uri = Uri.tryParse(url);
+  if (uri == null) return null;
+  final external = externalPageNavPath(url, pages);
+  if (external != null) return external;
+  final nav = navPathOfUri(uri);
+  if (isCustomPagePath(nav)) return nav;
+  final path = _plainRoute(uri.path);
+  return path.isEmpty ? null : path;
+}
+
+String _plainRoute(String path) {
+  var out = path;
+  while (out.startsWith('/')) {
+    out = out.substring(1);
+  }
+  while (out.endsWith('/')) {
+    out = out.substring(0, out.length - 1);
+  }
+  try {
+    return Uri.decodeComponent(out);
+  } catch (_) {
+    return out;
+  }
 }
