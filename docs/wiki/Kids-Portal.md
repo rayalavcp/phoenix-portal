@@ -11,9 +11,9 @@ A calm game hub for children, offline and ad-free. Open it from the dock or the 
 | **Learn** | Math Blitz, Times Tables, Telling the Time, Flag Quiz, Word Scramble, Patterns, Fractions, Money, Science, Spelling, Opposites, Count It, Letter Sounds, Place Value, Story Sums, Telugu Words |
 | **Maps** | USA, India and World: find it, name it, capitals, continents, flags, fill the map, shape memory |
 | **Puzzles** | Sudoku, Maze, Word Search, Word Guess, Memory Pro, 2048, Lights Out |
-| **Play** | Snake, Whack-a-Mole, Simon Says, Tic-Tac-Toe, Connect Four |
+| **Play** | Snake, Whack-a-Mole, Simon Says, Tic-Tac-Toe, Connect Four, Star Swipe (swipe through the stars, miss the storm clouds), Stack Up (drop each block to build a tower) |
 | **Arcade** | Munch Maze, Brick Bash, Hop Across, Sky Glide, Fox Run |
-| **Move** | Camera games: Space Blaster, Bubble Pop, Fruit Catcher, Finger Math, Wall Dodge, Air Trace, Freeze Dance |
+| **Move** | Camera games: Space Blaster, Bubble Pop, Fruit Catcher, Finger Math, Wall Dodge, Air Trace, Freeze Dance, Goalie (save the shots), Window Wipe (wipe the frost off a window) |
 | **Create** | Draw Studio, Pixel Paint, Piano |
 
 Puzzles, mazes and brick walls are new every round. Quizzes have levels with stars and **Next

@@ -269,7 +269,7 @@ double faceMinWidthFor(int sensitivity) {
 /// One hand in a game: its palm, the fingers it shows and its 21 points
 /// (x, y pairs), all 0..1 across and down the picture as the child sees it.
 class GameHand {
-  const GameHand(this.palm, this.fingers, this.points);
+  const GameHand(this.palm, this.fingers, this.points, {this.size = 0, this.aspect = 0.75});
 
   factory GameHand.fromNative(Map<Object?, Object?> raw) {
     final lm = raw['lm'];
@@ -283,12 +283,21 @@ class GameHand {
       Offset((raw['x']! as num).toDouble(), (raw['y']! as num).toDouble()),
       f is num ? f.toInt() : 0,
       pts.length == 42 ? pts : Float32List(0),
+      size: raw['s'] is num ? (raw['s']! as num).toDouble() : 0,
+      aspect: raw['a'] is num && (raw['a']! as num) > 0 ? (raw['a']! as num).toDouble() : 0.75,
     );
   }
 
   final Offset palm;
   final int fingers;
   final Float32List points;
+
+  /// The hand's size (wrist to middle knuckle) in frame widths; 0 when
+  /// not reported (older native code).
+  final double size;
+
+  /// The frame's height over its width.
+  final double aspect;
 
   Offset point(int i) => Offset(points[i * 2], points[i * 2 + 1]);
 }

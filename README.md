@@ -93,9 +93,9 @@ the built-in 4K landscapes, slowly drifting, with the clock and each photographe
 | **Learn** | Math Blitz, Times Tables, Telling the Time, Flag Quiz, Word Scramble, Patterns, Fractions, Money, Science, Spelling, Opposites, Count It, Letter Sounds, Place Value, Story Sums, Telugu Words. Levels with stars and **Next level** after a good round. |
 | **Maps** | USA (50 states), India (28 states and 8 union territories) and World: find it, name it, capitals, continents, flags, fill the map, shape memory. |
 | **Puzzles** | Sudoku, Maze, Word Search, Word Guess, Memory Pro (6 to 12 pairs), 2048, Lights Out: a new puzzle every round. |
-| **Play** | Snake, Whack-a-Mole, Simon Says, Tic-Tac-Toe, Connect Four. |
+| **Play** | Snake, Whack-a-Mole, Simon Says, Tic-Tac-Toe, Connect Four, Star Swipe (swipe through the stars, miss the storm clouds), Stack Up (drop each block to build a tower). |
 | **Arcade** | Munch Maze (a new maze every stage), Brick Bash (a new wall every stage), Hop Across, Sky Glide, Fox Run: original retro games. |
-| **Move** | Camera games: Space Blaster, Bubble Pop, Fruit Catcher, Finger Math, Wall Dodge, Air Trace, Freeze Dance. Each hand is a soft bubble cursor; every game also plays by touch. |
+| **Move** | Camera games: Space Blaster, Bubble Pop, Fruit Catcher, Finger Math, Wall Dodge, Air Trace, Freeze Dance, Goalie (save the shots), Window Wipe (wipe the frost off a window). Each hand is a soft bubble cursor; the camera keeps to one player even with other children in view, and the same arm movement reaches the whole screen near or far. Every game also plays by touch. |
 | **Create** | Draw Studio, Pixel Paint, Piano. |
 
 <p align="center">

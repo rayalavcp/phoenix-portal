@@ -154,7 +154,7 @@ remove it safely).
 | Telugu calendar (panchangam), word of the day | `managers/home/panchang.dart`, `managers/home/telugu_words.dart`, `ui/home/telugu_calendar_page.dart` |
 | Photos (Immich / folder), photo frame | `managers/home/photo_service.dart`, `ui/home/photo_frame.dart` |
 | Kids Portal hub and frame | `ui/kids/kids_overlay.dart`, `ui/kids/kids_activities.dart` |
-| Kids games | `kids_learn.dart` (quizzes), `kids_games.dart`, `kids_puzzles.dart`, `kids_play.dart` (incl. piano), `kids_motion.dart` (camera games), `kids_arcade.dart` (Munch Maze, Brick Bash), `kids_arcade2.dart` (Hop Across, Sky Glide, Fox Run), `kids_motion2.dart` (Wall Dodge, Air Trace, Freeze Dance), `kids_learn_more.dart` (Count It, Letter Sounds, Place Value, Story Sums, Telugu Words), `kids_maps.dart` (USA, India, World maps; data in `assets/maps`, rebuilt with `tool/kids_maps`) |
+| Kids games | `kids_learn.dart` (quizzes), `kids_games.dart`, `kids_puzzles.dart`, `kids_play.dart` (incl. piano), `kids_motion.dart` (camera games), `kids_arcade.dart` (Munch Maze, Brick Bash), `kids_arcade2.dart` (Hop Across, Sky Glide, Fox Run), `kids_motion2.dart` (Wall Dodge, Air Trace, Freeze Dance, Goalie, Window Wipe), `kids_touch.dart` (Star Swipe, Stack Up), `kids_learn_more.dart` (Count It, Letter Sounds, Place Value, Story Sums, Telugu Words), `kids_maps.dart` (USA, India, World maps; data in `assets/maps`, rebuilt with `tool/kids_maps`) |
 | Hand/head tracking for games | native `GameVision.kt` (game mode: two hands with landmarks, every frame; its body segmenter is no longer asked for), `FaceDetector.kt`, `CameraMotion.kt` (`game` arg); Dart `motion_manager.dart` (`startGameVision`, `startHeadTracking`), `kids_motion.dart` (`KidsHands`, One Euro smoothing, `_CursorPainter`) |
 | App Store, side-loading (any APK by link or upload; GitHub apps Morphe and MicroG-RE with update checks) | `managers/store/store_manager.dart`, `ui/store/store_overlay.dart`, native `StoreInstaller.kt` (`inspect`), admin card in `remote-ui/static/phoenix_home.js`, upload endpoint `POST /api/apps/upload`; PC patching `install/patch-morphe.ps1`, guide `install/MORPHE.md` |
 | Updates from GitHub | `managers/update/update_manager.dart` (`_releasesUrl` = this repo's GitHub Releases API) |
@@ -265,8 +265,14 @@ Math, Wall Dodge, Air Trace, Freeze Dance), **Create**.
   level, "Next level" after 2+ stars.
 - Camera games: a **game mode** in the native camera pipeline
   (`GameVision.kt`: every frame, two hands; `CameraMotion.kt` `game` arg),
-  `KidsHands` with a responsive One Euro filter (beta 6) and a 50 ms look
-  ahead. **Nothing of the child is drawn** (the owner found the hand and
+  `KidsHands` with a responsive One Euro filter (beta 6) and a 40 ms look
+  ahead that fades out at low speed. One-player games pass hands through
+  `PlayerLock` (keeps the followed hand by position and size, ignores other
+  children's; after 1.2 s without it the biggest hand takes over) and
+  `HandReach` (a box 7 × 5 hand sizes wide maps to the whole screen and is
+  pushed along at its edges). The head tracker passes the last face to
+  `FaceDetector.detect` so a nearby face wins over a bigger one. GameVision
+  always tracks two hands (needed to choose the player) at 640 px. **Nothing of the child is drawn** (the owner found the hand and
   body renders scary, 2026.12.14): only a pastel bubble cursor per hand
   (pink, blue; yellow for the head) with a sparkle trail
   (`_CursorPainter`). The camera runs only while a camera game is played.

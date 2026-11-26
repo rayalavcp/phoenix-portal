@@ -116,7 +116,10 @@ class FaceDetector(private val context: Context) {
      * could not be loaded (logged once); the caller then simply never sees
      * a face.
      */
-    fun detect(image: ImageProxy, rotation: Int): Face? {
+    /** [nearX], [nearY]: where the face being followed was (upright frame,
+     *  0..1); a face close to it wins over a bigger one, so a game keeps
+     *  following its player with another child in view. */
+    fun detect(image: ImageProxy, rotation: Int, nearX: Float = -1f, nearY: Float = -1f): Face? {
         val engine = interpreter ?: load() ?: return null
         // Nothing in here may take the kiosk down: this runs on the camera
         // analyzer's thread, where an uncaught exception is a process
@@ -130,7 +133,7 @@ class FaceDetector(private val context: Context) {
                 arrayOf<Any>(input.buffer),
                 mapOf<Int, Any>(regIndex to regressors, scoreIndex to scores),
             )
-            val face = decode()
+            val face = decode(nearX, nearY)
             trace((SystemClock.elapsedRealtimeNanos() - startNs) / 1_000_000f)
             face
         } catch (e: Exception) {
@@ -139,7 +142,10 @@ class FaceDetector(private val context: Context) {
         }
     }
 
-    private fun decode(): Face? {
+    private fun decode(nearX: Float = -1f, nearY: Float = -1f): Face? {
+        val near = nearX >= 0f && nearY >= 0f
+        var nearest: Face? = null
+        var nearestD = 0.2f
         // The interpreter leaves each output buffer positioned at its end;
         // a float view starts at the position, so rewind first or the view
         // is empty (limit 0).
@@ -158,7 +164,8 @@ class FaceDetector(private val context: Context) {
             val ax = ((i % GRID) + 0.5f) / GRID
             val ay = ((i / GRID) + 0.5f) / GRID
             val width = reg.get(base + 2) / INPUT
-            if (best != null && width <= best.width) continue
+            val bigger = best == null || width > best.width
+            if (!bigger && !near) continue
             // The box centre, in the upright frame (0..1 each way).
             val cx = (reg.get(base) / INPUT + ax).coerceIn(0f, 1f)
             val cy = (reg.get(base + 1) / INPUT + ay).coerceIn(0f, 1f)
@@ -176,8 +183,17 @@ class FaceDetector(private val context: Context) {
             val my = (ley + rey) / 2f
             val turn = ((nx - mx) * ex + (ny - my) * ey) / eyeDist2
             if (abs(turn) > FRONTAL_MAX) continue
-            best = Face(width, score, turn, cx, cy)
+            val face = Face(width, score, turn, cx, cy)
+            if (bigger) best = face
+            if (near) {
+                val d = kotlin.math.hypot(cx - nearX, cy - nearY)
+                if (d < nearestD) {
+                    nearestD = d
+                    nearest = face
+                }
+            }
         }
+        if (nearest != null) return nearest
         // Debug-level trace of the strongest candidate even when nothing
         // passes: the way to tell "no face in frame" from "the frame is not
         // reaching the model right" when tuning on a device.

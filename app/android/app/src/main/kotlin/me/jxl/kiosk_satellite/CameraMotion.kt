@@ -495,6 +495,9 @@ class CameraMotion(
     @Volatile private var fingersWanted = false
     /** The Kids Portal's head-steered games: the face's position, fast. */
     @Volatile private var headsWanted = false
+    private var lastHeadX = -1f
+    private var lastHeadY = -1f
+    private var lastHeadSeenNs = 0L
 
     /** A Kids Portal game is open (see [GameVision]): its hands (two, with
      *  landmarks) and its body mask, on every frame, emitted at once. */
@@ -1665,7 +1668,17 @@ class CameraMotion(
             if (headsWanted && !paused && now - lastHeadNs >= HEAD_INTERVAL_NS) {
                 lastHeadNs = now
                 val detector = faceDetector ?: FaceDetector(context).also { faceDetector = it }
-                val head = detector.detect(image, image.imageInfo.rotationDegrees)
+                // Keep to the player's face while another child is in view.
+                val following = now - lastHeadSeenNs < 1_200_000_000L
+                val head = detector.detect(
+                    image, image.imageInfo.rotationDegrees,
+                    if (following) lastHeadX else -1f, if (following) lastHeadY else -1f,
+                )
+                if (head != null && head.x >= 0f) {
+                    lastHeadX = head.x
+                    lastHeadY = head.y
+                    lastHeadSeenNs = now
+                }
                 val sink = activeSink
                 if (sink != null) {
                     val hx = head?.x?.takeIf { it >= 0f }?.let { (if (boundFront) 1f - it else it).toDouble() }

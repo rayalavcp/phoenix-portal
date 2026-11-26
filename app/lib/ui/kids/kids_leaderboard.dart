@@ -47,6 +47,7 @@ const _titles = {
   'blaster': 'Space Blaster',
   'fingermath': 'Finger Math',
   'walls': 'Wall Dodge', 'trace': 'Air Trace', 'freeze': 'Freeze Dance',
+  'goalie': 'Goalie', 'wipe': 'Window Wipe', 'swipe': 'Star Swipe', 'stack': 'Stack Up',
 };
 
 const _maps = {'usa': 'USA Map', 'india': 'India Map', 'world': 'World Map'};

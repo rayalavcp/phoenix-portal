@@ -19,6 +19,12 @@ Built from this branch and installed from `install/` (see `install/README.md`).
 - **Docs (2026-11-26):** new README and a wiki (`docs/wiki`) with mock
   screenshots made from sample data; leaderboard medals are icons (they look
   the same on every screen).
+- **2026.12.22 (motion):** camera games keep to one player when other
+  children are in view (hand and head); the same arm movement reaches the
+  whole screen near or far (a reach box sized by the hand); sharper hand
+  points (640-pixel frames), no sweep when a hand comes back, less
+  overshoot. New games: Goalie and Window Wipe (camera), Star Swipe and
+  Stack Up (touch).
 - **2026.12.21 (generic):** no school is set up by default (pick yours with
   **Set up** on the School page); the Telugu calendar is an option under
   Customize and in the remote admin (off on new installs, kept on for

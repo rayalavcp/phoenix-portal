@@ -48,9 +48,12 @@ class GameVision(
         private const val BODY_MODEL = "selfie_segmenter.tflite"
 
         /** The longer side the frame is scaled to before the models see
-         *  it: the hand model looks at 192-224 pixel inputs, the body
-         *  model at 256, so more only costs the conversion. */
-        private const val WORK_SIDE = 320
+         *  it. The palm finder shrinks it to 192 pixels anyway, but the
+         *  hand's points are read from a crop around the hand at this
+         *  size: a child a couple of metres from the Portal's wide camera
+         *  has a small hand in the picture, and at 320 pixels its points
+         *  were blurry and the cursor shook. */
+        private const val WORK_SIDE = 640
 
         /** The body mask as sent to the app: this many cells across. */
         const val MASK_WIDTH = 96
@@ -146,7 +149,14 @@ class GameVision(
             val palm = intArrayOf(0, 5, 9, 13, 17)
             val px = palm.map { h[it].x() }.average().toFloat()
             val py = palm.map { h[it].y() }.average().toFloat()
-            out.add(mapOf("x" to px.toDouble(), "y" to py.toDouble(), "f" to read.fingers, "lm" to pts))
+            // The hand's size (wrist to the middle knuckle) in widths of
+            // the frame: how far away the child is, so a game can ask for
+            // the same arm movement near or far.
+            val sx = h[9].x() - h[0].x()
+            val sy = (h[9].y() - h[0].y()) * aspect
+            val size = kotlin.math.sqrt(sx * sx + sy * sy)
+            out.add(mapOf("x" to px.toDouble(), "y" to py.toDouble(), "f" to read.fingers, "lm" to pts,
+                "s" to size.toDouble(), "a" to aspect.toDouble()))
         }
         emit(mapOf("ghands" to out, "aspect" to aspect.toDouble(), "ms" to handAvgMs.toDouble()))
     }
@@ -187,10 +197,14 @@ class GameVision(
             val options = HandLandmarker.HandLandmarkerOptions.builder()
                 .setBaseOptions(BaseOptions.builder().setModelAssetPath(HAND_MODEL).setDelegate(Delegate.CPU).build())
                 .setRunningMode(RunningMode.LIVE_STREAM)
+                // Two, even for one-player games: with two children in
+                // view the app needs both to keep following the player's.
                 .setNumHands(2)
-                .setMinHandDetectionConfidence(0.4f)
+                .setMinHandDetectionConfidence(0.45f)
                 .setMinHandPresenceConfidence(0.4f)
-                .setMinTrackingConfidence(0.4f)
+                // Keep following a hand through motion blur rather than
+                // dropping it and finding it again (a visible jump).
+                .setMinTrackingConfidence(0.3f)
                 .setResultListener { result, _ -> onHands(result) }
                 .setErrorListener { e ->
                     handBusy.set(false)

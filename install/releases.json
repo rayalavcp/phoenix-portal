@@ -1,16 +1,16 @@
 [
   {
-    "tag_name": "v2026.12.21",
-    "name": "Phoenix Portal 2026.12.21",
+    "tag_name": "v2026.12.22",
+    "name": "Phoenix Portal 2026.12.22",
     "draft": false,
     "prerelease": false,
-    "body": "No school is set up by default (pick yours with Set up on the School page). The Telugu calendar is now an option under Customize and in the remote admin, kept on for existing installs. Generic sample data in docs and screenshots.",
-    "html_url": "https://github.com/rayalavcp/phoenix-portal/releases/tag/v2026.12.21",
+    "body": "Camera games keep to one player when other children are in view and reach the whole screen with the same arm movement near or far; smoother, sharper hand tracking. New games: Goalie and Window Wipe (camera), Star Swipe and Stack Up (touch).",
+    "html_url": "https://github.com/rayalavcp/phoenix-portal/releases/tag/v2026.12.22",
     "assets": [
       {
-        "name": "kiosk-satellite-2026.12.21.armeabi-v7a.apk",
-        "browser_download_url": "https://github.com/rayalavcp/phoenix-portal/releases/download/v2026.12.21/kiosk-satellite-2026.12.21.armeabi-v7a.apk",
-        "size": 100707822,
+        "name": "kiosk-satellite-2026.12.22.armeabi-v7a.apk",
+        "browser_download_url": "https://github.com/rayalavcp/phoenix-portal/releases/download/v2026.12.22/kiosk-satellite-2026.12.22.armeabi-v7a.apk",
+        "size": 100822702,
         "state": "uploaded"
       }
     ]

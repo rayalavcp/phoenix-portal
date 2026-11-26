@@ -6,6 +6,7 @@ import 'package:flutter/scheduler.dart';
 
 import '../../app_container.dart';
 import '../../managers/motion/motion_manager.dart';
+import '../../managers/motion/native_motion.dart' show GameHand;
 import 'kids_activities.dart';
 import 'kids_games.dart';
 import 'kids_logic.dart';
@@ -63,10 +64,16 @@ class _Track {
   DateTime _last = DateTime.fromMillisecondsSinceEpoch(0);
 
   /// The camera-to-screen delay the look ahead makes up for, seconds.
-  static const lead = 0.05;
+  static const lead = 0.04;
+
+  /// After this long without a sighting the point starts afresh where the
+  /// hand comes back, instead of sweeping over from where it was lost.
+  static const _lostAfter = 0.4;
 
   void measure(Offset p, DateTime now) {
-    final dt = at == null ? 0.0 : (now.difference(_last).inMicroseconds / 1e6).clamp(0.0, 0.25);
+    final gap = now.difference(_last).inMicroseconds / 1e6;
+    if (at != null && gap > _lostAfter) reset();
+    final dt = at == null ? 0.0 : gap.clamp(0.0, 0.25);
     _last = now;
     at = Offset(_fx.filter(p.dx, dt), _fy.filter(p.dy, dt));
     _v = Offset(_fx.velocity, _fy.velocity);
@@ -76,8 +83,11 @@ class _Track {
   Offset? shown(DateTime now) {
     final a = at;
     if (a == null) return null;
-    final since = (now.difference(_last).inMicroseconds / 1e6).clamp(0.0, 0.12);
-    final p = a + _v * math.min(lead + since, 0.1);
+    // Led along its speed between sightings, but never far: a long lead
+    // overshoots when the hand stops.
+    final since = (now.difference(_last).inMicroseconds / 1e6).clamp(0.0, 0.1);
+    final speed = _v.distance;
+    final p = a + _v * (math.min(lead + since, 0.07) * (speed < 0.15 ? speed / 0.15 : 1.0));
     return Offset(p.dx.clamp(0.0, 1.0), p.dy.clamp(0.0, 1.0));
   }
 
@@ -89,12 +99,101 @@ class _Track {
   }
 }
 
+/// Which hand is the player's when more than one is in view (two
+/// children, or a parent next to the child): once a hand is followed,
+/// the one nearest where it was and about its size (the same distance from
+/// the Portal) stays the player's; a hand that jumps across the picture
+/// or is a very different size belongs to someone else and is ignored.
+/// When the player's hand has been gone a moment, the biggest hand (the
+/// child nearest the Portal) becomes the player.
+class PlayerLock {
+  Offset? _at;
+  double _size = 0;
+  DateTime _seen = DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// How long the player's hand may be gone before another can take over.
+  static const hold = Duration(milliseconds: 1200);
+
+  bool get locked => _at != null;
+
+  GameHand? pick(List<GameHand> hands, DateTime now) {
+    if (hands.isEmpty) return null;
+    final at = _at;
+    GameHand? best;
+    if (at != null && now.difference(_seen) < hold) {
+      var bestCost = double.infinity;
+      for (final h in hands) {
+        final jump = (h.palm - at).distance;
+        final ratio = _size > 0 && h.size > 0 ? math.max(h.size / _size, _size / h.size) : 1.0;
+        // Too far, or clearly nearer or further from the Portal: not them.
+        if (jump > 0.3 || ratio > 1.8) continue;
+        final cost = jump + (ratio - 1) * 0.15;
+        if (cost < bestCost) {
+          bestCost = cost;
+          best = h;
+        }
+      }
+      if (best == null) return null; // only someone else's hand: wait
+    } else {
+      // Nobody followed yet (or they left): the nearest child plays.
+      best = hands.reduce((a, b) => b.size > a.size ? b : a);
+    }
+    _at = best.palm;
+    _size = best.size > 0 ? (_size == 0 ? best.size : _size + (best.size - _size) * 0.2) : _size;
+    _seen = now;
+    return best;
+  }
+
+  void reset() {
+    _at = null;
+    _size = 0;
+  }
+}
+
+/// Turns where a hand is in the camera's picture into where the cursor is
+/// on the screen, the same way near or far: a box about an arm's sweep
+/// wide (measured in hand sizes, so it shrinks as the child steps back)
+/// covers the whole screen. The box starts centred on the hand and is
+/// pushed along when the hand reaches past its edge, so the cursor always
+/// reaches the edges of the screen without the child walking about.
+class HandReach {
+  /// The box, in hand sizes (wrist to middle knuckle): about 70 by 50 cm
+  /// for a child's hand.
+  static const across = 7.0, down = 5.0;
+
+  Offset? _centre;
+  double _size = 0;
+  DateTime _seen = DateTime.fromMillisecondsSinceEpoch(0);
+
+  Offset map(Offset palm, double size, double aspect, DateTime now) {
+    final gap = now.difference(_seen).inMilliseconds;
+    _seen = now;
+    // A hand's size swings as it turns: follow it slowly.
+    _size = _size == 0 || gap > 1500 ? size : _size + (size - _size) * 0.08;
+    final w = (across * _size).clamp(0.22, 0.9);
+    final h = (down * _size / aspect).clamp(0.22, 0.9);
+    var c = _centre;
+    if (c == null || gap > 1500) {
+      // A hand that comes back starts in the middle of the screen.
+      c = palm;
+    }
+    // Push the box along when the hand reaches past an edge.
+    var cx = c.dx, cy = c.dy;
+    if (palm.dx < cx - w / 2) cx = palm.dx + w / 2;
+    if (palm.dx > cx + w / 2) cx = palm.dx - w / 2;
+    if (palm.dy < cy - h / 2) cy = palm.dy + h / 2;
+    if (palm.dy > cy + h / 2) cy = palm.dy - h / 2;
+    _centre = Offset(cx, cy);
+    return Offset(((palm.dx - cx) / w + 0.5).clamp(0.0, 1.0), ((palm.dy - cy) / h + 0.5).clamp(0.0, 1.0));
+  }
+}
+
 /// A camera session for a game: starts the hand tracker (the game vision,
 /// up to two hands) or the head tracker when the game opens and stops it
 /// when it closes, so the camera is free again. Nothing of the child is
 /// drawn: only a friendly cursor where each hand (or the head) points.
 class KidsHands {
-  KidsHands(this._motion, {this.head = false, this.amplify = true}) {
+  KidsHands(this._motion, {this.head = false, this.amplify = true, this.twoHands = false}) {
     if (head) {
       if (_motion.headsAvailable) {
         _motion.startHeadTracking();
@@ -114,6 +213,11 @@ class KidsHands {
   /// Small movements go a long way (steering games); off, the point is
   /// where the child really is.
   final bool amplify;
+
+  /// Follow two hands (games that count fingers or pop with both).
+  final bool twoHands;
+
+  final _reach = HandReach();
 
   /// Whether the camera is following (false: touch only).
   bool get camera => head ? _motion.headsAvailable : _motion.handsAvailable;
@@ -160,6 +264,10 @@ class KidsHands {
   void _onHands() {
     final hands = _motion.gameHands.value;
     final now = DateTime.now();
+    if (!twoHands) {
+      _onPlayerHand(hands, now);
+      return;
+    }
     if (hands.isEmpty) {
       fingers.value = null;
       return;
@@ -179,6 +287,25 @@ class KidsHands {
       _tracks[1].reset();
     }
     fingers.value = hands.take(2).fold<int>(0, (a, h) => a + h.fingers);
+  }
+
+  final _player = PlayerLock();
+
+  /// One-player games: follow the player's hand only, even with another
+  /// child (or a parent) in view.
+  void _onPlayerHand(List<GameHand> hands, DateTime now) {
+    final h = _player.pick(hands, now);
+    if (h == null) {
+      if (hands.isEmpty) fingers.value = null;
+      return;
+    }
+    _seen = now;
+    _touch = null;
+    final raw = flip ? Offset(1 - h.palm.dx, h.palm.dy) : h.palm;
+    // Steer through the reach box (the same arm movement near or far).
+    _tracks[0].measure(amplify && h.size > 0 ? _reach.map(raw, h.size, h.aspect, now) : map(h.palm), now);
+    _tracks[1].reset();
+    fingers.value = h.fingers;
   }
 
   /// Touch steers too (and is how the game plays without a camera).
@@ -360,7 +487,7 @@ class _BubblePopState extends State<BubblePop> with SingleTickerProviderStateMix
   static const _seconds = 60;
   // Made on Start: the camera only runs while the game is being played.
   KidsHands? _tracker;
-  KidsHands get _hands => _tracker ??= KidsHands(widget.container.motion);
+  KidsHands get _hands => _tracker ??= KidsHands(widget.container.motion, twoHands: true);
 
   @visibleForTesting
   KidsHands get debugHands => _hands;
@@ -838,7 +965,7 @@ class FingerMath extends StatefulWidget {
 
 class _FingerMathState extends State<FingerMath> {
   static const _count = 10;
-  late final KidsHands _hands = KidsHands(widget.container.motion);
+  late final KidsHands _hands = KidsHands(widget.container.motion, twoHands: true);
   final _rng = math.Random();
   int _level = 0, _index = 0, _score = 0;
   bool _playing = false, _over = false, _newBest = false;

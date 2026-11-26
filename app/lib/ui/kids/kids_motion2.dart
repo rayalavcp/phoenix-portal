@@ -911,3 +911,517 @@ class _DancePainter extends CustomPainter {
   @override
   bool shouldRepaint(_DancePainter old) => true;
 }
+
+// ── Goalie ────────────────────────────────────────────────────────────────
+
+/// One shot at the goal: it comes from far away (small) towards [to],
+/// where the glove must be when it arrives.
+class GoalShot {
+  GoalShot(this.from, this.to, this.flight, this.hue);
+  final Offset from, to; // fractions of the play area
+  final double flight; // seconds to arrive
+  final double hue;
+  double t = 0; // seconds flown
+  bool done = false, saved = false;
+  double after = 0; // seconds since it arrived (for the burst)
+
+  double get progress => (t / flight).clamp(0.0, 1.0);
+
+  /// Where the ball is now: it curves a little as it comes.
+  Offset get at {
+    final p = progress;
+    final e = p * p * (3 - 2 * p);
+    final bend = math.sin(p * math.pi) * 0.06 * (hue > 180 ? 1 : -1);
+    return Offset.lerp(from, to, e)! + Offset(bend, 0);
+  }
+}
+
+/// Whether the glove at [glove] saves a shot arriving at [to]: the glove
+/// covers about a sixth of the goal, more on easy.
+bool goalieSaves(Offset? glove, Offset to, int level) =>
+    glove != null && (glove - to).distance < const [0.17, 0.14, 0.11][level];
+
+/// Shots fly at the goal: put your glove (your hand) where each one lands.
+/// A shadow marks the spot so even a small child can get there in time.
+class GoalieGame extends StatefulWidget {
+  const GoalieGame({super.key, required this.container, required this.onBack});
+  final AppContainer container;
+  final VoidCallback onBack;
+
+  @override
+  State<GoalieGame> createState() => _GoalieState();
+}
+
+class _GoalieState extends _MoveGame<GoalieGame> {
+  final _rng = math.Random();
+  final shots = <GoalShot>[];
+  double _next = 0;
+  int saves = 0, streak = 0;
+  String message = '';
+  double flash = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    steer = 1;
+  }
+
+  @override
+  AppContainer get container => widget.container;
+  @override
+  VoidCallback get onBack => widget.onBack;
+  @override
+  String get scoreKey => 'goalie${level + 1}';
+  @override
+  int starsFor(int s) => s >= 60 ? 3 : (s >= 30 ? 2 : (s >= 10 ? 1 : 0));
+
+  @override
+  void reset() {
+    shots.clear();
+    _next = 1.2;
+    saves = 0;
+    streak = 0;
+    message = 'READY?';
+    flash = 1.2;
+  }
+
+  @override
+  void step(double dt) {
+    flash = math.max(0, flash - dt);
+    // Faster and more often as the saves add up.
+    final speedUp = math.min(0.45, saves * 0.012);
+    _next -= dt;
+    final inFlight = shots.where((s) => !s.done).length;
+    if (_next <= 0 && inFlight < (level == 2 && saves > 15 ? 2 : 1)) {
+      final to = Offset(0.14 + _rng.nextDouble() * 0.72, 0.3 + _rng.nextDouble() * 0.5);
+      shots.add(GoalShot(
+        Offset(0.4 + _rng.nextDouble() * 0.2, 0.12),
+        to,
+        const [2.2, 1.7, 1.35][level] * (1 - speedUp),
+        _rng.nextDouble() * 360,
+      ));
+      _next = const [1.3, 1.0, 0.8][level] * (1 - speedUp * 0.6);
+    }
+    final glove = hands?.point.value;
+    for (final s in shots) {
+      if (s.done) {
+        s.after += dt;
+        continue;
+      }
+      s.t += dt;
+      if (s.t >= s.flight) {
+        s.done = true;
+        if (goalieSaves(glove, s.to, level)) {
+          s.saved = true;
+          saves++;
+          streak++;
+          final bonus = streak >= 5 ? 2 : 1;
+          score += bonus;
+          message = streak >= 5 ? 'ON FIRE! +2' : const ['SAVED!', 'GREAT SAVE!', 'WHAT A STOP!', 'BLOCKED!'][_rng.nextInt(4)];
+          flash = 0.8;
+        } else {
+          streak = 0;
+          message = 'GOAL...';
+          flash = 0.8;
+          if (!loseLife()) return;
+        }
+      }
+    }
+    shots.removeWhere((s) => s.done && s.after > 0.6);
+  }
+
+  @override
+  Widget build(BuildContext context) => moveFrame(
+    title: 'Goalie',
+    colors: const [Color(0xFF14532D), Color(0xFF2F7BD6)],
+    hud: 'SAVES',
+    icon: Icons.sports_soccer_rounded,
+    pitch: 'You are the goalie! Move your hand to put your glove where the ball is coming. Watch for the shadow on the goal.',
+    options: Column(
+      children: [
+        kidsLevelChips(const ['Easy', 'Medium', 'Hard'], level, (i) => setState(() => level = i)),
+        const SizedBox(height: 14),
+        steerChips('Your glove follows', const ['My head', 'My hand']),
+      ],
+    ),
+    overDetail: '$saves saves',
+    lifeIcon: Icons.sports_soccer_rounded,
+    painter: _GoaliePainter(this),
+  );
+}
+
+class _GoaliePainter extends CustomPainter {
+  _GoaliePainter(this.g);
+  final _GoalieState g;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final short = math.min(size.width, size.height);
+    Offset at(Offset f) => Offset(f.dx * size.width, f.dy * size.height);
+    // The pitch: stripes of grass below, the goal across the middle.
+    final grass = Rect.fromLTWH(0, size.height * 0.62, size.width, size.height * 0.38);
+    for (var i = 0; i < 6; i++) {
+      canvas.drawRect(
+        Rect.fromLTWH(0, grass.top + i * grass.height / 6, size.width, grass.height / 6),
+        Paint()..color = (i.isEven ? const Color(0xFF2E8B57) : const Color(0xFF33995F)).withValues(alpha: 0.55),
+      );
+    }
+    final goal = Rect.fromLTRB(size.width * 0.06, size.height * 0.2, size.width * 0.94, size.height * 0.86);
+    final net = Paint()
+      ..color = Colors.white.withValues(alpha: 0.12)
+      ..strokeWidth = 1;
+    for (var x = goal.left; x <= goal.right; x += short * 0.045) {
+      canvas.drawLine(Offset(x, goal.top), Offset(x, goal.bottom), net);
+    }
+    for (var y = goal.top; y <= goal.bottom; y += short * 0.045) {
+      canvas.drawLine(Offset(goal.left, y), Offset(goal.right, y), net);
+    }
+    final post = Paint()
+      ..color = Colors.white
+      ..strokeWidth = short * 0.018
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(goal.bottomLeft, goal.topLeft, post);
+    canvas.drawLine(goal.topLeft, goal.topRight, post);
+    canvas.drawLine(goal.topRight, goal.bottomRight, post);
+    for (final s in g.shots) {
+      final target = at(s.to);
+      if (!s.done) {
+        // The shadow where it lands: grows and firms up as it comes.
+        final p = s.progress;
+        canvas.drawOval(
+          Rect.fromCenter(center: target, width: short * (0.08 + p * 0.1), height: short * (0.05 + p * 0.06)),
+          Paint()..color = Colors.black.withValues(alpha: 0.15 + p * 0.25),
+        );
+        canvas.drawCircle(
+          target,
+          short * 0.12 * (1.2 - p * 0.4),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 3
+            ..color = Colors.white.withValues(alpha: 0.25 + p * 0.4),
+        );
+        _ball(canvas, at(s.at), short * (0.025 + 0.06 * p * p), s.t * 8);
+      } else {
+        final burst = s.after / 0.6;
+        final color = s.saved ? const Color(0xFFF3DA8A) : const Color(0xFFFF6B6B);
+        for (var i = 0; i < 10; i++) {
+          final a = i * math.pi / 5;
+          canvas.drawCircle(
+            target + Offset(math.cos(a), math.sin(a)) * short * 0.16 * burst,
+            short * 0.012 * (1 - burst),
+            Paint()..color = color.withValues(alpha: 1 - burst),
+          );
+        }
+      }
+    }
+    if (g.flash > 0) {
+      final color = g.message == 'GOAL...' ? const Color(0xFFFF6B6B) : const Color(0xFFF3DA8A);
+      _say(canvas, g.message, Offset(size.width / 2, size.height * 0.1), short * 0.09, color.withValues(alpha: (g.flash / 0.8).clamp(0.0, 1.0)));
+    }
+  }
+
+  void _ball(Canvas canvas, Offset c, double r, double spin) {
+    canvas.drawCircle(c, r, Paint()..color = Colors.white);
+    final dark = Paint()..color = const Color(0xFF1F2937);
+    canvas.drawCircle(c, r * 0.32, dark);
+    for (var i = 0; i < 5; i++) {
+      final a = spin + i * 2 * math.pi / 5;
+      canvas.drawCircle(c + Offset(math.cos(a), math.sin(a)) * r * 0.72, r * 0.18, dark);
+    }
+    canvas.drawCircle(
+      c,
+      r,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(1, r * 0.08)
+        ..color = const Color(0xFF1F2937),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_GoaliePainter old) => true;
+}
+
+// ── Window Wipe ───────────────────────────────────────────────────────────
+
+/// A frosty window: [cols] × [rows] cells, each 1 (frosted) to 0 (clear).
+class FrostWindow {
+  FrostWindow(this.cols, this.rows) : cells = List<double>.filled(cols * rows, 1);
+  final int cols, rows;
+  final List<double> cells;
+
+  /// Wipes around [p] (fractions) with a cloth [radius] (fraction of the
+  /// width; [aspect] is the area's height over its width); returns how
+  /// much frost came off.
+  double wipe(Offset p, double radius, double aspect) {
+    var off = 0.0;
+    final r2 = radius * radius;
+    for (var y = 0; y < rows; y++) {
+      final cy = (y + 0.5) / rows;
+      final dy = (cy - p.dy) * aspect; // in widths, like dx
+      if (dy * dy > r2) continue;
+      for (var x = 0; x < cols; x++) {
+        final dx = (x + 0.5) / cols - p.dx;
+        final d2 = dx * dx + dy * dy;
+        if (d2 > r2) continue;
+        final i = y * cols + x;
+        final before = cells[i];
+        // Firmer in the middle of the cloth.
+        final next = math.max(0.0, before - (1 - d2 / r2) * 0.55 - 0.1);
+        cells[i] = next;
+        off += before - next;
+      }
+    }
+    return off;
+  }
+
+  /// How much of the window is clear, 0..1.
+  double get clear => 1 - cells.fold<double>(0, (a, c) => a + c) / cells.length;
+
+  void frost() => cells.fillRange(0, cells.length, 1);
+}
+
+/// The window has frosted over: wave your hand like a cloth to wipe it
+/// clean and see the picture outside. Clear as many as you can in time.
+class WindowWipe extends StatefulWidget {
+  const WindowWipe({super.key, required this.container, required this.onBack});
+  final AppContainer container;
+  final VoidCallback onBack;
+
+  @override
+  State<WindowWipe> createState() => _WindowWipeState();
+}
+
+class _WindowWipeState extends _MoveGame<WindowWipe> {
+  static const _seconds = 75.0;
+  final frost = FrostWindow(32, 20);
+  double left = _seconds, flash = 0;
+  int scene = 0, pictures = 0;
+  final _rng = math.Random();
+
+  @override
+  void initState() {
+    super.initState();
+    steer = 1;
+  }
+
+  @override
+  AppContainer get container => widget.container;
+  @override
+  VoidCallback get onBack => widget.onBack;
+  @override
+  String get scoreKey => 'wipe${level + 1}';
+  @override
+  int starsFor(int s) => s >= 8 ? 3 : (s >= 5 ? 2 : (s >= 2 ? 1 : 0));
+
+  /// How clear the window must be to count, by level.
+  double get _goal => const [0.82, 0.88, 0.93][level];
+
+  @override
+  void reset() {
+    frost.frost();
+    left = _seconds;
+    pictures = 0;
+    scene = _rng.nextInt(_WipePainter.scenes);
+    flash = 0;
+  }
+
+  @override
+  void step(double dt) {
+    left -= dt;
+    flash = math.max(0, flash - dt);
+    if (left <= 0) {
+      unawaited(finish());
+      return;
+    }
+    // Frost creeps back a little on harder levels.
+    if (level > 0) {
+      for (var i = 0; i < frost.cells.length; i++) {
+        frost.cells[i] = math.min(1, frost.cells[i] + dt * (level == 1 ? 0.01 : 0.025));
+      }
+    }
+    final p = hands?.point.value;
+    if (p != null && size != Size.zero) {
+      frost.wipe(p, const [0.11, 0.09, 0.08][level], size.height / size.width);
+    }
+    if (frost.clear >= _goal) {
+      pictures++;
+      score = pictures;
+      flash = 1.4;
+      frost.frost();
+      scene = (scene + 1 + _rng.nextInt(_WipePainter.scenes - 1)) % _WipePainter.scenes;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => moveFrame(
+    title: 'Window Wipe',
+    colors: const [Color(0xFF1E3A5F), Color(0xFF7FB8E6)],
+    hud: '${left.ceil()}s',
+    icon: Icons.cleaning_services_rounded,
+    pitch: 'Brrr, the window has frosted over! Wave your hand like a cloth to wipe it clean and see what is outside.',
+    options: Column(
+      children: [
+        kidsLevelChips(const ['Easy', 'Medium', 'Hard'], level, (i) => setState(() => level = i)),
+        const SizedBox(height: 14),
+        steerChips('The cloth follows', const ['My head', 'My hand']),
+      ],
+    ),
+    overDetail: '$pictures windows wiped clean',
+    lifeIcon: Icons.ac_unit_rounded,
+    painter: _WipePainter(this),
+  );
+}
+
+class _WipePainter extends CustomPainter {
+  _WipePainter(this.g);
+  final _WindowWipeState g;
+
+  static const scenes = 5;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    _scene(canvas, size, g.scene);
+    // The frost over it, cell by cell, soft at the edges.
+    final f = g.frost;
+    final cw = size.width / f.cols, ch = size.height / f.rows;
+    final paint = Paint()..maskFilter = MaskFilter.blur(BlurStyle.normal, math.max(cw, ch) * 0.35);
+    for (var y = 0; y < f.rows; y++) {
+      for (var x = 0; x < f.cols; x++) {
+        final v = f.cells[y * f.cols + x];
+        if (v <= 0.02) continue;
+        paint.color = Color.lerp(const Color(0xFFDDEBF7), const Color(0xFFF7FBFF), ((x * 7 + y * 13) % 5) / 5)!.withValues(alpha: 0.94 * v);
+        canvas.drawRect(Rect.fromLTWH(x * cw - 1, y * ch - 1, cw + 2, ch + 2), paint);
+      }
+    }
+    // How clear: a little bar at the bottom.
+    final bar = Rect.fromLTWH(24, size.height - 30, size.width - 48, 12);
+    canvas.drawRRect(RRect.fromRectAndRadius(bar, const Radius.circular(6)), Paint()..color = Colors.black26);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(Rect.fromLTWH(bar.left, bar.top, bar.width * (f.clear / g._goal).clamp(0.0, 1.0), bar.height), const Radius.circular(6)),
+      Paint()..color = const Color(0xFF7CFF6B),
+    );
+    if (g.flash > 0) {
+      _say(canvas, 'SPARKLING! +1', Offset(size.width / 2, size.height * 0.14), math.min(size.width, size.height) * 0.1,
+          const Color(0xFFF3DA8A).withValues(alpha: (g.flash / 1.4).clamp(0.0, 1.0)));
+    }
+  }
+
+  /// The view outside: a few simple painted scenes.
+  void _scene(Canvas canvas, Size size, int which) {
+    final w = size.width, h = size.height;
+    final full = Offset.zero & size;
+    const skies = [
+      [Color(0xFF6EC6FF), Color(0xFFBDE7FF)],
+      [Color(0xFFFF9A6B), Color(0xFFFFD39A)],
+      [Color(0xFF1B2A5A), Color(0xFF4B3A7A)],
+      [Color(0xFF7FD6C2), Color(0xFFD7F5E9)],
+      [Color(0xFF9EC9FF), Color(0xFFFFF1C9)],
+    ];
+    canvas.drawRect(full, Paint()..shader = LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: skies[which]).createShader(full));
+    Path hill(double base, double amp, double phase) {
+      final p = Path()..moveTo(0, h);
+      for (var x = 0.0; x <= w; x += w / 40) {
+        p.lineTo(x, h * base - math.sin(x / w * math.pi * 2 + phase) * h * amp);
+      }
+      return p
+        ..lineTo(w, h)
+        ..close();
+    }
+
+    switch (which) {
+      case 0: // sunny hills and a rainbow
+        const bands = [Color(0xFFFF6B6B), Color(0xFFFFB86B), Color(0xFFFFE66B), Color(0xFF7CFF6B), Color(0xFF6BC8FF), Color(0xFFB06BFF)];
+        for (var i = 0; i < bands.length; i++) {
+          canvas.drawArc(Rect.fromCenter(center: Offset(w * 0.5, h * 0.75), width: w * (0.9 - i * 0.06), height: h * (1.1 - i * 0.07)), math.pi, math.pi, false,
+              Paint()
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = h * 0.03
+                ..color = bands[i].withValues(alpha: 0.8));
+        }
+        canvas.drawCircle(Offset(w * 0.85, h * 0.18), h * 0.09, Paint()..color = const Color(0xFFFFE066));
+        canvas.drawPath(hill(0.72, 0.05, 0.5), Paint()..color = const Color(0xFF5CC46A));
+        canvas.drawPath(hill(0.82, 0.04, 2), Paint()..color = const Color(0xFF3FA357));
+      case 1: // sunset over the sea with a sailboat
+        canvas.drawCircle(Offset(w * 0.5, h * 0.6), h * 0.16, Paint()..color = const Color(0xFFFFE08A));
+        canvas.drawRect(Rect.fromLTWH(0, h * 0.62, w, h * 0.38), Paint()..color = const Color(0xFF2E6DA4));
+        for (var i = 0; i < 6; i++) {
+          canvas.drawLine(Offset(w * (0.1 + i * 0.15), h * (0.7 + (i % 3) * 0.08)), Offset(w * (0.18 + i * 0.15), h * (0.7 + (i % 3) * 0.08)),
+              Paint()
+                ..color = Colors.white54
+                ..strokeWidth = 3);
+        }
+        final boat = Offset(w * 0.3, h * 0.66);
+        canvas.drawPath(Path()
+          ..moveTo(boat.dx - w * 0.06, boat.dy)
+          ..lineTo(boat.dx + w * 0.06, boat.dy)
+          ..lineTo(boat.dx + w * 0.045, boat.dy + h * 0.04)
+          ..lineTo(boat.dx - w * 0.045, boat.dy + h * 0.04)
+          ..close(), Paint()..color = const Color(0xFF7A4A2A));
+        canvas.drawPath(Path()
+          ..moveTo(boat.dx, boat.dy - h * 0.18)
+          ..lineTo(boat.dx + w * 0.05, boat.dy - h * 0.01)
+          ..lineTo(boat.dx, boat.dy - h * 0.01)
+          ..close(), Paint()..color = Colors.white);
+      case 2: // a starry night with a moon
+        final rng = math.Random(7);
+        for (var i = 0; i < 60; i++) {
+          canvas.drawCircle(Offset(rng.nextDouble() * w, rng.nextDouble() * h * 0.7), 1 + rng.nextDouble() * 2, Paint()..color = Colors.white70);
+        }
+        canvas.drawCircle(Offset(w * 0.2, h * 0.2), h * 0.1, Paint()..color = const Color(0xFFFFF3C4));
+        canvas.drawCircle(Offset(w * 0.235, h * 0.18), h * 0.09, Paint()..color = const Color(0xFF1B2A5A));
+        canvas.drawPath(hill(0.8, 0.06, 1), Paint()..color = const Color(0xFF14213D));
+        for (var i = 0; i < 5; i++) {
+          final x = w * (0.5 + i * 0.1);
+          canvas.drawRect(Rect.fromLTWH(x, h * 0.62, w * 0.06, h * 0.25), Paint()..color = const Color(0xFF22305A));
+          canvas.drawRect(Rect.fromLTWH(x + w * 0.018, h * 0.68, w * 0.022, h * 0.04), Paint()..color = const Color(0xFFFFE08A));
+        }
+      case 3: // a garden with flowers and a butterfly
+        canvas.drawPath(hill(0.7, 0.03, 0), Paint()..color = const Color(0xFF6CCB5F));
+        final rng = math.Random(3);
+        const petals = [Color(0xFFFF7AB6), Color(0xFFFFD166), Color(0xFFB794F6), Color(0xFFFF8C61)];
+        for (var i = 0; i < 12; i++) {
+          final c = Offset(w * (0.06 + i * 0.08), h * (0.78 + rng.nextDouble() * 0.12));
+          canvas.drawLine(c, c + Offset(0, h * 0.1), Paint()
+            ..color = const Color(0xFF2F8F3A)
+            ..strokeWidth = 3);
+          for (var k = 0; k < 5; k++) {
+            final a = k * 2 * math.pi / 5;
+            canvas.drawCircle(c + Offset(math.cos(a), math.sin(a)) * h * 0.022, h * 0.018, Paint()..color = petals[i % 4]);
+          }
+          canvas.drawCircle(c, h * 0.012, Paint()..color = const Color(0xFFFFF3C4));
+        }
+        final b = Offset(w * 0.62, h * 0.35);
+        for (final s in const [-1.0, 1.0]) {
+          canvas.drawOval(Rect.fromCenter(center: b + Offset(s * w * 0.03, 0), width: w * 0.05, height: h * 0.1), Paint()..color = const Color(0xFFFF9F1C));
+        }
+        canvas.drawLine(b - Offset(0, h * 0.04), b + Offset(0, h * 0.04), Paint()
+          ..color = const Color(0xFF3B2A1A)
+          ..strokeWidth = 4);
+      default: // snowy mountains
+        canvas.drawPath(Path()
+          ..moveTo(0, h * 0.8)
+          ..lineTo(w * 0.3, h * 0.3)
+          ..lineTo(w * 0.55, h * 0.75)
+          ..lineTo(w * 0.75, h * 0.4)
+          ..lineTo(w, h * 0.8)
+          ..lineTo(w, h)
+          ..lineTo(0, h)
+          ..close(), Paint()..color = const Color(0xFF6B7FA3));
+        canvas.drawPath(Path()
+          ..moveTo(w * 0.22, h * 0.42)
+          ..lineTo(w * 0.3, h * 0.3)
+          ..lineTo(w * 0.38, h * 0.45)
+          ..close(), Paint()..color = Colors.white);
+        canvas.drawPath(Path()
+          ..moveTo(w * 0.69, h * 0.49)
+          ..lineTo(w * 0.75, h * 0.4)
+          ..lineTo(w * 0.81, h * 0.5)
+          ..close(), Paint()..color = Colors.white);
+        canvas.drawRect(Rect.fromLTWH(0, h * 0.85, w, h * 0.15), Paint()..color = const Color(0xFFEAF4FF));
+    }
+  }
+
+  @override
+  bool shouldRepaint(_WipePainter old) => true;
+}

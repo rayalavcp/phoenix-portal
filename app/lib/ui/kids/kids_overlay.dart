@@ -21,6 +21,7 @@ import 'kids_motion.dart';
 import 'kids_motion2.dart';
 import 'kids_play.dart';
 import 'kids_puzzles.dart';
+import 'kids_touch.dart';
 
 /// Phoenix Portal's Kids Portal: a full screen, child-safe home. Mounted by
 /// the kiosk screen above the dashboard; shows whatever [KidsManager.screen]
@@ -115,7 +116,8 @@ enum _Game {
   fractions, money, science, spelling, opposites, mole, lights,
   bubbles, catcher, fingermath, blaster,
   munch, bricks, hop, sky, run,
-  walls, trace, dance,
+  walls, trace, dance, goalie, wipe,
+  swipe, stack,
   count, letters, placevalue, story, telugu,
   usamap, indiamap, worldmap,
 }
@@ -192,6 +194,10 @@ final _games = <_GameInfo>[
       const [Color(0xFF1F8A4C), Color(0xFF14A06B)], 'snake', (b) => 'Longest: $b'),
   _GameInfo(_Game.mole, 'Whack-a-Mole', 'Quick! Tap the moles', Icons.pest_control_rodent_rounded,
       const [Color(0xFF6B4E1F), Color(0xFF1F8A4C)], 'mole1', (b) => 'Easy best: $b'),
+  _GameInfo(_Game.swipe, 'Star Swipe', 'Swipe through the stars', Icons.auto_awesome_rounded,
+      const [Color(0xFF14123A), Color(0xFF4B3A9A)], 'swipe1', (b) => 'High score: $b'),
+  _GameInfo(_Game.stack, 'Stack Up', 'Build the tallest tower', Icons.layers_rounded,
+      const [Color(0xFF1E3A5F), Color(0xFFFF8A65)], 'stack1', (b) => 'High score: $b'),
   _GameInfo(_Game.simon, 'Simon Says', 'Copy the lights', Icons.lightbulb_rounded,
       const [Color(0xFF283066), Color(0xFF7B5CFF)], 'simon', (b) => 'Best: level $b'),
   _GameInfo(_Game.ttt, 'Tic-Tac-Toe', 'Three in a row', Icons.tag_rounded,
@@ -213,6 +219,10 @@ final _games = <_GameInfo>[
       const [Color(0xFF14365A), Color(0xFF2FB8A8)], 'trace1', (b) => 'Best: $b pictures', shelf: 'Move'),
   _GameInfo(_Game.dance, 'Freeze Dance', 'Dance, then freeze!', Icons.music_note_rounded,
       const [Color(0xFF5A1F6B), Color(0xFFFF6B9A)], 'freeze1', (b) => 'High score: $b', shelf: 'Move'),
+  _GameInfo(_Game.goalie, 'Goalie', 'Save the shots with your hand', Icons.sports_soccer_rounded,
+      const [Color(0xFF14532D), Color(0xFF2F7BD6)], 'goalie1', (b) => 'High score: $b', shelf: 'Move'),
+  _GameInfo(_Game.wipe, 'Window Wipe', 'Wave to wipe the frost away', Icons.cleaning_services_rounded,
+      const [Color(0xFF1E3A5F), Color(0xFF7FB8E6)], 'wipe1', (b) => 'Best: $b windows', shelf: 'Move'),
   // Maps: states, territories and countries.
   _GameInfo(_Game.usamap, 'USA Map', 'All 50 states', Icons.flag_rounded,
       const [Color(0xFF1C3D9E), Color(0xFFD42A1A)], null, null, shelf: 'Maps'),
@@ -336,6 +346,10 @@ class _KidsHomeState extends State<_KidsHome> {
       _Game.walls => WallDodge(key: const ValueKey('walls'), container: widget.container, onBack: _back),
       _Game.trace => AirTrace(key: const ValueKey('trace'), container: widget.container, onBack: _back),
       _Game.dance => FreezeDance(key: const ValueKey('dance'), container: widget.container, onBack: _back, tones: _tones),
+      _Game.goalie => GoalieGame(key: const ValueKey('goalie'), container: widget.container, onBack: _back),
+      _Game.wipe => WindowWipe(key: const ValueKey('wipe'), container: widget.container, onBack: _back),
+      _Game.swipe => StarSwipe(key: const ValueKey('swipe'), onBack: _back),
+      _Game.stack => StackUp(key: const ValueKey('stack'), onBack: _back),
       _Game.sky => SkyGlide(key: const ValueKey('sky'), container: widget.container, onBack: _back),
       _Game.run => FoxRun(key: const ValueKey('run'), container: widget.container, onBack: _back),
       null when _board => KidsLeaderboard(key: const ValueKey('board'), onBack: _back),
