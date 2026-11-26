@@ -6,6 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kiosk_satellite/app_container.dart';
 import 'package:kiosk_satellite/managers/motion/native_motion.dart';
 import 'package:kiosk_satellite/ui/kids/kids_motion.dart';
+import 'package:kiosk_satellite/ui/kids/spark_body.dart';
+import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Real MediaPipe Pose (lite) results for one photo of a person with both
@@ -87,5 +90,48 @@ void main() {
     final fingers = KidsHands(c.motion, twoHands: true, fingerCount: true);
     expect(fingers.body, isFalse);
     fingers.dispose();
+  });
+
+  testWidgets('the neon spark body and the camera corner draw', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final c = AppContainer();
+    await c.settings.init();
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final hands = KidsHands(c.motion)..debugCamera = true;
+    final arms = poses((fx['scales']! as Map)['0.55']);
+    for (var i = 0; i < 5; i++) {
+      hands.debugFollow(arms, DateTime.now());
+      hands.step(0.016);
+    }
+    expect(hands.bodies.value, hasLength(1));
+    // The hand with a cursor is drawn on it: its owner is known.
+    expect(hands.trackOwner[0], isNotNull);
+    // A camera frame to show: a small picture made here.
+    final recorder = ui.PictureRecorder();
+    Canvas(recorder).drawRect(const Rect.fromLTWH(0, 0, 64, 48), Paint()..color = const Color(0xFF3366AA));
+    final image = await tester.runAsync(() => recorder.endRecording().toImage(64, 48));
+    final png = (await tester.runAsync(() => image!.toByteData(format: ui.ImageByteFormat.png)))!;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          backgroundColor: Colors.black,
+          body: Stack(
+            children: [
+              Positioned.fill(child: CustomPaint(painter: SparkBodyPainter(hands, hands.sparkBody))),
+              Positioned(right: 12, bottom: 12, child: GameCameraPreview(motion: c.motion)),
+            ],
+          ),
+        ),
+      ),
+    );
+    c.motion.gamePoses.value = arms;
+    c.motion.gamePreview.value = FacePreviewFrame(jpeg: png.buffer.asUint8List(), rotation: 0, mirror: true);
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Camera'), findsOneWidget);
+    hands.dispose();
   });
 }

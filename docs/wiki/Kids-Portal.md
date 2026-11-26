@@ -68,6 +68,11 @@ the screen, a hand above your head the top. Finger Math still looks at the hands
 to the Portal. To go back to the older hand-only tracking: remote admin › **Phoenix** › Kids
 Portal › **Camera games follow** › Hand only.
 
+On screen the child is a **body of neon sparks** whose colours flow through it, standing where
+they stand; the hands are the pink and blue bubbles that pop and catch. The bottom-right corner
+shows what the camera sees, dimmed, with the body it follows drawn over it, so you can tell at a
+glance whether you are in view.
+
 ## Playing with two children
 
 One-player camera games follow one child, even with another in view. **Pop Duel** is made for

@@ -19,6 +19,11 @@ Built from this branch and installed from `install/` (see `install/README.md`).
 - **Docs (2026-11-26):** new README and a wiki (`docs/wiki`) with mock
   screenshots made from sample data; leaderboard medals are icons (they look
   the same on every screen).
+- **2026.12.26 (neon body):** in the camera games the child is drawn as a
+  body of neon sparks whose colours flow through it (the owner's pick from
+  mockups), standing where the child stands, the hands reaching the game's
+  bubble cursors; Pop Duel shows both players. A corner preview shows the
+  camera picture, dimmed, with the tracked body over it.
 - **2026.12.25 (body tracking):** camera games follow the child's whole
   body (MediaPipe Pose) instead of the hand alone: tested on real model
   output, it finds a child filling 35% of the picture's height (22% with

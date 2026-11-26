@@ -10,6 +10,7 @@ import '../../managers/motion/native_motion.dart' show BodyPose, GameHand;
 import 'kids_activities.dart';
 import 'kids_games.dart';
 import 'kids_logic.dart';
+import 'spark_body.dart';
 
 /// The Kids Portal's Move shelf: games played by moving a hand in front of
 /// the Portal's camera. The hand tracker (MediaPipe, on the device) reports
@@ -325,6 +326,7 @@ class KidsHands {
       if (body) {
         _motion.gamePoses.addListener(_onPoses);
         _motion.startGameVision(pose: true);
+        _motion.startGamePreview();
       } else {
         _motion.gameHands.addListener(_onHands);
         _motion.startGameVision(hands: true);
@@ -345,6 +347,12 @@ class KidsHands {
   final bool fingerCount;
 
   final _bodyLock = BodyLock();
+
+  /// The camera (for the corner preview).
+  MotionManager get motion => _motion;
+
+  /// The neon spark body drawn for the player (body tracking).
+  late final sparkBody = SparkBody();
   final _active = ActiveHand();
 
   final MotionManager _motion;
@@ -362,7 +370,11 @@ class KidsHands {
   final _reach = HandReach();
 
   /// Whether the camera is following (false: touch only).
-  bool get camera => head ? _motion.headsAvailable : _motion.handsAvailable;
+  bool get camera => debugCamera || (head ? _motion.headsAvailable : _motion.handsAvailable);
+
+  /// For tests and previews: behave as if the camera were on.
+  @visibleForTesting
+  bool debugCamera = false;
 
   /// Where the hand (or head) is now, 0..1 across and down; null while none.
   final point = ValueNotifier<Offset?>(null);
@@ -458,43 +470,76 @@ class KidsHands {
 
   void _followBodies(List<BodyPose> poses, DateTime now) {
     if (poses.isEmpty) return;
-    final views = [for (final p in poses) ?BodyView.of(p)];
+    final views = <(BodyView, BodyPose)>[
+      for (final p in poses)
+        if (BodyView.of(p) case final v?) (v, p),
+    ];
     if (views.isEmpty) return;
-    List<Offset> spots;
+    // Who is shown and steers: (slot, view, pose), slot 0 or 1.
+    final players = <(int, BodyView, BodyPose)>[];
+    // Each cursor: (track, slot, side, spot).
+    final spots = <(int, int, int, Offset)>[];
     if (people) {
       // Two players: left to right, each over their own half.
-      views.sort((a, b) => a.centre.dx.compareTo(b.centre.dx));
-      spots = [
-        for (final (i, v) in views.take(2).indexed)
-          if (v.hand(v.activeSide(null)) case final h?)
-            Offset(((views.length == 1 ? (v.centre.dx < 0.5 ? 0 : 1) : i) + bodyCursor(h, v).dx) / 2, bodyCursor(h, v).dy),
-      ];
+      views.sort((a, b) => a.$1.centre.dx.compareTo(b.$1.centre.dx));
+      for (final (i, (v, p)) in views.take(2).indexed) {
+        final slot = views.length == 1 ? (v.centre.dx < 0.5 ? 0 : 1) : i;
+        players.add((slot, v, p));
+        final side = v.activeSide(_peopleSides[slot]);
+        _peopleSides[slot] = side;
+        if (v.hand(side) case final h?) {
+          final c = bodyCursor(h, v);
+          spots.add((slot, slot, side, Offset((slot + c.dx) / 2, c.dy)));
+        }
+      }
     } else {
-      final v = _bodyLock.pick(views, now);
+      final v = _bodyLock.pick([for (final e in views) e.$1], now);
       if (v == null) return;
+      final pose = views.firstWhere((e) => identical(e.$1, v)).$2;
+      players.add((0, v, pose));
       if (twoHands) {
-        spots = [for (final side in const [0, 1]) if (v.hand(side) case final h?) bodyCursor(h, v)];
+        for (final side in const [0, 1]) {
+          if (v.hand(side) case final h?) spots.add((side, 0, side, bodyCursor(h, v)));
+        }
       } else {
         final side = _active.pick(v);
-        final h = v.hand(side);
-        spots = h == null ? const [] : [bodyCursor(h, v)];
+        // The other hand takes over: start its cursor afresh.
+        if (side != _cursorSide) _tracks[0].reset();
+        _cursorSide = side;
+        if (v.hand(side) case final h?) spots.add((0, 0, side, bodyCursor(h, v)));
       }
     }
+    // The bodies to draw, smoothed (see spark_body.dart).
+    bodies.value = [
+      for (final (slot, v, p) in players)
+        _smoothers[slot].shown(p, v, slot, now, flip: flip),
+    ];
     if (spots.isEmpty) return;
     _seen = now;
     _touch = null;
-    final flipped = [for (final s in spots) flip ? Offset(1 - s.dx, s.dy) : s];
-    // Keep each point on its own track (nearest to where it was).
-    var first = 0;
-    final was = _tracks[0].at;
-    if (was != null && flipped.length == 2 && (flipped[1] - was).distance < (flipped[0] - was).distance) first = 1;
-    _tracks[0].measure(flipped[first], now);
-    if (flipped.length == 2) {
-      _tracks[1].measure(flipped[1 - first], now);
-    } else {
-      _tracks[1].reset();
+    final used = <int>{};
+    for (final (track, slot, side, spot) in spots) {
+      _tracks[track].measure(flip ? Offset(1 - spot.dx, spot.dy) : spot, now);
+      trackOwner[track] = (slot, side);
+      used.add(track);
+    }
+    for (final t in const [0, 1]) {
+      if (!used.contains(t)) {
+        _tracks[t].reset();
+        trackOwner[t] = null;
+      }
     }
   }
+
+  int _cursorSide = -1;
+  final _peopleSides = <int?>[null, null];
+  final _smoothers = [BodySmoother(), BodySmoother()];
+
+  /// The people being drawn (body tracking), smoothed.
+  final bodies = ValueNotifier<List<ShownBody>>(const []);
+
+  /// Whose hand each cursor is: (person slot, side), or null.
+  final trackOwner = <(int, int)?>[null, null];
 
   /// Touch steers too (and is how the game plays without a camera).
   void touch(Offset fraction) {
@@ -521,14 +566,20 @@ class KidsHands {
   void step(double dt) {
     if (_touch != null) return;
     final now = DateTime.now();
-    final a = _tracks[0].shown(now);
+    var a = _tracks[0].shown(now);
     final b = handInView ? _tracks[1].shown(now) : null;
-    if (a == null) return;
+    if (a == null && b == null) return;
     _trail(0, a);
     _trail(1, b);
+    shown[0] = a;
+    shown[1] = b;
+    a ??= b;
     point.value = a;
-    points.value = [a, ?b];
+    points.value = [?a, if (shown[0] != null) ?b];
   }
+
+  /// Each track's cursor as last drawn (null: none), by track.
+  final shown = <Offset?>[null, null];
 
   void dispose() {
     if (head) {
@@ -538,7 +589,9 @@ class KidsHands {
       _motion.gameHands.removeListener(_onHands);
       _motion.gamePoses.removeListener(_onPoses);
       _motion.stopGameVision();
+      if (body) _motion.stopGamePreview();
     }
+    bodies.dispose();
     point.dispose();
     points.dispose();
     fingers.dispose();
@@ -878,19 +931,28 @@ class KidsMotionArena extends StatelessWidget {
                   Positioned.fill(
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: const Color(0xFF101828).withValues(alpha: 0.25),
+                        // Darker while the neon body shows, so it glows.
+                        color: const Color(0xFF070B16).withValues(alpha: hands.body && hands.camera ? 0.72 : 0.25),
                         border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 2),
                         borderRadius: BorderRadius.circular(28),
                       ),
                     ),
                   ),
+                  // The child as a body of neon sparks, behind the game.
+                  if (hands.body && hands.camera)
+                    Positioned.fill(
+                      child: IgnorePointer(child: RepaintBoundary(child: CustomPaint(painter: SparkBodyPainter(hands, hands.sparkBody)))),
+                    ),
                   Positioned.fill(child: CustomPaint(painter: painter)),
                   Positioned.fill(
                     child: IgnorePointer(child: RepaintBoundary(child: CustomPaint(painter: _CursorPainter(hands, cursorIcon)))),
                   ),
+                  // What the camera sees, dimmed, with what it tracks.
+                  if (hands.body && hands.camera)
+                    Positioned(right: 12, bottom: 12, child: GameCameraPreview(motion: hands.motion, width: size.width < 700 ? 150 : 220)),
                   Positioned(
                     left: 0,
-                    right: 0,
+                    right: hands.body && hands.camera ? (size.width < 700 ? 170 : 240) : 0,
                     bottom: 14,
                     child: KidsHandHint(hands: hands, visible: !hands.handInView),
                   ),

@@ -25,11 +25,11 @@ $ProgressPreference = 'SilentlyContinue'
 # Windows PowerShell 5.1 defaults to old TLS, which GitHub refuses.
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-$Version = "2026.12.25"
+$Version = "2026.12.26"
 # Builds are GitHub Release files (tag v<version>), not committed to the branch.
 $ApkUrl    = "https://github.com/rayalavcp/phoenix-portal/releases/download/v$Version/phoenix-portal.apk"
-$ApkSize = 105733100
-$ApkSha256 = "ec9d06b143092d7e3ccf6c81af246da2685651bb8be55f5e7c5dc28e30348c90"
+$ApkSize = 105782252
+$ApkSha256 = "8e266e47d1128da0be566f17b0dca7418d4087f6d499e0e91df4675f7ea6783d"
 $Pkg       = 'com.phoenix.portal'
 $Ns        = 'me.jxl.kiosk_satellite'
 $Main      = "$Pkg/$Ns.MainActivity"

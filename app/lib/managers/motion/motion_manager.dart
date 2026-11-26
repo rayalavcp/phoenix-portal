@@ -1140,6 +1140,7 @@ class MotionManager extends Manager {
               // way across when the hold ends is not worth drawing.
               if (tick.isPreview) {
                 if (_previewHolding) facePreview.value = tick.preview;
+                if (_gamePreviewTimer != null) gamePreview.value = tick.preview;
                 return;
               }
               // A face is not a lighting change, so the self-light quiet
@@ -1667,6 +1668,31 @@ class MotionManager extends Manager {
   /// The game's hands (empty when none is in view).
   final gameHands = ValueNotifier<List<GameHand>>(const []);
 
+  /// What the camera sees while a camera game is open (the corner
+  /// preview), null otherwise. Frames are about ten a second at most.
+  final gamePreview = ValueNotifier<FacePreviewFrame?>(null);
+  Timer? _gamePreviewTimer;
+
+  /// Keep the camera's frames coming for the game's corner preview: the
+  /// native preview window is re-opened every few seconds while it runs.
+  void startGamePreview() {
+    if (_gamePreviewTimer != null) return;
+    void open() => unawaited(
+      NativeMotion.showPreview(const Duration(seconds: 8)).catchError((Object e) {
+        log.debug(name, 'game preview failed: $e');
+      }),
+    );
+    open();
+    _gamePreviewTimer = Timer.periodic(const Duration(seconds: 5), (_) => open());
+  }
+
+  void stopGamePreview() {
+    _gamePreviewTimer?.cancel();
+    _gamePreviewTimer = null;
+    gamePreview.value = null;
+    unawaited(NativeMotion.showPreview(Duration.zero).catchError((Object _) {}));
+  }
+
   /// The people a game sees (empty when nobody is in view).
   final gamePoses = ValueNotifier<List<BodyPose>>(const []);
 
@@ -1758,6 +1784,8 @@ class MotionManager extends Manager {
     headTest.dispose();
     gameHands.dispose();
     gamePoses.dispose();
+    _gamePreviewTimer?.cancel();
+    gamePreview.dispose();
     bodyMask.dispose();
     _presence.dispose();
   }

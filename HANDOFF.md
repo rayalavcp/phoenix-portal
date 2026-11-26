@@ -294,10 +294,20 @@ Math, Wall Dodge, Air Trace, Freeze Dance), **Create**.
   tracker found hands only at 90%. `test/fixtures/body_poses.json` holds those
   real results; `test/body_tracking_test.dart` checks the cursor on them.
   Not yet measured on a Portal: the time per look (log line "GameVision
-  poses: N ms a look"). **Nothing of the child is drawn** (the owner found the hand and
-  body renders scary, 2026.12.14): only a pastel bubble cursor per hand
-  (pink, blue; yellow for the head) with a sparkle trail
-  (`_CursorPainter`). The camera runs only while a camera game is played.
+  poses: N ms a look"). In body mode (2026.12.26) the child is drawn as a **body of
+  neon sparks** (`ui/kids/spark_body.dart`: `SparkBody`, ~1,600 sparks pinned
+  to limbs, torso and head, bucketed by colour into a few `drawRawPoints`
+  calls; colours flow by position and time; the active hand's forearm reaches
+  to its cursor so the hand is drawn where the game counts it). The owner
+  picked this from mockups after finding realistic hand and body renders
+  scary (2026.12.14): keep it stylised, never the child's outline or picture
+  in the play area. Cursors stay pastel bubbles (`_CursorPainter`). The
+  bottom-right **camera corner** (`GameCameraPreview`) shows the camera
+  picture dimmed with the tracked body over it: frames come through the
+  existing preview stream (`MotionManager.startGamePreview`, which re-opens
+  the native preview window every 5 s while a body-tracked game runs). Hand
+  mode and head mode draw only the cursors. The camera runs only while a
+  camera game is played.
 - `test/kids_all_games_test.dart` opens and plays every game at three
   screen sizes with random taps, so a layout bug can show only in some
   game states (Connect Four's 1.6 px button overflow at 1024×600 did:
