@@ -29,6 +29,10 @@ Rules the owner set (details in HANDOFF.md):
   colours (`Phx` tokens in `app/lib/ui/theme.dart`, `kidsSoft()` for Kids).
   No loud saturated fills.
 - Kids content: no copyrighted characters or songs; English only.
+- Keep the docs current: when a feature changes, update `README.md`, the
+  matching `docs/wiki/*.md` page, `install/README.md` and `CHANGELOG.md`.
+  Screenshots come from mock data only (see HANDOFF.md), never from the
+  owner's Portal or home.
 - Before shipping: `flutter analyze lib test`, the tests for what changed
   (`app/test/kids_all_games_test.dart` for any Kids game), and the admin JS
   tests (`node --test app/test/*_test.mjs`).

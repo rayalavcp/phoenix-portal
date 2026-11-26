@@ -16,6 +16,9 @@ Built from this branch and installed from `install/` (see `install/README.md`).
   calling.
 - **School:** SchoolCafe menus and the Frisco ISD calendar.
 - **Updates:** from this repository; nothing is sent to the original project.
+- **Docs (2026-11-26):** new README and a wiki (`docs/wiki`) with mock
+  screenshots made from sample data; leaderboard medals are icons (they look
+  the same on every screen).
 - **2026.12.20:** with no photos set up, the Phoenix Photo Frame shows the
   built-in 4K landscapes, slowly drifting, with their credits; everything
   (guides, licence, plugin list, wallpapers) now comes from `main`.

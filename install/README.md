@@ -11,6 +11,9 @@
     Settings > Screensaver.
   - Guides, the licence link, the plugin list and wallpapers now come from
     the repository's `main` branch.
+
+### Earlier builds (newest first)
+
   - **Calmer everywhere**: the orange, gold, blue, green and rose accents
     are a step softer on every screen and in the remote admin. Smart Home,
     All apps, the App Store and Timers now stand on your wallpaper in the
@@ -183,9 +186,13 @@
     calendar or iCal.
   - The installer stops other apps (such as Portal HA Bridge) from taking
     over the screen after a reboot, if you say yes.
-- Signed with the same **debug key** as the earlier test builds, so it
-  installs over them with `adb install -r` and keeps the settings.
-- Windows installer: `install-phoenix.ps1` (download, verify, install, set up, check).
-- Instructions for the local agent: `LOCAL_AGENT.md`.
+## About these builds
 
-Remove this folder before merging the branch.
+- Every build is signed with the project's key (certificate SHA-256
+  starting `47fff989d4`), so each installs over the last one and keeps the
+  settings. A build signed with any other key will not install over it.
+- Windows installer: `install-phoenix.ps1` (downloads the release, checks
+  its size and SHA-256, installs, sets up, checks).
+- Instructions for an agent on the PC: `LOCAL_AGENT.md`. For developers and
+  coding agents: `HANDOFF.md` at the repository root.
+- How updates reach the Portals: `UPDATES.md`.

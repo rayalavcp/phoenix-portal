@@ -1,5 +1,9 @@
 # Instructions for the local agent (Windows PC with the Portal on USB)
 
+This file is for an agent on the Windows PC that has the Portal on USB
+(installing, patching apps, removing Immortal). For changing the code,
+building and releasing, see `HANDOFF.md` at the repository root.
+
 Copy everything below the line into the agent.
 
 ---
@@ -38,8 +42,11 @@ If it says the SHA-256 does not match: run STEP 2, STEP 3 and STEP 4 again.
 STEP 6. Send me the whole SUMMARY block it prints, with the version it shows.
 If any line says FAIL, also send the 30 lines above it.
 
-After this install (version 2026.12.3 or newer), the Portal updates itself
-from GitHub: the PC is only needed again if something goes wrong.
+After this install the Portal updates itself from this repository's GitHub
+Releases (on start and every 12 hours): the PC is only needed again if
+something goes wrong. To install a release by hand without USB: remote
+admin > Phoenix > Install apps on this Portal > Install from a link:
+https://github.com/rayalavcp/phoenix-portal/releases/latest/download/phoenix-portal.apk
 
 ---
 

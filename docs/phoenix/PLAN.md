@@ -114,3 +114,9 @@ intercom, RTSP, the fleet agent.
 15. **Replacing Immortal:** a Calls button on the Today dock (the stock
     Portal home's calling screen). What is still missing and how to remove
     Immortal safely: `docs/phoenix/IMMORTAL.md`.
+16. **Round four: done (2026.12.13 to 2026.12.20).** Review and security
+    pass; builds as GitHub Releases and an APK-free history; widget-style
+    tiles on several home screens; the sun's path; Kids leaderboards and new
+    puzzles every game; shopping list, quick timers, wallpaper colours; a
+    calmer look everywhere; the scenic photo frame; `main` as the only
+    working branch; README, wiki (`docs/wiki`) and mock screenshots.

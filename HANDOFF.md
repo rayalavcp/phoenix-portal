@@ -4,7 +4,7 @@ Read this first. It is the state of the project for the next agent (Cursor,
 cloud or local): what it is, where things live, how to build and ship, and
 what is still open.
 
-## Start here (handed over 2026-11-25)
+## Start here (updated 2026-11-26)
 
 - **Latest release: 2026.12.20 (versionCode 395)**, published as GitHub
   Release `v2026.12.20` from `main`. It is the first build that needs
@@ -39,10 +39,15 @@ what is still open.
 - **Toolchain used:** Flutter 3.44.6 stable (Dart ^3.12), Android SDK
   platform 36 / build-tools 36.0.0, Java 21, Node 22 (remote admin build and
   JS tests).
-- **Owner's latest asks, all done:** calmer UI everywhere (2026.12.19);
-  leaderboards, shopping list, quick timers, wallpaper colours, home screens,
-  random mazes (2026.12.18). Decisions still waiting for the owner are under
-  "Open decisions" below.
+- **Owner's latest asks, all done:** README, wiki and docs with new mock
+  screenshots (2026-11-26, see "Docs, wiki and screenshots"); scenic photo
+  frame and everything on `main` (2026.12.20); calmer UI everywhere
+  (2026.12.19); leaderboards, shopping list, quick timers, wallpaper colours,
+  home screens, random mazes (2026.12.18). Decisions still waiting for the
+  owner are under "Open decisions" below.
+- **The owner deletes `claude/fervent-hopper-25a7jk` themselves** (the cloud
+  agent's git access could not delete branches). If it is still there, it
+  is an old copy of `main`: do not work on it.
 
 ### Open decisions (ask the owner first)
 
@@ -59,6 +64,9 @@ what is still open.
    the mic).
 5. CC BY-NC-ND's NoDerivatives term and public release downloads: flagged to
    the owner (keep the repo private or ask Xavier Larrea); not resolved.
+6. Publish the wiki: the GitHub wiki was not reachable from the cloud
+   agent. Run `docs/wiki/publish-wiki.sh` (create the wiki's first page on
+   GitHub once if it is empty).
 
 ### Known flaky or failing tests (not caused by recent work)
 
@@ -200,6 +208,30 @@ Portals on **2026.12.3 or newer** then find it themselves (on start and every
 
 Commit messages so far end with the cloud agent's attribution lines; a new
 agent may use its own. Never put model names in commits.
+
+## Docs, wiki and screenshots
+
+- `README.md` is the front page; `docs/wiki/*.md` is the wiki's source
+  (Home, Install, Today and tiles, Kids Portal, Smart Home, Calendars,
+  Photos and screensavers, App Store, Remote admin, Updates,
+  Troubleshooting, For developers, `_Sidebar.md`). Publish with
+  `docs/wiki/publish-wiki.sh`. `install/README.md` (build notes),
+  `install/UPDATES.md` (how updates work), `install/LOCAL_AGENT.md` (steps
+  for an agent on the owner's Windows PC) and `CHANGELOG.md` complete it.
+  When a feature changes, update the README, the wiki page and the install
+  notes with it.
+- **Screenshots** (`docs/phoenix/screens/*.jpg`, 1280×800) are made from
+  mock data only, never from the owner's Portal or home: a throwaway widget
+  test pumps the real screens with sample weather, calendar events, shopping
+  items, Home Assistant entities and leaderboard names on the built-in
+  wallpapers, and saves each with `RenderRepaintBoundary.toImage`. Tips: load
+  the app fonts with `FontLoader` (Inter, Nunito, Rubik and Material Icons
+  from the Flutter SDK); Telugu needs a font that has both Latin and Telugu
+  (merge Inter, instanced at fixed weights, with Noto Sans Telugu scaled to
+  2048 units per em, using fontTools), since the test renderer does not fall
+  back between families; mock `path_provider` to a folder holding
+  `wallpapers/photo_<id>.jpg` for the scenic frame; wait with
+  `tester.runAsync` for images to decode. Don't commit the throwaway test.
 
 ## Device facts
 

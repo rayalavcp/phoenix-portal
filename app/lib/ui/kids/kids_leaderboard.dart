@@ -171,7 +171,9 @@ class _KidsLeaderboardState extends State<KidsLeaderboard> {
     super.dispose();
   }
 
-  static const _medals = ['🥇', '🥈', '🥉'];
+  // Gold, silver and bronze trophies (icons, so they look the same on
+  // every screen, emoji font or not).
+  static const _medals = [Color(0xFFF2CF6E), Color(0xFFD5DAE3), Color(0xFFD9A07A)];
 
   @override
   Widget build(BuildContext context) => KidsActivityFrame(
@@ -237,10 +239,12 @@ class _KidsLeaderboardState extends State<KidsLeaderboard> {
                                     SizedBox(
                                       width: 38,
                                       child: i < 3
-                                          ? Text(
-                                              _medals[i],
-                                              style: const TextStyle(
-                                                fontSize: 22,
+                                          ? Align(
+                                              alignment: Alignment.centerLeft,
+                                              child: Icon(
+                                                Icons.emoji_events_rounded,
+                                                color: _medals[i],
+                                                size: 24,
                                               ),
                                             )
                                           : Text(
@@ -300,7 +304,7 @@ class KidsLeaderboardButton extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('🏆', style: TextStyle(fontSize: 22)),
+          const Icon(Icons.emoji_events_rounded, color: Color(0xFFF2CF6E), size: 24),
           const SizedBox(width: 6),
           Text('Top 10', style: kidsText(18)),
         ],
@@ -370,7 +374,7 @@ class _NameDialogState extends State<_NameDialog> {
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
     title: Row(
       children: [
-        const Text('🏆', style: TextStyle(fontSize: 34)),
+        const Icon(Icons.emoji_events_rounded, color: Color(0xFFF2CF6E), size: 36),
         const SizedBox(width: 10),
         Expanded(child: Text('New high score!', style: kidsText(28))),
       ],
