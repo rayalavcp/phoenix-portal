@@ -19,6 +19,12 @@ Built from this branch and installed from `install/` (see `install/README.md`).
 - **Docs (2026-11-26):** new README and a wiki (`docs/wiki`) with mock
   screenshots made from sample data; leaderboard medals are icons (they look
   the same on every screen).
+- **2026.12.28 (smoother):** body-tracked cursors and the neon body glide
+  more smoothly (steadier when slow, less look-ahead); the log lists every
+  camera the device offers ("PhoenixCameras"). Found in the owner's Portal
+  log: Meta's Smart Camera keeps auto-framing the picture apps receive (it
+  pans and zooms after whoever moves) and runs its own pose and gesture
+  models at 30 frames a second beside ours.
 - **2026.12.27 (live camera):** camera games show the live camera picture,
   mirrored, filling the play area, the children seeing themselves with the
   game around them; the hand cursors are glowing rings on their real hands.

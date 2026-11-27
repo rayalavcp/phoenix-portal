@@ -36,8 +36,8 @@ class ShownBody {
 /// Smooths one person's 33 points over time (the One Euro filter, as the
 /// cursors use), so the drawn body glides rather than shakes.
 class BodySmoother {
-  final _x = List.generate(33, (_) => OneEuro(minCutoff: 1.4, beta: 4));
-  final _y = List.generate(33, (_) => OneEuro(minCutoff: 1.4, beta: 4));
+  final _x = List.generate(33, (_) => OneEuro(minCutoff: 0.9, beta: 2.5));
+  final _y = List.generate(33, (_) => OneEuro(minCutoff: 0.9, beta: 2.5));
   DateTime? _last;
 
   ShownBody shown(BodyPose p, BodyView v, int slot, DateTime now, {bool flip = false}) {

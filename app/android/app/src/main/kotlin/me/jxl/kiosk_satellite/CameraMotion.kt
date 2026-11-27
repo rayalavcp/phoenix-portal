@@ -532,6 +532,37 @@ class CameraMotion(
     private var liveEntry: io.flutter.view.TextureRegistry.SurfaceTextureEntry? = null
     private var liveSurface: Surface? = null
 
+    private var camerasLogged = false
+
+    /** Every camera the device offers, once, for the log ("PhoenixCameras"):
+     *  on a Portal the app is handed Meta's Smart Camera picture, which pans
+     *  and zooms after people; this shows whether a fixed one is offered too. */
+    private fun logCameras() {
+        if (camerasLogged) return
+        camerasLogged = true
+        try {
+            val manager = context.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager
+            for (id in manager.cameraIdList) {
+                val c = manager.getCameraCharacteristics(id)
+                val facing = when (c.get(android.hardware.camera2.CameraCharacteristics.LENS_FACING)) {
+                    android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT -> "front"
+                    android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK -> "back"
+                    else -> "external"
+                }
+                val focal = c.get(android.hardware.camera2.CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)?.joinToString("/")
+                val sensor = c.get(android.hardware.camera2.CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE)
+                val pixels = c.get(android.hardware.camera2.CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)
+                val caps = c.get(android.hardware.camera2.CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)?.toList().orEmpty()
+                val logical = caps.contains(11) // LOGICAL_MULTI_CAMERA
+                val level = c.get(android.hardware.camera2.CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)
+                Log.i("PhoenixCameras", "camera $id: $facing, focal=$focal mm, sensor=$sensor mm, pixels=$pixels, " +
+                    "level=$level, logical=$logical, caps=$caps")
+            }
+        } catch (e: Exception) {
+            Log.w("PhoenixCameras", "could not list cameras: $e")
+        }
+    }
+
     /** Frees the live picture's texture (main thread). */
     private fun releaseLive() {
         try { liveSurface?.release() } catch (_: Exception) {}
@@ -1004,6 +1035,7 @@ class CameraMotion(
             gameBody = allowAnalysis && game?.get("body") == true
             gamePose = allowAnalysis && game?.get("pose") == true
             gameLive = allowAnalysis && game?.get("live") == true
+            if (gameHands || gamePose) logCameras()
             if (!gameLive) mainHandler.post { releaseLive() }
             if (!gameHands && !gameBody && !gamePose) {
                 gameVision?.close()

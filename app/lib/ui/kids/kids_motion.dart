@@ -60,13 +60,22 @@ class OneEuro {
 /// One followed point (a hand's palm or the head): filtered, with a short
 /// look ahead along its speed to make up for the camera's own delay.
 class _Track {
-  final _fx = OneEuro(), _fy = OneEuro();
+  _Track({double minCutoff = 1.0, double beta = 6.0, this.lead = 0.04})
+    : _fx = OneEuro(minCutoff: minCutoff, beta: beta),
+      _fy = OneEuro(minCutoff: minCutoff, beta: beta);
+
+  /// The smoother a body-tracked cursor glides: the pose model's points
+  /// wobble more frame to frame than a hand tracker's, so it is held
+  /// steadier when slow and looks ahead less (2026.12.28).
+  _Track.body() : this(minCutoff: 0.6, beta: 2.2, lead: 0.025);
+
+  final OneEuro _fx, _fy;
   Offset? at;
   Offset _v = Offset.zero;
   DateTime _last = DateTime.fromMillisecondsSinceEpoch(0);
 
   /// The camera-to-screen delay the look ahead makes up for, seconds.
-  static const lead = 0.04;
+  final double lead;
 
   /// After this long without a sighting the point starts afresh where the
   /// hand comes back, instead of sweeping over from where it was lost.
@@ -424,7 +433,7 @@ class KidsHands {
   /// Swap left and right, if the camera's picture comes out mirrored.
   bool flip = false;
 
-  final _tracks = [_Track(), _Track()];
+  late final _tracks = body || live ? [_Track.body(), _Track.body()] : [_Track(), _Track()];
   Offset? _touch;
   DateTime _seen = DateTime.fromMillisecondsSinceEpoch(0);
 

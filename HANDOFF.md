@@ -287,6 +287,15 @@ Math, Wall Dodge, Air Trace, Freeze Dance), **Create**.
   (kids_motion2.dart). Not yet seen on a Portal: whether its camera binds
   Preview + ImageAnalysis together at 1280×960 (the log says "game live
   picture: ..." or "live picture rejected").
+- **Portal camera, found in the owner's log (2026-11-26):** apps get Meta's
+  Smart Camera *virtual* camera (`CameraAnalytics … camera_type: virtual`),
+  which `aloha.TrackAndHoldAiDirector` pans and zooms after whoever moves
+  ("Forcing fast track movement"), while Meta's own `aloha.PoseEstimator`
+  and gesture detectors run on the hardware camera at 30 fps. So the picture
+  the games see moves under the child, and the CPU is shared. 2026.12.28 logs
+  every camera id ("PhoenixCameras" in logcat) to see whether a fixed camera
+  is offered; next steps depend on that list (pick that camera for games, or
+  find a way to pause auto-framing while a game runs).
 - **APK size:** 2026.12.25 is about 106 MB (the pose model added 5.8 MB; the
   Rubik font was cut to the scripts Phoenix shows: Latin, Greek, Cyrillic,
   Devanagari, Telugu and symbols). Over 100 MiB, `publish_release.sh` uploads it
